@@ -1,7 +1,7 @@
 k8s-ami-core
 =========
 
-A role to install Kubernetes components on an EC2 instance, for the purpose of creating an AMI.
+An Ansible role to install Kubernetes components on an EC2 instance, for the purpose of creating an AMI.
 
 Requirements
 ------------
