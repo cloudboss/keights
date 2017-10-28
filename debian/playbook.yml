@@ -1,0 +1,291 @@
+# Copyright © 2017 Joseph Wright <joseph@cloudboss.co>
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+---
+- hosts: all
+  gather_facts: false
+  become: true
+
+  vars:
+    base_repo: http://cdn-aws.deb.debian.org/debian/
+    docker_gpg_key: F76221572C52609D
+    partitions:
+      - number: 1
+        start: 0%
+        end: 2GiB
+        mount: /
+        mount_opts: rw,barrier=0,noatime,errors=remount-ro
+      - number: 2
+        start: 2GiB
+        end: 4GiB
+        mount: /usr
+        mount_opts: ro,barrier=0,noatime
+      - number: 3
+        start: 4GiB
+        end: 6GiB
+        mount: /var
+        mount_opts: rw,barrier=0,noatime,errors=remount-ro
+      - number: 4
+        start: 6GiB
+        end: 100%
+        mount: /var/log
+        mount_opts: rw,barrier=0,noatime,errors=remount-ro
+    bootstrap_exclude:
+      - nano
+      - wget
+      - whiptail
+    bootstrap_include:
+      - bind9-host
+      - curl
+      - dbus
+      - dirmngr
+      - ebtables
+      - ethtool
+      - file
+      - groff-base
+      - less
+      - linux-image-amd64
+      - logrotate
+      - net-tools
+      - socat
+      - sudo
+      - strace
+      - sysstat
+      - tcpdump
+      - traceroute
+      - vim-tiny
+
+  tasks:
+    - name: install packages for bootstrapping
+      apt:
+        name: '{{ item }}'
+        update_cache: true
+      with_items:
+        - debootstrap
+        - parted
+
+    - name: partition ebs volume
+      parted:
+        device: '/dev/{{ ebs_vol }}'
+        number: '{{ item.number }}'
+        part_start: '{{ item.start }}'
+        part_end: '{{ item.end }}'
+        state: present
+      with_items: '{{ partitions }}'
+
+    - name: make filesystems on ebs volume partitions
+      filesystem:
+        fstype: ext4
+        dev: '/dev/{{ ebs_vol }}{{ item.number }}'
+        opts: '-L {{ item.mount }}'
+      with_items: '{{ partitions }}'
+
+    - name: mount ebs volume partitions
+      mount:
+        src: '/dev/{{ ebs_vol }}{{ item.number }}'
+        path: '/mnt{{ item.mount }}'
+        fstype: ext4
+        state: mounted
+      with_items: '{{ partitions }}'
+
+    - name: bootstrap operating system onto ebs volume
+      shell: |
+        debootstrap \
+          --merged-usr \
+          --exclude={{ bootstrap_exclude | join(",") }} \
+          --include={{ bootstrap_include | join(",") }} \
+          stable /mnt {{ base_repo }}
+      args:
+        # Pick a file, any file...
+        creates: /mnt/usr/bin/vi
+
+    - name: download software
+      get_url:
+        url: '{{ item.src }}'
+        dest: '{{ item.dest }}'
+      with_items:
+        - src: https://dl.k8s.io/v{{ k8s_version }}/kubernetes-server-linux-amd64.tar.gz
+          dest: /tmp/kubernetes-server-linux-amd64.tar.gz
+        - src: https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_amd64/amazon-ssm-agent.deb
+          dest: /mnt/tmp/amazon-ssm-agent.deb
+
+    - name: unarchive software
+      unarchive:
+        src: '{{ item.src }}'
+        remote_src: true
+        dest: '{{ item.dest }}'
+        creates: '{{ item.creates }}'
+      with_items:
+        - src: /tmp/kubernetes-server-linux-amd64.tar.gz
+          dest: /tmp
+          creates: /tmp/kubernetes/server/bin
+
+    - name: copy software binaries to chroot
+      command: 'install -m 0755 {{ item.src }} {{ item.dest }}'
+      args:
+        creates: '{{ item.dest }}'
+      with_items:
+        - src: /tmp/kubernetes/server/bin/hyperkube
+          dest: /mnt/usr/local/bin/hyperkube
+        - src: /tmp/kubernetes/server/bin/kubeadm
+          dest: /mnt/usr/local/bin/kubeadm
+
+    - name: create hyperkube symlinks
+      file:
+        src: /usr/local/bin/hyperkube
+        path: '/mnt/usr/local/bin/{{ item }}'
+        state: link
+        force: true
+      with_items:
+        - kubectl
+        - kubelet
+        - kube-proxy
+
+    - name: copy staging files into chroot
+      copy:
+        src: 'staging/{{ item.path }}'
+        dest: '/mnt/{{ item.path }}'
+        mode: '{{ item.mode }}'
+      with_items:
+        - path: etc/apt/sources.list.d/docker.list
+          mode: '0644'
+
+    - name: expand staging templates into chroot
+      template:
+        src: 'staging/{{ item.path }}.j2'
+        dest: '/mnt/{{ item.path }}'
+        mode: '{{ item.mode }}'
+      with_items:
+        - path: tmp/debconf-selections
+          mode: '0644'
+
+    - name: mount memory filesystems into chroot
+      mount:
+        src: '/{{ item }}'
+        path: '/mnt/{{ item }}'
+        fstype: none
+        opts: bind
+        state: mounted
+      with_items:
+        - dev
+        - proc
+        - sys
+
+    - name: install and configure additional packages in chroot
+      shell: |
+        chroot /mnt sh -s<<' EOF'
+        debconf-set-selections /tmp/debconf-selections && \
+        apt-key adv --recv-keys {{ docker_gpg_key }} && \
+        apt-get update && \
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+          cloud-init \
+          grub-pc \
+          locales \
+          openssh-server \
+          docker-engine={{ docker_version }} && \
+        dpkg -i /tmp/amazon-ssm-agent.deb && \
+        apt-get clean && \
+        systemctl enable amazon-ssm-agent && \
+        systemctl disable apt-daily.timer && \
+        systemctl disable apt-daily-upgrade.timer
+        EOF
+      args:
+        creates: /mnt/usr/bin/amazon-ssm-agent
+      # Retry due to occasional network issues
+      retries: 3
+      register: chrooted_installation
+      until: chrooted_installation | succeeded
+
+    - name: create directories in chroot
+      file:
+        path: '{{ item }}'
+        state: directory
+        mode: '0755'
+      with_items:
+        - /mnt/etc/systemd/system/docker.service.d
+
+    - name: post copy staging files into chroot
+      copy:
+        src: 'staging/{{ item.path }}'
+        dest: '/mnt/{{ item.path }}'
+        mode: '{{ item.mode }}'
+      with_items:
+        - path: etc/network/interfaces
+          mode: '0644'
+        - path: etc/cloud/cloud.cfg.d/01_cloudboss.cfg
+          mode: '0644'
+        - path: etc/default/docker
+          mode: '0644'
+        - path: etc/systemd/system/docker.service.d/cloudboss.conf
+          mode: '0644'
+
+    - name: set fstab filesystem mounts
+      mount:
+        src: 'LABEL={{ item.mount }}'
+        path: '{{ item.mount }}'
+        fstype: ext4
+        opts: '{{ item.mount_opts }}'
+        fstab: /mnt/etc/fstab
+        state: present
+      with_items: '{{ partitions }}'
+
+    - name: clean up default fstab
+      lineinfile:
+        path: /mnt/etc/fstab
+        regexp: UNCONFIGURED FSTAB
+        state: absent
+
+    - name: find tmp files
+      command: find /mnt/tmp -mindepth 1 -maxdepth 1
+      register: tmp_files
+      changed_when: false
+
+    - name: find apt lists
+      command: find /mnt/var/lib/apt/lists -mindepth 1 -maxdepth 1
+      register: apt_lists
+      changed_when: false
+
+    - name: find log files
+      command: find /mnt/var/log -type f
+      register: log_files
+      changed_when: false
+
+    - name: clean up
+      file:
+        path: '{{ item }}'
+        state: absent
+      with_flattened:
+        - /mnt/initrd.img.old
+        - /mnt/vmlinuz.old
+        - /mnt/etc/cloud/cloud.cfg.d/00_debian.cfg
+        - '{{ tmp_files.stdout_lines }}'
+        - '{{ apt_lists.stdout_lines }}'
+        - '{{ log_files.stdout_lines }}'
+
+    - name: unmount chroot mounts
+      mount:
+        path: '{{ item }}'
+        state: unmounted
+      with_items:
+        - mount: /mnt/dev
+        - mount: /mnt/proc
+        - mount: /mnt/sys
+        - mount: /mnt/var/log
+        - mount: /mnt/var
+        - mount: /mnt/usr

@@ -1,0 +1,76 @@
+{
+  "variables": {
+    "ami-version": "",
+    "debian-release": "stretch",
+    "ebs-vol": "xvdf",
+    "docker-version": "1.12.6-0~debian-stretch",
+    "k8s-version": "1.8.1"
+  },
+
+  "builders": [{
+    "type": "amazon-ebssurrogate",
+    "spot_price_auto_product": "Linux/UNIX (Amazon VPC)",
+
+    "ssh_pty": true,
+    "instance_type": "t2.micro",
+    "associate_public_ip_address": true,
+    "ssh_username": "admin",
+    "ssh_timeout": "5m",
+
+    "source_ami_filter": {
+      "filters": {
+        "virtualization-type": "hvm",
+        "name": "debian-{{ user `debian-release` }}-hvm-x86_64-gp2-*",
+        "root-device-type": "ebs"
+      },
+      "owners": ["379101102735"],
+      "most_recent": true
+    },
+
+    "launch_block_device_mappings": [
+      {
+        "device_name": "/dev/xvdf",
+        "delete_on_termination": true,
+        "volume_size": 8,
+        "volume_type": "gp2"
+      }
+    ],
+
+    "tags": {
+      "os:version": "debian-{{ user `debian-release` }}",
+      "docker:version": "{{ user `docker-version` }}",
+      "k8s:version": "{{ user `k8s-version` }}"
+    },
+
+    "run_tags": {
+      "Name": "ami-builder-{{ user `debian-release` }}"
+    },
+
+    "run_volume_tags": {
+      "Name": "ami-volume-{{ user `debian-release` }}"
+    },
+
+    "ami_name": "debian-{{ user `debian-release` }}-k8s-hvm-amd64-{{ user `ami-version` }}",
+    "ami_description": "Cloudboss Kube Debian {{ user `debian-release` }}",
+    "ami_virtualization_type": "hvm",
+    "ami_root_device": {
+      "source_device_name": "/dev/xvdf",
+      "device_name": "/dev/xvda",
+      "delete_on_termination": true,
+      "volume_size": 8,
+      "volume_type": "gp2"
+    }
+  }],
+
+  "provisioners": [
+    {
+      "type": "ansible",
+      "playbook_file": "./playbook.yml",
+      "extra_arguments": [
+	"-e", "ebs_vol={{ user `ebs-vol` }}",
+	"-e", "docker_version={{ user `docker-version` }}",
+	"-e", "k8s_version={{ user `k8s-version` }}"
+      ]
+    }
+  ]
+}
