@@ -22,6 +22,7 @@ package helpers
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -52,17 +53,19 @@ func RunCommand(command string, args ...string) *CommandOutput {
 
 func AtomicWrite(path string, contents []byte, mode os.FileMode) error {
 	dir := filepath.Dir(path)
-	tempFile, err := ioutil.TempFile(dir, ".keights")
+	tempDir, err := ioutil.TempDir(dir, ".keights")
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tempFile.Name())
+	defer os.RemoveAll(tempDir)
 
-	err = ioutil.WriteFile(tempFile.Name(), contents, mode)
+	base := filepath.Base(path)
+	tempFile := fmt.Sprintf("%s/%s", tempDir, base)
+	err = ioutil.WriteFile(tempFile, contents, mode)
 	if err != nil {
 		return err
 	}
-	return os.Rename(tempFile.Name(), path)
+	return os.Rename(tempFile, path)
 }
 
 func WriteIfChanged(path string, contents []byte) error {
