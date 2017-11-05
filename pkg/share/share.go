@@ -76,7 +76,7 @@ func FormatHosts(mapping map[string]string, prefix, domain string) []string {
 	hosts := []string{}
 	keys := helpers.SortMapKeys(mapping)
 	for _, key := range keys {
-		host := fmt.Sprintf("%s-%s.%s %s", prefix, key, domain, mapping[key])
+		host := fmt.Sprintf("%s %s-%s.%s", mapping[key], prefix, key, domain)
 		hosts = append(hosts, host)
 	}
 	return hosts
