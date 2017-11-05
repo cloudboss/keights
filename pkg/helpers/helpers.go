@@ -25,6 +25,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"syscall"
 )
@@ -50,7 +51,8 @@ func RunCommand(command string, args ...string) *CommandOutput {
 }
 
 func AtomicWrite(path string, contents []byte, mode os.FileMode) error {
-	tempFile, err := ioutil.TempFile("", "keights")
+	dir := filepath.Dir(path)
+	tempFile, err := ioutil.TempFile(dir, ".keights")
 	if err != nil {
 		return err
 	}
