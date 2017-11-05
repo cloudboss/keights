@@ -1,0 +1,6 @@
+builds:
+  - binary: keights
+    goos:
+      - linux
+    goarch:
+      - amd64
