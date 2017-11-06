@@ -1,0 +1,12 @@
+[Unit]
+Description=keights share service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/keights share \
+            -i /run/keights-collector/asg \
+            -p k8s-master \
+            -d k8s.local
+
+[Install]
+WantedBy=multi-user.target

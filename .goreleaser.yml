@@ -4,3 +4,18 @@ builds:
       - linux
     goarch:
       - amd64
+fpm:
+  vendor: Cloudboss Corporation
+  homepage: https://github.com/cloudboss/keights
+  maintainer: Joseph Wright <joseph@cloudboss.co>
+  description: Utilities for boostrapping Kubernetes
+  license: MIT
+  formats:
+    - deb
+  bindir: /usr/bin
+  files:
+    fpm/usr/lib/tmpfiles.d/keights-collector.conf: /usr/lib/tmpfiles.d/keights-collector.conf
+    fpm/usr/lib/systemd/system/keights-collector.timer: /usr/lib/systemd/system/keights-collector.timer
+    fpm/usr/lib/systemd/system/keights-collector.service: /usr/lib/systemd/system/keights-collector.service
+    fpm/usr/lib/systemd/system/keights-share.path: /usr/lib/systemd/system/keights-share.path
+    fpm/usr/lib/systemd/system/keights-share.service: /usr/lib/systemd/system/keights-share.service

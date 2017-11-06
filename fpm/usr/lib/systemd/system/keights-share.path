@@ -1,0 +1,9 @@
+[Unit]
+Description=keights-share path watcher
+
+[Path]
+PathExists=/run/keights-collector/asg
+PathChanged=/run/keights-collector/asg
+
+[Install]
+WantedBy=multi-user.target

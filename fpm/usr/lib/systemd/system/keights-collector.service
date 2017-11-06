@@ -1,0 +1,16 @@
+[Unit]
+Description=keights collector service
+
+[Service]
+# Environment=AWS_REGION=
+# Environment=KEIGHTS_ASG_NAME=
+# Environment=KEIGHTS_VOLUME_TAG=
+Type=oneshot
+ExecStartPre=/usr/bin/systemd-tmpfiles --create --prefix /run/keights-collector
+ExecStart=/usr/bin/keights collect \
+            -a ${KEIGHTS_ASG_NAME} \
+            -v ${KEIGHTS_VOLUME_TAG} \
+            -o /run/keights-collector/asg
+
+[Install]
+WantedBy=multi-user.target
