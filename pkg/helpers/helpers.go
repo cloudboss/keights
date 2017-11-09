@@ -29,6 +29,10 @@ import (
 	"path/filepath"
 	"sort"
 	"syscall"
+
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/autoscaling"
 )
 
 type CommandOutput struct {
@@ -92,4 +96,24 @@ func SortMapKeys(mapping map[string]string) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+func AsgName(sess *session.Session) (*string, error) {
+	metadata := ec2metadata.New(sess)
+	identity, err := metadata.GetInstanceIdentityDocument()
+	if err != nil {
+		return nil, err
+	}
+	asgClient := autoscaling.New(sess)
+	input := &autoscaling.DescribeAutoScalingInstancesInput{
+		InstanceIds: []*string{&identity.InstanceID},
+	}
+	output, err := asgClient.DescribeAutoScalingInstances(input)
+	if err != nil {
+		return nil, err
+	}
+	for _, instance := range output.AutoScalingInstances {
+		return instance.AutoScalingGroupName, nil
+	}
+	return nil, fmt.Errorf("Autoscaling group name not found")
 }

@@ -31,15 +31,13 @@ var (
 		Use:   "collect",
 		Short: "Collect information about an autoscaling group",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return collect.DoIt(asgName, volumeTag, outputFile)
+			return collect.DoIt(volumeTag, outputFile)
 		},
 	}
 )
 
 func init() {
 	RootCmd.AddCommand(collectCmd)
-	collectCmd.Flags().StringVarP(&asgName, "asg-name", "a",
-		"", "Name of autoscaling group")
 	collectCmd.Flags().StringVarP(&volumeTag, "volume-tag", "v",
 		"", "Tag to search on EBS volume")
 	collectCmd.Flags().StringVarP(&outputFile, "output-file", "o",

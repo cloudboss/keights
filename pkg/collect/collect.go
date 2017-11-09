@@ -33,8 +33,8 @@ import (
 )
 
 type Collector struct {
-	asgName     string
-	volumeTag   string
+	asgName     *string
+	volumeTag   *string
 	autoscaling *autoscaling.AutoScaling
 	ec2         *ec2.EC2
 	asg         *autoscaling.Group
@@ -42,14 +42,15 @@ type Collector struct {
 	volumes     []*ec2.Volume
 }
 
-func NewCollector(asgName, volumeTag string) *Collector {
-	sess := session.New()
-	return &Collector{
+func NewCollector(sess *session.Session, asgName, volumeTag *string) *Collector {
+	asgClient := autoscaling.New(sess)
+	collector := &Collector{
 		asgName:     asgName,
 		volumeTag:   volumeTag,
-		autoscaling: autoscaling.New(sess),
+		autoscaling: asgClient,
 		ec2:         ec2.New(sess),
 	}
+	return collector
 }
 
 func (c *Collector) Describe() (*autoscaling.Group, error) {
@@ -63,7 +64,7 @@ func (c *Collector) Describe() (*autoscaling.Group, error) {
 
 func (c *Collector) Refresh() error {
 	input := autoscaling.DescribeAutoScalingGroupsInput{
-		AutoScalingGroupNames: []*string{aws.String(c.asgName)},
+		AutoScalingGroupNames: []*string{c.asgName},
 	}
 	out, err := c.autoscaling.DescribeAutoScalingGroups(&input)
 	if err != nil {
@@ -124,7 +125,7 @@ func (c *Collector) Volumes() ([]*ec2.Volume, error) {
 			},
 			&ec2.Filter{
 				Name:   aws.String("tag-key"),
-				Values: []*string{aws.String(c.volumeTag)},
+				Values: []*string{c.volumeTag},
 			},
 		},
 	})
@@ -165,7 +166,7 @@ func (c *Collector) Mapping(instances []*ec2.Instance, volumes []*ec2.Volume) (m
 	for _, volume := range volumes {
 		var index string
 		for _, tag := range volume.Tags {
-			if *tag.Key == c.volumeTag {
+			if *tag.Key == *c.volumeTag {
 				index = *tag.Value
 			}
 		}
@@ -230,8 +231,13 @@ func WriteOutput(mapping map[string]string, outputFile string) error {
 	return helpers.WriteIfChanged(outputFile, buf.Bytes())
 }
 
-func DoIt(asgName, volumeTag, outputFile string) error {
-	collector := NewCollector(asgName, volumeTag)
+func DoIt(volumeTag, outputFile string) error {
+	sess := session.New()
+	asgName, err := helpers.AsgName(sess)
+	if err != nil {
+		return err
+	}
+	collector := NewCollector(sess, asgName, aws.String(volumeTag))
 	instances, err := collector.WaitForInstances()
 	if err != nil {
 		return err

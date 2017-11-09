@@ -28,7 +28,6 @@ import (
 )
 
 var (
-	asgName   string
 	volumeTag string
 	logLevel  string
 	RootCmd   = &cobra.Command{

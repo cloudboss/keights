@@ -41,40 +41,34 @@ const (
 )
 
 type Volumizer struct {
-	autoscaling *autoscaling.AutoScaling
-	ec2         *ec2.EC2
-	identity    ec2metadata.EC2InstanceIdentityDocument
+	autoscaling      *autoscaling.AutoScaling
+	ec2              *ec2.EC2
+	availabilityZone string
+	instanceID       string
 }
 
-func NewVolumizer() (*Volumizer, error) {
-	sess := session.New()
-	metadata := ec2metadata.New(sess)
-	identity, err := metadata.GetInstanceIdentityDocument()
-	if err != nil {
-		return nil, err
+func NewVolumizer(sess *session.Session, availabilityZone, instanceID string) *Volumizer {
+	return &Volumizer{
+		autoscaling:      autoscaling.New(sess),
+		ec2:              ec2.New(sess),
+		availabilityZone: availabilityZone,
+		instanceID:       instanceID,
 	}
-	client := Volumizer{
-		autoscaling: autoscaling.New(sess),
-		ec2:         ec2.New(sess),
-		identity:    identity,
-	}
-	return &client, nil
 }
 
-func (v *Volumizer) FindVolume(asg, volumeTag string) (*ec2.Volume, error) {
-	az := v.identity.AvailabilityZone
+func (v *Volumizer) FindVolume(asgName, volumeTag *string) (*ec2.Volume, error) {
 	filters := []*ec2.Filter{
 		&ec2.Filter{
 			Name:   aws.String("tag:Name"),
-			Values: []*string{aws.String(asg)},
+			Values: []*string{asgName},
 		},
 		&ec2.Filter{
 			Name:   aws.String("tag-key"),
-			Values: []*string{aws.String(volumeTag)},
+			Values: []*string{volumeTag},
 		},
 		&ec2.Filter{
 			Name:   aws.String("availability-zone"),
-			Values: []*string{aws.String(az)},
+			Values: []*string{aws.String(v.availabilityZone)},
 		},
 	}
 	input := &ec2.DescribeVolumesInput{Filters: filters}
@@ -92,7 +86,7 @@ func (v *Volumizer) FindVolume(asg, volumeTag string) (*ec2.Volume, error) {
 func (v *Volumizer) AttachVolume(volume *ec2.Volume, device string) error {
 	input := &ec2.AttachVolumeInput{
 		Device:     aws.String(device),
-		InstanceId: &v.identity.InstanceID,
+		InstanceId: &v.instanceID,
 		VolumeId:   volume.VolumeId,
 	}
 	_, err := v.ec2.AttachVolume(input)
@@ -161,12 +155,21 @@ func (v *Volumizer) MakeFilesystem(device, fstype string) error {
 	return nil
 }
 
-func DoIt(asg, device, volumeTag, fsType string) error {
-	volumizer, err := NewVolumizer()
+func DoIt(device, volumeTag, fsType string) error {
+	sess := session.New()
+	metadata := ec2metadata.New(sess)
+	identity, err := metadata.GetInstanceIdentityDocument()
 	if err != nil {
 		return err
 	}
-	volume, err := volumizer.FindVolume(asg, volumeTag)
+	volumizer := NewVolumizer(sess, identity.AvailabilityZone, identity.InstanceID)
+
+	asgName, err := helpers.AsgName(sess)
+	if err != nil {
+		return err
+	}
+
+	volume, err := volumizer.FindVolume(asgName, &volumeTag)
 	if err != nil {
 		return err
 	}

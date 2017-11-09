@@ -32,15 +32,13 @@ var (
 		Use:   "volumize",
 		Short: "Attach and format EBS volumes",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return volumize.DoIt(asgName, device, volumeTag, fsType)
+			return volumize.DoIt(device, volumeTag, fsType)
 		},
 	}
 )
 
 func init() {
 	RootCmd.AddCommand(volumizeCmd)
-	volumizeCmd.Flags().StringVarP(&asgName, "asg-name", "a",
-		"", "Name of autoscaling group")
 	volumizeCmd.Flags().StringVarP(&device, "device", "d",
 		"xvdf", "Name of device for EBS volume")
 	volumizeCmd.Flags().StringVarP(&fsType, "fstype", "f",
