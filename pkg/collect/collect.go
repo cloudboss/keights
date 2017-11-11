@@ -146,7 +146,7 @@ func (c *Collector) Volumes() ([]*ec2.Volume, error) {
 }
 
 func (c *Collector) WaitForInstances() ([]*ec2.Instance, error) {
-	err := WaitFor(5*time.Minute, func() error {
+	err := helpers.WaitFor(5*time.Minute, func() error {
 		_, err := c.Instances()
 		return err
 	})
@@ -154,7 +154,7 @@ func (c *Collector) WaitForInstances() ([]*ec2.Instance, error) {
 }
 
 func (c *Collector) WaitForVolumes() ([]*ec2.Volume, error) {
-	err := WaitFor(10*time.Minute, func() error {
+	err := helpers.WaitFor(10*time.Minute, func() error {
 		_, err := c.Volumes()
 		return err
 	})
@@ -199,27 +199,6 @@ func InstanceIds(instances []*autoscaling.Instance) []*string {
 		instanceIds = append(instanceIds, instance.InstanceId)
 	}
 	return instanceIds
-}
-
-func WaitFor(duration time.Duration, checker func() error) error {
-	var err error
-	c := make(chan bool)
-	go func() {
-		for {
-			err = checker()
-			if err != nil {
-				time.Sleep(5 * time.Second)
-			} else {
-				c <- true
-			}
-		}
-	}()
-	select {
-	case <-c:
-		return nil
-	case <-time.After(duration):
-		return err
-	}
 }
 
 func WriteOutput(mapping map[string]string, outputFile string) error {

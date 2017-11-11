@@ -29,6 +29,7 @@ import (
 	"path/filepath"
 	"sort"
 	"syscall"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -116,4 +117,25 @@ func AsgName(sess *session.Session) (*string, error) {
 		return instance.AutoScalingGroupName, nil
 	}
 	return nil, fmt.Errorf("Autoscaling group name not found")
+}
+
+func WaitFor(duration time.Duration, checker func() error) error {
+	var err error
+	c := make(chan bool)
+	go func() {
+		for {
+			err = checker()
+			if err != nil {
+				time.Sleep(5 * time.Second)
+			} else {
+				c <- true
+			}
+		}
+	}()
+	select {
+	case <-c:
+		return nil
+	case <-time.After(duration):
+		return err
+	}
 }
