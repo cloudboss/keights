@@ -109,23 +109,14 @@ func (v *Volumizer) WaitForVolume(volume *ec2.Volume) error {
 }
 
 func (v *Volumizer) WaitForDevice(device string) error {
-	c := make(chan bool)
-	devicePath := fmt.Sprintf("/dev/%s", device)
-	go func() {
-		for {
-			if _, err := os.Stat(devicePath); err != nil {
-				time.Sleep(1 * time.Second)
-			} else {
-				c <- true
-			}
+	return helpers.WaitFor(5*time.Minute, func() error {
+		devicePath := fmt.Sprintf("/dev/%s", device)
+		_, err := os.Stat(devicePath)
+		if err != nil {
+			return fmt.Errorf("No device %s found", devicePath)
 		}
-	}()
-	select {
-	case <-c:
 		return nil
-	case <-time.After(5 * time.Minute):
-		return fmt.Errorf("No device %s found", devicePath)
-	}
+	})
 }
 
 func (v *Volumizer) HasFilesystem(device, fstype string) (bool, error) {
