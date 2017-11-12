@@ -56,7 +56,8 @@ func NewVolumizer(sess *session.Session, availabilityZone, instanceID string) *V
 	}
 }
 
-func (v *Volumizer) FindVolume(asgName, volumeTag *string) (*ec2.Volume, error) {
+func (v *Volumizer) WaitForVolume(asgName, volumeTag *string) (*ec2.Volume, error) {
+	var output *ec2.DescribeVolumesOutput
 	filters := []*ec2.Filter{
 		&ec2.Filter{
 			Name:   aws.String("tag:Name"),
@@ -72,13 +73,19 @@ func (v *Volumizer) FindVolume(asgName, volumeTag *string) (*ec2.Volume, error) 
 		},
 	}
 	input := &ec2.DescribeVolumesInput{Filters: filters}
-	output, err := v.ec2.DescribeVolumes(input)
+	err := helpers.WaitFor(10*time.Minute, func() error {
+		output, err := v.ec2.DescribeVolumes(input)
+		if err != nil {
+			return err
+		}
+		numVol := len(output.Volumes)
+		if numVol != 1 {
+			return fmt.Errorf("Expected 1 volume, found %d", numVol)
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
-	}
-	numVol := len(output.Volumes)
-	if numVol != 1 {
-		return nil, fmt.Errorf("Expected 1 volume, found %d", numVol)
 	}
 	return output.Volumes[0], nil
 }
@@ -98,14 +105,6 @@ func (v *Volumizer) AttachVolume(volume *ec2.Volume, device string) error {
 		}
 	}
 	return err
-}
-
-func (v *Volumizer) WaitForVolume(volume *ec2.Volume) error {
-	return v.ec2.WaitUntilVolumeInUse(
-		&ec2.DescribeVolumesInput{
-			VolumeIds: []*string{aws.String(*volume.VolumeId)},
-		},
-	)
 }
 
 func (v *Volumizer) WaitForDevice(device string) error {
@@ -154,20 +153,15 @@ func DoIt(device, volumeTag, fsType string) error {
 		return err
 	}
 	volumizer := NewVolumizer(sess, identity.AvailabilityZone, identity.InstanceID)
-
 	asgName, err := helpers.AsgName(sess)
 	if err != nil {
 		return err
 	}
-
-	volume, err := volumizer.FindVolume(asgName, &volumeTag)
+	volume, err := volumizer.WaitForVolume(asgName, &volumeTag)
 	if err != nil {
 		return err
 	}
 	if err = volumizer.AttachVolume(volume, device); err != nil {
-		return err
-	}
-	if err = volumizer.WaitForVolume(volume); err != nil {
 		return err
 	}
 	if err = volumizer.WaitForDevice(device); err != nil {
