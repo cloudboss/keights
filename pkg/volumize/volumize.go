@@ -74,7 +74,8 @@ func (v *Volumizer) WaitForVolume(asgName, volumeTag *string) (*ec2.Volume, erro
 	}
 	input := &ec2.DescribeVolumesInput{Filters: filters}
 	err := helpers.WaitFor(10*time.Minute, func() error {
-		output, err := v.ec2.DescribeVolumes(input)
+		var err error
+		output, err = v.ec2.DescribeVolumes(input)
 		if err != nil {
 			return err
 		}
