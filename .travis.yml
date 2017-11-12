@@ -1,0 +1,13 @@
+dist: trusty
+sudo: false
+language: go
+go: 1.9
+install:
+  - go get github.com/goreleaser/goreleaser
+  - gem install fpm
+  - export PATH=${GOPATH}/bin:${PATH}
+script:
+  - go build
+  - test -z "${TRAVIS_TAG}" && goreleaser --skip-validate --skip-publish
+after_success:
+  - test -n "${TRAVIS_TAG}" && goreleaser
