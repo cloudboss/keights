@@ -8,6 +8,6 @@ install:
   - export PATH=${GOPATH}/bin:${PATH}
 script:
   - go build
-  - test -z "${TRAVIS_TAG}" && goreleaser --skip-validate --skip-publish
+  - test -n "${TRAVIS_TAG}" || goreleaser --skip-validate --skip-publish
 after_success:
   - test -n "${TRAVIS_TAG}" && goreleaser
