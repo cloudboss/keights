@@ -10,4 +10,5 @@ script:
   - go build
   - test -n "${TRAVIS_TAG}" || goreleaser --skip-validate --skip-publish
 after_success:
+  - test -n "${TRAVIS_TAG}" && go clean
   - test -n "${TRAVIS_TAG}" && goreleaser
