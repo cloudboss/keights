@@ -21,6 +21,7 @@
 package helpers
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io/ioutil"
@@ -28,6 +29,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strings"
 	"syscall"
 	"time"
 
@@ -138,4 +140,24 @@ func WaitFor(duration time.Duration, checker func() error) error {
 	case <-time.After(duration):
 		return err
 	}
+}
+
+func InputToMapping(inputFile string) (map[string]string, error) {
+	fd, err := os.Open(inputFile)
+	if err != nil {
+		return nil, err
+	}
+	defer fd.Close()
+
+	mapping := map[string]string{}
+	scanner := bufio.NewScanner(fd)
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.Split(line, ":")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("Malformed input file")
+		}
+		mapping[parts[0]] = strings.Trim(parts[1], "\n")
+	}
+	return mapping, nil
 }
