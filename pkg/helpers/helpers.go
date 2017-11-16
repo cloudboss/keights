@@ -78,11 +78,11 @@ func AtomicWrite(path string, contents []byte, mode os.FileMode) error {
 func WriteIfChanged(path string, contents []byte) error {
 	var original []byte
 	var err error
-	if _, err = os.Stat(path); os.IsNotExist(err) {
-		original = []byte{}
-	} else {
-		original, err = ioutil.ReadFile(path)
-		if err != nil {
+	original, err = ioutil.ReadFile(path)
+	if err != nil {
+		if e, ok := err.(*os.PathError); ok && e.Err == syscall.ENOENT {
+			original = []byte{}
+		} else {
 			return err
 		}
 	}
