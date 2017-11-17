@@ -147,6 +147,14 @@
           dest: /mnt/usr/local/bin/hyperkube
         - src: /tmp/kubernetes/server/bin/kubeadm
           dest: /mnt/usr/local/bin/kubeadm
+        - src: /tmp/kubernetes/server/bin/kube-apiserver.tar
+          dest: /mnt/tmp/kube-apiserver.tar
+        - src: /tmp/kubernetes/server/bin/kube-controller-manager.tar
+          dest: /mnt/tmp/kube-controller-manager.tar
+        - src: /tmp/kubernetes/server/bin/kube-proxy.tar
+          dest: /mnt/tmp/kube-proxy.tar
+        - src: /tmp/kubernetes/server/bin/kube-scheduler.tar
+          dest: /mnt/tmp/kube-scheduler.tar
 
     - name: create hyperkube symlinks
       file:
@@ -182,7 +190,7 @@
         src: '/{{ item }}'
         path: '/mnt/{{ item }}'
         fstype: none
-        opts: bind
+        opts: rbind
         state: mounted
       with_items:
         - dev
@@ -214,6 +222,23 @@
       retries: 3
       register: chrooted_installation
       until: chrooted_installation | succeeded
+
+    - name: import kubernetes docker images in chroot
+      shell: |
+        chroot /mnt sh -s<<' EOF'
+        dockerd >/dev/null 2>&1 </dev/null &
+        pid=${!}
+        while [ ! -S /var/run/docker.sock ]; do
+            sleep 0.5
+        done
+        docker load </tmp/kube-apiserver.tar
+        docker load </tmp/kube-controller-manager.tar
+        docker load </tmp/kube-proxy.tar
+        docker load </tmp/kube-scheduler.tar
+        kill ${pid}
+        EOF
+      args:
+        creates: '/var/lib/docker/overlay2/*/diff/usr/local/bin/etcd'
 
     - name: create directories in chroot
       file:
