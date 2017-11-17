@@ -1,0 +1,661 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Simple cluster
+
+Parameters:
+  ClusterName:
+    Description: Name of Kubernetes cluster
+    Type: String
+  NumInstances:
+    Description: Number of master instances
+    Type: Number
+    Default: 1
+    AllowedValues: [1, 3]
+    ConstraintDescription: You must choose an odd number of instances
+  VpcId:
+    Description: ID of VPC where cluster will be placed
+    Type: AWS::EC2::VPC::Id
+  SubnetIds:
+    Description: List of subnets IDs in VPC where cluster will be placed
+    Type: List<AWS::EC2::Subnet::Id>
+  ImageId:
+    Description: ID of AMI used for instances
+    Type: AWS::EC2::Image::Id
+  InstanceType:
+    Description: Type of EC2 instance
+    Type: String
+  KeyPair:
+    Description: SSH keypair assigned to instances
+    Type: AWS::EC2::KeyPair::KeyName
+  IamInstanceProfile:
+    Description: IAM Instance profile to assign to instances
+    Type: String
+  LambdaExecutionRole:
+    Description: Role to assign to helper Lamba functions
+    Type: String
+  PodCidr:
+    Description: CIDR block of addresses for pods
+    Default: 10.0.0.0/16
+    Type: String
+  SshAccessCidr:
+    Description: CIDR block given ssh access to cluster
+    Default: 0.0.0.0/0
+    Type: String
+  K8sVersion:
+    Description: Version of Kubernetes
+    Type: String
+  EtcdVersion:
+    Description: Version of etcd
+    Type: String
+  EtcdClusterToken:
+    Description: Shared token to bootstrap etcd cluster
+    Type: String
+    NoEcho: true
+
+Mappings:
+  LambdaUrls:
+    AllFunctions:
+      Bucket: cloudboss-public
+    SubnetToAzFunction:
+      Key: lambda/co/cloudboss/stackboss/0.1.0/python3.6/stackboss-0.1.0.zip
+  MaxSizes:
+    NumInstances:
+      '1': 2
+      '3': 4
+
+Conditions:
+  HasThreeMasters: !Equals [!Ref NumInstances, 3]
+
+Resources:
+  SubnetToAzFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !FindInMap [LambdaUrls, AllFunctions, Bucket]
+        S3Key: !FindInMap [LambdaUrls, SubnetToAzFunction, Key]
+      Handler: stackboss.handlers.subnet_to_az
+      Runtime: python3.6
+      Timeout: 30
+      Role: !Ref LambdaExecutionRole
+
+  SubnetToAz1:
+    Type: Custom::SubnetToAz
+    DependsOn: SubnetToAzFunction
+    Properties:
+      ServiceToken: !GetAtt [SubnetToAzFunction, Arn]
+      Region: !Ref AWS::Region
+      SubnetId: !Select [0, !Ref SubnetIds]
+
+  SubnetToAz2:
+    Type: Custom::SubnetToAz
+    DependsOn: SubnetToAzFunction
+    Condition: HasThreeMasters
+    Properties:
+      ServiceToken: !GetAtt [SubnetToAzFunction, Arn]
+      Region: !Ref AWS::Region
+      SubnetId: !Select [1, !Ref SubnetIds]
+
+  SubnetToAz3:
+    Type: Custom::SubnetToAz
+    DependsOn: SubnetToAzFunction
+    Condition: HasThreeMasters
+    Properties:
+      ServiceToken: !GetAtt [SubnetToAzFunction, Arn]
+      Region: !Ref AWS::Region
+      SubnetId: !Select [2, !Ref SubnetIds]
+
+  EtcdSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for etcd
+      VpcId: !Ref VpcId
+
+  EtcdSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EtcdSecurityGroup
+      SourceSecurityGroupId: !Ref EtcdSecurityGroup
+      FromPort: 2379
+      ToPort: 2380
+      IpProtocol: tcp
+
+  EtcdSecurityGroupEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref EtcdSecurityGroup
+      DestinationSecurityGroupId: !Ref EtcdSecurityGroup
+      FromPort: 2379
+      ToPort: 2380
+      IpProtocol: tcp
+
+  AutoscalingGroupSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for autoscaling group
+      VpcId: !Ref VpcId
+
+  AutoscalingGroupIngressSsh:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref AutoscalingGroupSecurityGroup
+      CidrIp: !Ref SshAccessCidr
+      FromPort: 22
+      IpProtocol: tcp
+      ToPort: 22
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      DesiredCapacity: !Ref NumInstances
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MaxSize: !FindInMap [MaxSizes, NumInstances, !Ref NumInstances]
+      MinSize: !Ref NumInstances
+      VPCZoneIdentifier: !Ref SubnetIds
+
+  Volume1:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !GetAtt [SubnetToAz1, AvailabilityZone]
+      Size: 1
+      VolumeType: gp2
+      Tags:
+        - Key: Name
+          Value: !Ref AutoScalingGroup
+        - Key: etcd:instance
+          Value: 1
+
+  Volume2:
+    Type: AWS::EC2::Volume
+    Condition: HasThreeMasters
+    Properties:
+      AvailabilityZone: !GetAtt [SubnetToAz2, AvailabilityZone]
+      Size: 1
+      VolumeType: gp2
+      Tags:
+        - Key: Name
+          Value: !Ref AutoScalingGroup
+        - Key: etcd:instance
+          Value: 2
+
+  Volume3:
+    Type: AWS::EC2::Volume
+    Condition: HasThreeMasters
+    Properties:
+      AvailabilityZone: !GetAtt [SubnetToAz3, AvailabilityZone]
+      Size: 1
+      VolumeType: gp2
+      Tags:
+        - Key: Name
+          Value: !Ref AutoScalingGroup
+        - Key: etcd:instance
+          Value: 3
+
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      IamInstanceProfile: !Ref IamInstanceProfile
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPair
+      PlacementTenancy: default
+      SecurityGroups:
+        - !Ref AutoscalingGroupSecurityGroup
+        - !Ref EtcdSecurityGroup
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #cloud-config
+            write_files:
+              - path: /etc/keights/etcd.yml.template
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  apiVersion: v1
+                  kind: Pod
+                  metadata:
+                    creationTimestamp: null
+                    labels:
+                      k8s-app: etcd-server
+                    name: etcd-server
+                    namespace: kube-system
+                  spec:
+                    containers:
+                    - command:
+                      - /bin/sh
+                      - -c
+                      - /usr/local/bin/etcd 1>>/var/log/etcd.log 2>&1
+                      env:
+                      - name: ETCD_NAME
+                        value: {{ .Prefix }}-{{ .MyIndex }}
+                      - name: ETCD_DATA_DIR
+                        value: /var/lib/etcd
+                      - name: ETCD_LISTEN_PEER_URLS
+                        value: http://{{ .MyIP }}:2380,http://127.0.0.1:2380
+                      - name: ETCD_LISTEN_CLIENT_URLS
+                        value: http://{{ .MyIP }}:2379,http://127.0.0.1:2379
+                      - name: ETCD_ADVERTISE_CLIENT_URLS
+                        value: http://{{ .Prefix }}-{{ .MyIndex }}.{{ .Domain }}:2379
+                      - name: ETCD_INITIAL_ADVERTISE_PEER_URLS
+                        value: http://{{ .Prefix }}-{{ .MyIndex }}.{{ .Domain }}:2380
+                      - name: ETCD_INITIAL_CLUSTER_STATE
+                        value: new
+                      - name: ETCD_INITIAL_CLUSTER_TOKEN
+                        value: {{ .EtcdClusterToken }}
+                      - name: ETCD_INITIAL_CLUSTER
+                        value: {{ range $i, $k := keys .HostMap }}{{ if $i }},{{end}}{{ $.Prefix }}-{{ $k }}=http://{{ $.Prefix }}-{{ $k }}.{{ $.Domain }}:2380{{ end }}
+                      image: {{ .EtcdImage }}
+                      livenessProbe:
+                        httpGet:
+                          host: 127.0.0.1
+                          path: /health
+                          port: 2379
+                        initialDelaySeconds: 15
+                        timeoutSeconds: 15
+                      name: etcd-container
+                      ports:
+                      - containerPort: 2380
+                        hostPort: 2380
+                        name: serverport
+                      - containerPort: 2379
+                        hostPort: 2379
+                        name: clientport
+                      resources:
+                        requests:
+                          cpu: 200m
+                      volumeMounts:
+                      - mountPath: /var/lib/etcd
+                        name: varlibetcd
+                      - mountPath: /var/log/etcd.log
+                        name: varlogetcd
+                    hostNetwork: true
+                    volumes:
+                    - hostPath:
+                        path: /var/lib/etcd
+                      name: varlibetcd
+                    - hostPath:
+                        path: /var/log/etcd.log
+                      name: varlogetcd
+                  status: {}
+
+              - path: /etc/keights/kube-apiserver.yml.template
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  apiVersion: v1
+                  kind: Pod
+                  metadata:
+                    annotations:
+                      scheduler.alpha.kubernetes.io/critical-pod: ''
+                    creationTimestamp: null
+                    labels:
+                      component: kube-apiserver
+                      tier: control-plane
+                    name: kube-apiserver
+                    namespace: kube-system
+                  spec:
+                    containers:
+                    - command:
+                      - kube-apiserver
+                      - --bind-address={{ .MyIP }}
+                      - --insecure-bind-address={{ .MyIP }}
+                      - --service-cluster-ip-range={{ .PodCidr }}
+                      - --etcd-servers={{ range $i, $k := keys .HostMap }}{{ if $i }},{{end}}http://{{ $.Prefix }}-{{ $k }}.{{ $.Domain }}:2379{{ end }}
+                      - --cloud-provider=aws
+                      - --v=2
+                      image: {{ .KubeApiserverImage }}
+                      livenessProbe:
+                        failureThreshold: 8
+                        httpGet:
+                          host: {{ .MyIP }}
+                          path: /healthz
+                          port: 8080
+                          scheme: HTTP
+                        initialDelaySeconds: 15
+                        timeoutSeconds: 15
+                      name: kube-apiserver
+                      resources:
+                        requests:
+                          cpu: 250m
+                      volumeMounts:
+                      - mountPath: /etc/ssl/certs
+                        name: ca-certs
+                        readOnly: true
+                    hostNetwork: true
+                    volumes:
+                    - hostPath:
+                        path: /etc/ssl/certs
+                        type: DirectoryOrCreate
+                      name: ca-certs
+                  status: {}
+
+              - path: /etc/keights/kube-controller-manager.yml.template
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  apiVersion: v1
+                  kind: Pod
+                  metadata:
+                    annotations:
+                      scheduler.alpha.kubernetes.io/critical-pod: ''
+                    creationTimestamp: null
+                    labels:
+                      component: kube-controller-manager
+                      tier: control-plane
+                    name: kube-controller-manager
+                    namespace: kube-system
+                  spec:
+                    containers:
+                    - command:
+                      - /usr/local/bin/kube-controller-manager
+                      - --master={{ .MyIP }}:8080
+                      - --address=127.0.0.1
+                      - --leader-elect=true
+                      - --controllers=*,bootstrapsigner,tokencleaner
+                      image: {{ .KubeControllerManagerImage }}
+                      livenessProbe:
+                        failureThreshold: 8
+                        httpGet:
+                          host: 127.0.0.1
+                          path: /healthz
+                          port: 10252
+                          scheme: HTTP
+                        initialDelaySeconds: 15
+                        timeoutSeconds: 15
+                      name: kube-controller-manager
+                      resources:
+                        requests:
+                          cpu: 200m
+                      volumeMounts:
+                      - mountPath: /etc/ssl/certs
+                        name: ca-certs
+                        readOnly: true
+                    hostNetwork: true
+                    volumes:
+                    - hostPath:
+                        path: /etc/ssl/certs
+                        type: DirectoryOrCreate
+                        name: ca-certs
+                  status: {}
+
+              - path: /etc/keights/kube-scheduler.yml.template
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  apiVersion: v1
+                  kind: Pod
+                  metadata:
+                    annotations:
+                      scheduler.alpha.kubernetes.io/critical-pod: ''
+                    creationTimestamp: null
+                    labels:
+                      component: kube-scheduler
+                      tier: control-plane
+                    name: kube-scheduler
+                    namespace: kube-system
+                  spec:
+                    containers:
+                    - command:
+                      - kube-scheduler
+                      - --address=127.0.0.1
+                      - --master={{ .MyIP }}:8080
+                      - --leader-elect=true
+                      image: {{ .KubeSchedulerImage }}
+                      livenessProbe:
+                        failureThreshold: 8
+                        httpGet:
+                          host: 127.0.0.1
+                          path: /healthz
+                          port: 10251
+                          scheme: HTTP
+                        initialDelaySeconds: 15
+                        timeoutSeconds: 15
+                      name: kube-scheduler
+                      resources:
+                        requests:
+                          cpu: 100m
+                      volumeMounts:
+                      - mountPath: /etc/kubernetes/scheduler.conf
+                        name: kubeconfig
+                        readOnly: true
+                    hostNetwork: true
+                    volumes:
+                    - hostPath:
+                        path: /etc/kubernetes/scheduler.conf
+                        type: FileOrCreate
+                      name: kubeconfig
+                  status: {}
+
+              - path: /etc/systemd/system/kubelet.service
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Unit]
+                  Description=kubelet
+                  Requires=keights-templatize-etcd.service
+                  After=keights-templatize-etcd.service
+
+                  [Service]
+                  Type=simple
+                  ExecStartPre=/usr/bin/touch /var/log/etcd.log
+                  ExecStartPre=/usr/bin/touch /var/log/kube-apiserver.log
+                  ExecStart=/usr/local/bin/kubelet \
+                              --anonymous-auth=true \
+                              --cluster-domain=k8s.local \
+                              --image-pull-progress-deadline=2m \
+                              --pod-manifest-path=/etc/kubernetes/manifests \
+                              --pod-cidr=${PodCidr} \
+                              --register-node=true \
+                              --runtime-request-timeout=15m \
+                              --v=2
+                  Restart=always
+                  RestartSec=5
+
+                  [Install]
+                  WantedBy=multi-user.target
+
+              - path: /etc/systemd/system/keights-collector.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_VOLUME_TAG=etcd:instance
+
+              - path: /etc/systemd/system/keights-templatize-etcd.path
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Unit]
+                  Description=keights templatize etcd path watcher
+
+                  [Path]
+                  PathExists=/run/keights-collector/asg
+                  PathChanged=/run/keights-collector/asg
+
+                  [Install]
+                  WantedBy=multi-user.target
+
+              - path: /etc/systemd/system/keights-templatize-etcd.service
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Unit]
+                  Description=keights templatize etcd service
+
+                  [Service]
+                  Type=simple
+                  Environment=AWS_REGION=${AWS::Region}
+                  ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+                  ExecStart=/usr/bin/keights template \
+                              -i /run/keights-collector/asg \
+                              -t /etc/keights/etcd.yml.template \
+                              -D /etc/kubernetes/manifests/etcd.yml \
+                              -v EtcdImage=gcr.io/google_containers/etcd:${EtcdVersion} \
+                              -v Prefix=${ClusterName} \
+                              -v Domain=k8s.local \
+                              -v EtcdClusterToken=${EtcdClusterToken}
+
+                  [Install]
+                  WantedBy=multi-user.target
+
+              - path: /etc/systemd/system/keights-templatize-kube-apiserver.path
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Unit]
+                  Description=keights templatize kube-apiserver path watcher
+
+                  [Path]
+                  PathExists=/run/keights-collector/asg
+                  PathChanged=/run/keights-collector/asg
+
+                  [Install]
+                  WantedBy=multi-user.target
+
+              - path: /etc/systemd/system/keights-templatize-kube-apiserver.service
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Unit]
+                  Description=keights templatize kube-apiserver service
+
+                  [Service]
+                  Type=simple
+                  Environment=AWS_REGION=${AWS::Region}
+                  ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+                  ExecStart=/usr/bin/keights template \
+                              -i /run/keights-collector/asg \
+                              -t /etc/keights/kube-apiserver.yml.template \
+                              -D /etc/kubernetes/manifests/kube-apiserver.yml \
+                              -v KubeApiserverImage=gcr.io/google_containers/kube-apiserver:v${K8sVersion} \
+                              -v PodCidr=${PodCidr} \
+                              -v Prefix=${ClusterName} \
+                              -v Domain=k8s.local
+
+                  [Install]
+                  WantedBy=multi-user.target
+
+              - path: /etc/systemd/system/keights-templatize-kube-controller-manager.path
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Unit]
+                  Description=keights templatize kube-controller-manager path watcher
+
+                  [Path]
+                  PathExists=/run/keights-collector/asg
+                  PathChanged=/run/keights-collector/asg
+
+                  [Install]
+                  WantedBy=multi-user.target
+
+              - path: /etc/systemd/system/keights-templatize-kube-controller-manager.service
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Unit]
+                  Description=keights templatize kube-controller-manager service
+
+                  [Service]
+                  Type=simple
+                  ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+                  ExecStart=/usr/bin/keights template \
+                              -i /run/keights-collector/asg \
+                              -t /etc/keights/kube-controller-manager.yml.template \
+                              -D /etc/kubernetes/manifests/kube-controller-manager.yml \
+                              -v KubeControllerManagerImage=gcr.io/google_containers/kube-controller-manager:v${K8sVersion}
+
+                  [Install]
+                  WantedBy=multi-user.target
+
+              - path: /etc/systemd/system/keights-templatize-kube-scheduler.path
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Unit]
+                  Description=keights templatize kube-scheduler path watcher
+
+                  [Path]
+                  PathExists=/run/keights-collector/asg
+                  PathChanged=/run/keights-collector/asg
+
+                  [Install]
+                  WantedBy=multi-user.target
+
+              - path: /etc/systemd/system/keights-templatize-kube-scheduler.service
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Unit]
+                  Description=keights templatize kube-scheduler service
+
+                  [Service]
+                  Type=simple
+                  ExecStartPre=/usr/bin/mkdir -p /etc/kubernetes/manifests
+                  ExecStart=/usr/bin/keights template \
+                              -i /run/keights-collector/asg \
+                              -t /etc/keights/kube-scheduler.yml.template \
+                              -D /etc/kubernetes/manifests/kube-scheduler.yml \
+                              -v KubeSchedulerImage=gcr.io/google_containers/kube-scheduler:v${K8sVersion}
+
+                  [Install]
+                  WantedBy=multi-user.target
+
+              - path: /etc/systemd/system/keights-share.service.d/override.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  ExecStart=/usr/bin/keights share \
+                              -i /run/keights-collector/asg \
+                              -p ${ClusterName} \
+                              -d k8s.local
+
+              - path: /etc/systemd/system/var-lib-etcd.mount
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Unit]
+                  Description=etcd mount
+                  Before=local-fs.target
+
+                  [Mount]
+                  What=/dev/xvdf
+                  Where=/var/lib/etcd
+                  Type=ext4
+                  Options=rw,barrier=0,noatime,errors=remount-ro
+
+                  [Install]
+                  WantedBy=local-fs.target
+
+            runcmd:
+              - AWS_REGION=${AWS::Region} /usr/bin/keights volumize -v etcd:instance
+              - systemctl daemon-reload
+              - systemctl enable keights-templatize-etcd.path
+              - systemctl enable keights-templatize-kube-apiserver.path
+              - systemctl enable keights-templatize-kube-controller-manager.path
+              - systemctl enable keights-templatize-kube-scheduler.path
+              - systemctl enable var-lib-etcd.mount
+              - systemctl enable keights-collector.timer
+              - systemctl enable keights-share.path
+              - systemctl enable kubelet.service
+              - systemctl start --no-block keights-templatize-etcd.path
+              - systemctl start --no-block keights-templatize-kube-apiserver.path
+              - systemctl start --no-block keights-templatize-kube-controller-manager.path
+              - systemctl start --no-block keights-templatize-kube-scheduler.path
+              - systemctl start --no-block keights-collector.service
+              - systemctl start --no-block var-lib-etcd.mount
+              - systemctl start --no-block keights-collector.timer
+              - systemctl start --no-block keights-share.path
+              - systemctl start --no-block kubelet.service
+
+Outputs:
+  AutoscalingGroupSecurityGroup:
+    Description: Security group of autoscaling group
+    Value: !Ref AutoscalingGroupSecurityGroup
+  EtcdSecurityGroup:
+    Description: Security group for etcd
+    Value: !Ref EtcdSecurityGroup
+  AutoScalingGroup:
+    Description: Name of autoscaling group
+    Value: !Ref AutoScalingGroup
