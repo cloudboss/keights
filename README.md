@@ -43,6 +43,8 @@ Pass the following variables to packer:
 
 `k8s-version`: The version of Kubernetes, from https://dl.k8s.io
 
+`keights-version`: The version of keights, from https://github.com/cloudboss/keights
+
 `docker-version`: The version of docker, from `apt.dockerproject.org`
 
 The name of the AMI will be customized according to `ami-version`.
@@ -54,6 +56,7 @@ cd debian
 packer build \
   -var docker-version=17.03.1~ce-0~debian-stretch \
   -var k8s-version=1.8.2 \
+  -var keights-version=0.4.0 \
   -var ami-version=1710.2 \
   debian/build.json
 ```

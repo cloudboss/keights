@@ -4,7 +4,8 @@
     "debian-release": "stretch",
     "ebs-vol": "xvdf",
     "docker-version": "1.12.6-0~debian-stretch",
-    "k8s-version": "1.8.1"
+    "k8s-version": "1.8.1",
+    "keights-version": "0.2.0"
   },
 
   "builders": [{
@@ -39,7 +40,8 @@
     "tags": {
       "os:version": "debian-{{ user `debian-release` }}",
       "docker:version": "{{ user `docker-version` }}",
-      "k8s:version": "{{ user `k8s-version` }}"
+      "k8s:version": "{{ user `k8s-version` }}",
+      "keights:version": "{{ user `keights-version` }}"
     },
 
     "run_tags": {
@@ -69,7 +71,8 @@
       "extra_arguments": [
 	"-e", "ebs_vol={{ user `ebs-vol` }}",
 	"-e", "docker_version={{ user `docker-version` }}",
-	"-e", "k8s_version={{ user `k8s-version` }}"
+	"-e", "k8s_version={{ user `k8s-version` }}",
+	"-e", "keights_version={{ user `keights-version` }}"
       ]
     }
   ]
