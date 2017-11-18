@@ -73,7 +73,7 @@ func SplitHosts(hostsFile string) ([]byte, []string, []string, error) {
 
 func FormatHosts(mapping map[string]string, prefix, domain string) []string {
 	hosts := []string{}
-	keys := helpers.SortMapKeys(mapping)
+	keys := helpers.MapKeys(mapping)
 	for _, key := range keys {
 		// Hosts format:
 		// 10.11.12.13 api-<prefix>.<domain> <prefix>-<key>.<domain>

@@ -92,11 +92,16 @@ func WriteIfChanged(path string, contents []byte) error {
 	return AtomicWrite(path, contents, os.FileMode(0644))
 }
 
-func SortMapKeys(mapping map[string]string) []string {
+func MapKeys(mapping map[string]string) []string {
 	keys := []string{}
 	for key, _ := range mapping {
 		keys = append(keys, key)
 	}
+	return keys
+}
+
+func SortMapKeys(mapping map[string]string) []string {
+	keys := MapKeys(mapping)
 	sort.Strings(keys)
 	return keys
 }
