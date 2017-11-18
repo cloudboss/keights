@@ -259,12 +259,17 @@ Resources:
                         requests:
                           cpu: 200m
                       volumeMounts:
+                      - mountPath: /etc/hosts
+                        name: etchosts
                       - mountPath: /var/lib/etcd
                         name: varlibetcd
                       - mountPath: /var/log/etcd.log
                         name: varlogetcd
                     hostNetwork: true
                     volumes:
+                    - hostPath:
+                        path: /etc/hosts
+                      name: etchosts
                     - hostPath:
                         path: /var/lib/etcd
                       name: varlibetcd
