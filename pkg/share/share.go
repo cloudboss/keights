@@ -107,7 +107,7 @@ func DoIt(inputFile, hostsFile, prefix, domain string) error {
 	shareHosts := FormatHosts(mapping, prefix, domain)
 	newHosts := NewHosts(before, after, shareHosts)
 	if !bytes.Equal(original, newHosts) {
-		return helpers.AtomicWrite(hostsFile, newHosts, os.FileMode(0644))
+		return ioutil.WriteFile(hostsFile, newHosts, os.FileMode(0644))
 	}
 	return nil
 }
