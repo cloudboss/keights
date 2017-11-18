@@ -73,9 +73,13 @@ func SplitHosts(hostsFile string) ([]byte, []string, []string, error) {
 
 func FormatHosts(mapping map[string]string, prefix, domain string) []string {
 	hosts := []string{}
-	keys := helpers.SortMapKeys(mapping)
+	keys := helpers.MapKeys(mapping)
 	for _, key := range keys {
-		host := fmt.Sprintf("%s %s-%s.%s", mapping[key], prefix, key, domain)
+		// Hosts format:
+		// 10.11.12.13 api-<prefix>.<domain> <prefix>-<key>.<domain>
+		api := fmt.Sprintf("api-%s.%s", prefix, domain)
+		etcd := fmt.Sprintf("%s-%s.%s", prefix, key, domain)
+		host := fmt.Sprintf("%s %s %s", mapping[key], api, etcd)
 		hosts = append(hosts, host)
 	}
 	return hosts
@@ -107,7 +111,7 @@ func DoIt(inputFile, hostsFile, prefix, domain string) error {
 	shareHosts := FormatHosts(mapping, prefix, domain)
 	newHosts := NewHosts(before, after, shareHosts)
 	if !bytes.Equal(original, newHosts) {
-		return helpers.AtomicWrite(hostsFile, newHosts, os.FileMode(0644))
+		return ioutil.WriteFile(hostsFile, newHosts, os.FileMode(0644))
 	}
 	return nil
 }
