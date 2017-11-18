@@ -47,10 +47,6 @@ Parameters:
   EtcdVersion:
     Description: Version of etcd
     Type: String
-  EtcdClusterToken:
-    Description: Shared token to bootstrap etcd cluster
-    Type: String
-    NoEcho: true
 
 Mappings:
   LambdaUrls:
@@ -493,7 +489,7 @@ Resources:
                               -v EtcdImage=gcr.io/google_containers/etcd:${EtcdVersion} \
                               -v Prefix=${ClusterName} \
                               -v Domain=k8s.local \
-                              -v EtcdClusterToken=${EtcdClusterToken}
+                              -v EtcdClusterToken=etcd-${ClusterName}
 
                   [Install]
                   WantedBy=multi-user.target
