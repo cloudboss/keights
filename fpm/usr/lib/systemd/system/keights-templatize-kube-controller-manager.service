@@ -1,0 +1,18 @@
+[Unit]
+Description=keights-templatize-kube-controller-manager service
+Requires=keights-collector.service
+After=keights-collector.service
+
+[Service]
+Type=simple
+# Environment=AWS_REGION=
+# Environment=KEIGHTS_KUBE_CONTROLLER_MANAGER_IMAGE=
+ExecStartPre=/usr/bin/systemd-tmpfiles --create --prefix /etc/kubernetes
+ExecStart=/usr/bin/keights template \
+            -i /run/keights-collector/asg \
+            -t /usr/share/keights/kube-controller-manager.yml.template \
+            -D /etc/kubernetes/manifests/kube-controller-manager.yml \
+            -v KubeControllerManagerImage=${KEIGHTS_KUBE_CONTROLLER_MANAGER_IMAGE}
+
+[Install]
+WantedBy=keights-configure.target

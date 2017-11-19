@@ -1,5 +1,5 @@
 [Unit]
-Description=keights-share path watcher
+Description=keights-templatize-kube-apiserver path watcher
 
 [Path]
 PathExists=/run/keights-collector/asg

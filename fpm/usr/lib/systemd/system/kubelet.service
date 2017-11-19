@@ -1,0 +1,23 @@
+[Unit]
+Description=kubelet
+Requires=keights-configure.target docker.socket
+After=keights-configure.target docker.socket
+
+[Service]
+Type=simple
+# Environment=KEIGHTS_DOMAIN=
+# Environment=KEIGHTS_POD_CIDR=
+ExecStart=/usr/local/bin/kubelet \
+            --anonymous-auth=true \
+            --cluster-domain=${KEIGHTS_DOMAIN} \
+            --image-pull-progress-deadline=2m \
+            --pod-manifest-path=/etc/kubernetes/manifests \
+            --pod-cidr=${KEIGHTS_POD_CIDR} \
+            --register-node=true \
+            --runtime-request-timeout=15m \
+            --v=2
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

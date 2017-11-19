@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ''
+  creationTimestamp: null
+  labels:
+    component: kube-controller-manager
+    tier: control-plane
+  name: kube-controller-manager
+  namespace: kube-system
+spec:
+  containers:
+  - command:
+    - /usr/local/bin/kube-controller-manager
+    - --master={{ .MyIP }}:8080
+    - --address=127.0.0.1
+    - --leader-elect=true
+    - --controllers=*,bootstrapsigner,tokencleaner
+    image: {{ .KubeControllerManagerImage }}
+    livenessProbe:
+      failureThreshold: 8
+      httpGet:
+        host: 127.0.0.1
+        path: /healthz
+        port: 10252
+        scheme: HTTP
+      initialDelaySeconds: 15
+      timeoutSeconds: 15
+    name: kube-controller-manager
+    resources:
+      requests:
+        cpu: 200m
+    volumeMounts:
+    - mountPath: /etc/ssl/certs
+      name: etcsslcerts
+      readOnly: true
+  hostNetwork: true
+  volumes:
+  - hostPath:
+      path: /etc/ssl/certs
+      type: DirectoryOrCreate
+    name: etcsslcerts
+status: {}

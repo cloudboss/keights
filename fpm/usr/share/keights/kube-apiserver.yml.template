@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ''
+  creationTimestamp: null
+  labels:
+    component: kube-apiserver
+    tier: control-plane
+  name: kube-apiserver
+  namespace: kube-system
+spec:
+  containers:
+  - command:
+    - kube-apiserver
+    - --bind-address={{ .MyIP }}
+    - --insecure-bind-address={{ .MyIP }}
+    - --service-cluster-ip-range={{ .PodCidr }}
+    - --etcd-servers={{ range $i, $k := keys .HostMap }}{{ if $i }},{{end}}http://{{ $.Prefix }}-{{ $k }}.{{ $.Domain }}:2379{{ end }}
+    - --cloud-provider=aws
+    - --v=2
+    image: {{ .KubeApiserverImage }}
+    livenessProbe:
+      failureThreshold: 8
+      httpGet:
+        host: {{ .MyIP }}
+        path: /healthz
+        port: 8080
+        scheme: HTTP
+      initialDelaySeconds: 15
+      timeoutSeconds: 15
+    name: kube-apiserver
+    resources:
+      requests:
+        cpu: 250m
+    volumeMounts:
+    - mountPath: /etc/ssl/certs
+      name: ca-certs
+      readOnly: true
+  hostNetwork: true
+  volumes:
+  - hostPath:
+      path: /etc/ssl/certs
+      type: DirectoryOrCreate
+    name: ca-certs
+status: {}

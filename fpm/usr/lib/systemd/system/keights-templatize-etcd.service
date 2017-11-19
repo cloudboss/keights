@@ -1,0 +1,24 @@
+[Unit]
+Description=keights-templatize-etcd service
+Requires=keights-collector.service
+After=keights-collector.service
+
+[Service]
+Type=simple
+# Environment=AWS_REGION=
+# Environment=KEIGHTS_DOMAIN=
+# Environment=KEIGHTS_ETCD_CLUSTER_TOKEN=
+# Environment=KEIGHTS_ETCD_IMAGE=
+# Environment=KEIGHTS_PREFIX=
+ExecStartPre=/usr/bin/systemd-tmpfiles --create --prefix /etc/kubernetes
+ExecStart=/usr/bin/keights template \
+            -i /run/keights-collector/asg \
+            -t /usr/share/keights/etcd.yml.template \
+            -D /etc/kubernetes/manifests/etcd.yml \
+            -v EtcdImage=${KEIGHTS_ETCD_IMAGE} \
+            -v Prefix=${KEIGHTS_PREFIX} \
+            -v Domain=${KEIGHTS_DOMAIN} \
+            -v EtcdClusterToken=${KEIGHTS_ETCD_CLUSTER_TOKEN}
+
+[Install]
+WantedBy=keights-configure.target

@@ -1,5 +1,7 @@
 [Unit]
-Description=keights collector service
+Description=keights-collector service
+Requires=keights-volumize.service
+After=keights-volumize.service
 
 [Service]
 # Environment=AWS_REGION=
@@ -11,4 +13,4 @@ ExecStart=/usr/bin/keights collect \
             -o /run/keights-collector/asg
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=keights-configure.target

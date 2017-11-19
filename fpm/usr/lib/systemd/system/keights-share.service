@@ -1,12 +1,16 @@
 [Unit]
-Description=keights share service
+Description=keights-share service
+Requires=keights-collector.service
+After=keights-collector.service
 
 [Service]
 Type=oneshot
+# Environment=KEIGHTS_PREFIX=
+# Environment=KEIGHTS_DOMAIN=
 ExecStart=/usr/bin/keights share \
             -i /run/keights-collector/asg \
-            -p k8s-master \
-            -d k8s.local
+            -p ${KEIGHTS_PREFIX} \
+            -d ${KEIGHTS_DOMAIN}
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=keights-configure.target
