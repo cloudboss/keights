@@ -103,13 +103,7 @@ func WriteTemplate(buf bytes.Buffer, dest, owner, group string, mode int) error 
 		_, err := buf.WriteTo(os.Stdout)
 		return err
 	}
-	f, err := os.OpenFile(dest, os.O_RDWR|os.O_CREATE, os.FileMode(mode))
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	_, err = buf.WriteTo(f)
-	return err
+	return helpers.WriteIfChanged(dest, buf.Bytes(), os.FileMode(mode))
 }
 
 func DoIt(templateFile, inputFile, ip, dest, owner, group string, mode int, vars []string) error {
