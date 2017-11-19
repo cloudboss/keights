@@ -1,9 +1,9 @@
 [Unit]
-Description=keights collector timer
+Description=keights-collector timer
 
 [Timer]
 OnBootSec=1min
 OnUnitActiveSec=1min
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=keights-configure.target

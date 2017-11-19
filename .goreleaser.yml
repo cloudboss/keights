@@ -14,8 +14,51 @@ fpm:
     - deb
   bindir: /usr/bin
   files:
-    fpm/usr/lib/tmpfiles.d/keights-collector.conf: /usr/lib/tmpfiles.d/keights-collector.conf
-    fpm/usr/lib/systemd/system/keights-collector.timer: /usr/lib/systemd/system/keights-collector.timer
-    fpm/usr/lib/systemd/system/keights-collector.service: /usr/lib/systemd/system/keights-collector.service
-    fpm/usr/lib/systemd/system/keights-share.path: /usr/lib/systemd/system/keights-share.path
-    fpm/usr/lib/systemd/system/keights-share.service: /usr/lib/systemd/system/keights-share.service
+    fpm/usr/lib/tmpfiles.d/keights.conf:
+      /usr/lib/tmpfiles.d/keights.conf
+    fpm/usr/lib/systemd/system/keights-collector.service:
+      /usr/lib/systemd/system/keights-collector.service
+    fpm/usr/lib/systemd/system/keights-collector.timer:
+      /usr/lib/systemd/system/keights-collector.timer
+    fpm/usr/lib/systemd/system/keights-configure.target:
+      /usr/lib/systemd/system/keights-configure.target
+    fpm/usr/lib/systemd/system/keights-share.path:
+      /usr/lib/systemd/system/keights-share.path
+    fpm/usr/lib/systemd/system/keights-share.service:
+      /usr/lib/systemd/system/keights-share.service
+    fpm/usr/lib/systemd/system/keights-templatize-etcd.path:
+      /usr/lib/systemd/system/keights-templatize-etcd.path
+    fpm/usr/lib/systemd/system/keights-templatize-etcd.service:
+      /usr/lib/systemd/system/keights-templatize-etcd.service
+    fpm/usr/lib/systemd/system/keights-templatize-kube-apiserver.path:
+      /usr/lib/systemd/system/keights-templatize-kube-apiserver.path
+    fpm/usr/lib/systemd/system/keights-templatize-kube-apiserver.service:
+      /usr/lib/systemd/system/keights-templatize-kube-apiserver.service
+    fpm/usr/lib/systemd/system/keights-templatize-kube-controller-manager.path:
+      /usr/lib/systemd/system/keights-templatize-kube-controller-manager.path
+    fpm/usr/lib/systemd/system/keights-templatize-kube-controller-manager.service:
+      /usr/lib/systemd/system/keights-templatize-kube-controller-manager.service
+    fpm/usr/lib/systemd/system/keights-templatize-kube-proxy.path:
+      /usr/lib/systemd/system/keights-templatize-kube-proxy.path
+    fpm/usr/lib/systemd/system/keights-templatize-kube-proxy.service:
+      /usr/lib/systemd/system/keights-templatize-kube-proxy.service
+    fpm/usr/lib/systemd/system/keights-templatize-kube-scheduler.path:
+      /usr/lib/systemd/system/keights-templatize-kube-scheduler.path
+    fpm/usr/lib/systemd/system/keights-templatize-kube-scheduler.service:
+      /usr/lib/systemd/system/keights-templatize-kube-scheduler.service
+    fpm/usr/lib/systemd/system/keights-volumize.service:
+      /usr/lib/systemd/system/keights-volumize.service
+    fpm/usr/lib/systemd/system/kube-proxy.service:
+      /usr/lib/systemd/system/kube-proxy.service
+    fpm/usr/lib/systemd/system/kubelet.service:
+      /usr/lib/systemd/system/kubelet.service
+    fpm/usr/share/keights/etcd.yml.template:
+      /usr/share/keights/etcd.yml.template
+    fpm/usr/share/keights/kube-apiserver.yml.template:
+      /usr/share/keights/kube-apiserver.yml.template
+    fpm/usr/share/keights/kube-controller-manager.yml.template:
+      /usr/share/keights/kube-controller-manager.yml.template
+    fpm/usr/share/keights/kube-proxy.yml.template:
+      /usr/share/keights/kube-proxy.yml.template
+    fpm/usr/share/keights/kube-scheduler.yml.template:
+      /usr/share/keights/kube-scheduler.yml.template

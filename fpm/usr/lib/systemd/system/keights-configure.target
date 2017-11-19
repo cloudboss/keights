@@ -1,0 +1,4 @@
+[Unit]
+Description=keights-configure
+Requires=network.target
+After=network.target
