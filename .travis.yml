@@ -7,7 +7,7 @@ install:
   - gem install fpm
   - export PATH=${GOPATH}/bin:${PATH}
 script:
-  - go build
+  - go test -v ./...
   - test -n "${TRAVIS_TAG}" || goreleaser --skip-validate --skip-publish
 after_success:
   - test -n "${TRAVIS_TAG}" && go clean
