@@ -207,7 +207,7 @@ func WriteOutput(mapping map[string]string, outputFile string) error {
 	for _, key := range keys {
 		fmt.Fprintf(&buf, "%s:%s\n", key, mapping[key])
 	}
-	return helpers.WriteIfChanged(outputFile, buf.Bytes())
+	return helpers.WriteIfChanged(outputFile, buf.Bytes(), 0644)
 }
 
 func DoIt(volumeTag, outputFile string) error {

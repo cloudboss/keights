@@ -75,7 +75,7 @@ func AtomicWrite(path string, contents []byte, mode os.FileMode) error {
 	return os.Rename(tempFile, path)
 }
 
-func WriteIfChanged(path string, contents []byte) error {
+func WriteIfChanged(path string, contents []byte, mode os.FileMode) error {
 	var original []byte
 	var err error
 	original, err = ioutil.ReadFile(path)
@@ -89,7 +89,7 @@ func WriteIfChanged(path string, contents []byte) error {
 	if bytes.Equal(contents, original) {
 		return nil
 	}
-	return AtomicWrite(path, contents, os.FileMode(0644))
+	return AtomicWrite(path, contents, mode)
 }
 
 func MapKeys(mapping map[string]string) []string {
