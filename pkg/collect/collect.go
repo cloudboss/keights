@@ -210,13 +210,16 @@ func WriteOutput(mapping map[string]string, outputFile string) error {
 	return helpers.WriteIfChanged(outputFile, buf.Bytes(), 0644)
 }
 
-func DoIt(volumeTag, outputFile string) error {
+func DoIt(asgName, volumeTag, outputFile string) error {
 	sess := session.New()
-	asgName, err := helpers.AsgName(sess)
-	if err != nil {
-		return err
+	if asgName == "" {
+		selfAsgName, err := helpers.AsgName(sess)
+		if err != nil {
+			return err
+		}
+		asgName = *selfAsgName
 	}
-	collector := NewCollector(sess, asgName, aws.String(volumeTag))
+	collector := NewCollector(sess, &asgName, aws.String(volumeTag))
 	instances, err := collector.WaitForInstances()
 	if err != nil {
 		return err
