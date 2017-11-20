@@ -52,6 +52,8 @@ fpm:
       /usr/lib/systemd/system/kube-proxy.service
     fpm/usr/lib/systemd/system/kubelet.service:
       /usr/lib/systemd/system/kubelet.service
+    fpm/usr/lib/systemd/system/var-lib-etcd.mount:
+      /usr/lib/systemd/system/var-lib-etcd.mount
     fpm/usr/share/keights/etcd.yml.template:
       /usr/share/keights/etcd.yml.template
     fpm/usr/share/keights/kube-apiserver.yml.template:
