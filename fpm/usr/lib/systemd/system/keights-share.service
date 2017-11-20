@@ -1,7 +1,5 @@
 [Unit]
 Description=keights-share service
-Requires=keights-collector.service
-After=keights-collector.service
 
 [Service]
 Type=oneshot

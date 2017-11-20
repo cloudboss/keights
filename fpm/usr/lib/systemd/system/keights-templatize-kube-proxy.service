@@ -1,7 +1,5 @@
 [Unit]
 Description=keights-templatize-kube-proxy service
-Requires=keights-collector.service
-After=keights-collector.service
 
 [Service]
 Type=simple
