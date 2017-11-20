@@ -26,18 +26,21 @@ import (
 )
 
 var (
+	asgName    string
 	outputFile string
 	collectCmd = &cobra.Command{
 		Use:   "collect",
 		Short: "Collect information about an autoscaling group",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return collect.DoIt(volumeTag, outputFile)
+			return collect.DoIt(asgName, volumeTag, outputFile)
 		},
 	}
 )
 
 func init() {
 	RootCmd.AddCommand(collectCmd)
+	collectCmd.Flags().StringVarP(&asgName, "asg-name", "a",
+		"", "Name of autoscaling group to collect from")
 	collectCmd.Flags().StringVarP(&volumeTag, "volume-tag", "v",
 		"", "Tag to search on EBS volume")
 	collectCmd.Flags().StringVarP(&outputFile, "output-file", "o",
