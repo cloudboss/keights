@@ -66,13 +66,13 @@ func MyIP() (string, error) {
 	return identity.PrivateIP, nil
 }
 
-func MyIndex(mapping map[string]string, ip string) (string, error) {
+func MyIndex(mapping map[string]string, ip string) string {
 	for k, v := range mapping {
 		if v == ip {
-			return k, nil
+			return k
 		}
 	}
-	return "", fmt.Errorf("Machine index not found in mapping")
+	return "-1"
 }
 
 func Render(templateFile string, mapping map[string]interface{}) (bytes.Buffer, error) {
@@ -124,10 +124,7 @@ func DoIt(templateFile, inputFile, ip, dest, owner, group string, mode int, vars
 			return err
 		}
 	}
-	myIndex, err := MyIndex(inputFileMapping, myIP)
-	if err != nil {
-		return err
-	}
+	myIndex := MyIndex(inputFileMapping, myIP)
 	mapping := MergeMaps(cliMapping, map[string]interface{}{
 		"MyIP":    myIP,
 		"MyIndex": myIndex,
