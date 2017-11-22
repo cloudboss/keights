@@ -150,6 +150,10 @@ Resources:
       MaxSize: !FindInMap [MaxSizes, NumInstances, !Ref NumInstances]
       MinSize: !Ref NumInstances
       VPCZoneIdentifier: !Ref SubnetIds
+      Tags:
+        - Key: Name
+          Value: !Sub ${ClusterName}-master
+          PropagateAtLaunch: true
 
   Volume1:
     Type: AWS::EC2::Volume
