@@ -30,6 +30,9 @@ Parameters:
   IamInstanceProfile:
     Description: IAM Instance profile to assign to instances
     Type: String
+  ApiServerSecurityGroup:
+    Description: Security group for apiserver
+    Type: String
   LambdaExecutionRole:
     Description: Role to assign to helper Lamba functions
     Type: String
@@ -195,6 +198,7 @@ Resources:
       KeyName: !Ref KeyPair
       PlacementTenancy: default
       SecurityGroups:
+        - !Ref ApiServerSecurityGroup
         - !Ref AutoscalingGroupSecurityGroup
         - !Ref EtcdSecurityGroup
       UserData:

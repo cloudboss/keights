@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Kubernetes common resources
+
+Parameters:
+  VpcId:
+    Description: ID of VPC where cluster will be placed
+    Type: AWS::EC2::VPC::Id
+
+Resources:
+  ApiServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for kube-apiserver
+      VpcId: !Ref VpcId
+
+  ApiServerSecurityGroupHttpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ApiServerSecurityGroup
+      SourceSecurityGroupId: !Ref ApiServerSecurityGroup
+      FromPort: 8080
+      ToPort: 8080
+      IpProtocol: tcp
+
+  ApiServerSecurityGroupHttpEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref ApiServerSecurityGroup
+      DestinationSecurityGroupId: !Ref ApiServerSecurityGroup
+      FromPort: 8080
+      ToPort: 8080
+      IpProtocol: tcp
+
+  ApiServerSecurityGroupHttpsIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ApiServerSecurityGroup
+      SourceSecurityGroupId: !Ref ApiServerSecurityGroup
+      FromPort: 6443
+      ToPort: 6443
+      IpProtocol: tcp
+
+  ApiServerSecurityGroupHttpsEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref ApiServerSecurityGroup
+      DestinationSecurityGroupId: !Ref ApiServerSecurityGroup
+      FromPort: 6443
+      ToPort: 6443
+      IpProtocol: tcp
+
+Outputs:
+  ApiServerSecurityGroup:
+    Description: Security group of apiserver
+    Value: !Ref ApiServerSecurityGroup
