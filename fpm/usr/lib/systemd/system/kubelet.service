@@ -8,6 +8,7 @@ Type=simple
 # Environment=KEIGHTS_DOMAIN=
 # Environment=KEIGHTS_POD_CIDR=
 ExecStart=/usr/local/bin/kubelet \
+            --kubeconfig=/var/lib/kubelet/kubeconfig \
             --anonymous-auth=true \
             --cluster-domain=${KEIGHTS_DOMAIN} \
             --image-pull-progress-deadline=2m \
