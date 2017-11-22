@@ -1,0 +1,142 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Kubernetes node resources
+
+Parameters:
+  ClusterName:
+    Description: Name of Kubernetes cluster
+    Type: String
+  NumInstances:
+    Description: Number of node instances
+    Type: Number
+    Default: 1
+  VpcId:
+    Description: ID of VPC where cluster will be placed
+    Type: AWS::EC2::VPC::Id
+  SubnetIds:
+    Description: List of subnets IDs in VPC where cluster will be placed
+    Type: List<AWS::EC2::Subnet::Id>
+  ImageId:
+    Description: ID of AMI used for instances
+    Type: AWS::EC2::Image::Id
+  InstanceType:
+    Description: Type of EC2 instance
+    Type: String
+  KeyPair:
+    Description: SSH keypair assigned to instances
+    Type: AWS::EC2::KeyPair::KeyName
+  IamInstanceProfile:
+    Description: IAM Instance profile to assign to instances
+    Type: String
+  MasterAutoscalingGroup:
+    Description: Name of master autoscaling group
+    Type: String
+  ApiServerSecurityGroup:
+    Description: Security group of apiserver
+    Type: String
+  PodCidr:
+    Description: CIDR block of addresses for pods
+    Default: 10.0.0.0/16
+    Type: String
+  SshAccessCidr:
+    Description: CIDR block given ssh access to cluster
+    Default: 0.0.0.0/0
+    Type: String
+  K8sVersion:
+    Description: Version of Kubernetes
+    Type: String
+
+Resources:
+  AutoscalingGroupSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for autoscaling group
+      VpcId: !Ref VpcId
+
+  AutoscalingGroupIngressSsh:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref AutoscalingGroupSecurityGroup
+      CidrIp: !Ref SshAccessCidr
+      FromPort: 22
+      IpProtocol: tcp
+      ToPort: 22
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      DesiredCapacity: !Ref NumInstances
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MaxSize: !Ref NumInstances
+      MinSize: !Ref NumInstances
+      VPCZoneIdentifier: !Ref SubnetIds
+      Tags:
+        - Key: Name
+          Value: !Sub ${ClusterName}-node
+          PropagateAtLaunch: true
+
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      IamInstanceProfile: !Ref IamInstanceProfile
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPair
+      PlacementTenancy: default
+      SecurityGroups:
+        - !Ref AutoscalingGroupSecurityGroup
+        - !Ref ApiServerSecurityGroup
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #cloud-config
+            write_files:
+              - path: /etc/systemd/system/keights-collector.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_VOLUME_TAG=etcd:instance
+                  Environment=KEIGHTS_ASG_NAME=${MasterAutoscalingGroup}
+
+              - path: /etc/systemd/system/keights-share.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=KEIGHTS_DOMAIN=k8s.local
+                  Environment=KEIGHTS_PREFIX=${ClusterName}
+
+              - path: /etc/systemd/system/keights-templatize-kube-proxy.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_POD_CIDR=${PodCidr}
+
+              - path: /etc/systemd/system/kube-proxy.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=KEIGHTS_MASTER=api-${ClusterName}.k8s.local:8080
+
+            runcmd:
+              - systemctl enable keights-collector.timer
+              - systemctl enable keights-collector.service
+              - systemctl enable keights-share.path
+              - systemctl enable keights-templatize-kube-proxy.path
+              - systemctl enable kubelet.service
+              - systemctl enable kube-proxy.service
+              - systemctl start --no-block kubelet.service
+              - systemctl start --no-block kube-proxy.service
+
+Outputs:
+  AutoscalingGroupSecurityGroup:
+    Description: Security group of autoscaling group
+    Value: !Ref AutoscalingGroupSecurityGroup
+  AutoScalingGroup:
+    Description: Name of autoscaling group
+    Value: !Ref AutoScalingGroup
