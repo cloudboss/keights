@@ -7,6 +7,7 @@ After=keights-configure.target docker.socket
 Type=simple
 # Environment=KEIGHTS_DOMAIN=
 # Environment=KEIGHTS_POD_CIDR=
+Environment=KEIGHTS_KUBELET_EXTRA_OPTS=
 ExecStart=/usr/local/bin/kubelet \
             --kubeconfig=/var/lib/kubelet/kubeconfig \
             --anonymous-auth=true \
@@ -16,7 +17,7 @@ ExecStart=/usr/local/bin/kubelet \
             --pod-cidr=${KEIGHTS_POD_CIDR} \
             --register-node=true \
             --runtime-request-timeout=15m \
-            --v=2
+            --v=2 ${KEIGHTS_KUBELET_EXTRA_OPTS}
 Restart=always
 RestartSec=5
 
