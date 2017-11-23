@@ -91,6 +91,42 @@ Resources:
           !Sub |
             #cloud-config
             write_files:
+              - path: /var/lib/kubelet/kubeconfig
+                owner: root:root
+                permissions: '0600'
+                content: |
+                  apiVersion: v1
+                  kind: Config
+                  clusters:
+                  - cluster:
+                      server: http://api-${ClusterName}.k8s.local:8080
+                    name: local
+                  contexts:
+                  - context:
+                      cluster: local
+                      user: kubelet
+                    name: service-account-context
+                  current-context: service-account-context
+                  preferences: {}
+
+              - path: /var/lib/kube-proxy/kubeconfig
+                owner: root:root
+                permissions: '0600'
+                content: |
+                  apiVersion: v1
+                  kind: Config
+                  clusters:
+                  - cluster:
+                      server: http://api-${ClusterName}.k8s.local:8080
+                    name: local
+                  contexts:
+                  - context:
+                      cluster: local
+                      user: kube-proxy
+                    name: service-account-context
+                  current-context: service-account-context
+                  preferences: {}
+
               - path: /etc/systemd/system/keights-collector.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
