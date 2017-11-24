@@ -15,7 +15,7 @@ spec:
     - kube-apiserver
     - --bind-address={{ .MyIP }}
     - --insecure-bind-address={{ .MyIP }}
-    - --service-cluster-ip-range={{ .PodCidr }}
+    - --service-cluster-ip-range={{ .ServiceCidr }}
     - --etcd-servers={{ range $i, $k := keys .HostMap }}{{ if $i }},{{end}}http://{{ $.Prefix }}-{{ $k }}.{{ $.Domain }}:2379{{ end }}
     - --cloud-provider=aws
     - --v=2
