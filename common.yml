@@ -50,6 +50,30 @@ Resources:
       ToPort: 6443
       IpProtocol: tcp
 
+  KubeletSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for kubelet
+      VpcId: !Ref VpcId
+
+  KubeletSecurityGroupBgpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref KubeletSecurityGroup
+      SourceSecurityGroupId: !Ref KubeletSecurityGroup
+      FromPort: 10250
+      ToPort: 10250
+      IpProtocol: tcp
+
+  KubeletSecurityGroupBgpEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref KubeletSecurityGroup
+      DestinationSecurityGroupId: !Ref KubeletSecurityGroup
+      FromPort: 10250
+      ToPort: 10250
+      IpProtocol: tcp
+
   KubeRouterSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -78,6 +102,9 @@ Outputs:
   ApiServerSecurityGroup:
     Description: Security group of apiserver
     Value: !Ref ApiServerSecurityGroup
+  KubeletSecurityGroup:
+    Description: Security group of kube-router
+    Value: !Ref KubeletSecurityGroup
   KubeRouterSecurityGroup:
     Description: Security group of kube-router
     Value: !Ref KubeRouterSecurityGroup

@@ -33,6 +33,9 @@ Parameters:
   ApiServerSecurityGroup:
     Description: Security group for apiserver
     Type: String
+  KubeletSecurityGroup:
+    Description: Security group for kubelet
+    Type: String
   KubeRouterSecurityGroup:
     Description: Security group for kube-router
     Type: String
@@ -213,6 +216,7 @@ Resources:
       PlacementTenancy: default
       SecurityGroups:
         - !Ref ApiServerSecurityGroup
+        - !Ref KubeletSecurityGroup
         - !Ref KubeRouterSecurityGroup
         - !Ref AutoscalingGroupSecurityGroup
         - !Ref EtcdSecurityGroup

@@ -34,6 +34,9 @@ Parameters:
   ApiServerSecurityGroup:
     Description: Security group of apiserver
     Type: String
+  KubeletSecurityGroup:
+    Description: Security group for kubelet
+    Type: String
   KubeRouterSecurityGroup:
     Description: Security group for kube-router
     Type: String
@@ -92,6 +95,7 @@ Resources:
       SecurityGroups:
         - !Ref AutoscalingGroupSecurityGroup
         - !Ref ApiServerSecurityGroup
+        - !Ref KubeletSecurityGroup
         - !Ref KubeRouterSecurityGroup
       UserData:
         Fn::Base64:
