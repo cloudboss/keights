@@ -50,7 +50,34 @@ Resources:
       ToPort: 6443
       IpProtocol: tcp
 
+  KubeRouterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for kube-router
+      VpcId: !Ref VpcId
+
+  KubeRouterSecurityGroupBgpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref KubeRouterSecurityGroup
+      SourceSecurityGroupId: !Ref KubeRouterSecurityGroup
+      FromPort: 179
+      ToPort: 179
+      IpProtocol: tcp
+
+  KubeRouterSecurityGroupBgpEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref KubeRouterSecurityGroup
+      DestinationSecurityGroupId: !Ref KubeRouterSecurityGroup
+      FromPort: 179
+      ToPort: 179
+      IpProtocol: tcp
+
 Outputs:
   ApiServerSecurityGroup:
     Description: Security group of apiserver
     Value: !Ref ApiServerSecurityGroup
+  KubeRouterSecurityGroup:
+    Description: Security group of kube-router
+    Value: !Ref KubeRouterSecurityGroup

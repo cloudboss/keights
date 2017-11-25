@@ -34,6 +34,9 @@ Parameters:
   ApiServerSecurityGroup:
     Description: Security group of apiserver
     Type: String
+  KubeRouterSecurityGroup:
+    Description: Security group for kube-router
+    Type: String
   PodCidr:
     Description: CIDR block of addresses for pods
     Default: 10.0.0.0/16
@@ -44,6 +47,9 @@ Parameters:
     Type: String
   K8sVersion:
     Description: Version of Kubernetes
+    Type: String
+  KubeRouterVersion:
+    Description: Version of kube-router
     Type: String
 
 Resources:
@@ -86,6 +92,7 @@ Resources:
       SecurityGroups:
         - !Ref AutoscalingGroupSecurityGroup
         - !Ref ApiServerSecurityGroup
+        - !Ref KubeRouterSecurityGroup
       UserData:
         Fn::Base64:
           !Sub |
@@ -109,7 +116,7 @@ Resources:
                   current-context: service-account-context
                   preferences: {}
 
-              - path: /var/lib/kube-proxy/kubeconfig
+              - path: /var/lib/kube-router/kubeconfig
                 owner: root:root
                 permissions: '0600'
                 content: |
@@ -122,7 +129,7 @@ Resources:
                   contexts:
                   - context:
                       cluster: local
-                      user: kube-proxy
+                      user: kube-router
                     name: service-account-context
                   current-context: service-account-context
                   preferences: {}
@@ -144,30 +151,31 @@ Resources:
                   Environment=KEIGHTS_DOMAIN=k8s.local
                   Environment=KEIGHTS_PREFIX=${ClusterName}
 
-              - path: /etc/systemd/system/keights-templatize-kube-proxy.service.d/environment.conf
+              - path: /etc/systemd/system/kubelet.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
                 content: |
                   [Service]
-                  Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_DOMAIN=k8s.local
                   Environment=KEIGHTS_POD_CIDR=${PodCidr}
+                  Environment=KEIGHTS_NODE_LABELS=kubernetes.io/role=node,node-role.kubernetes.io/node=
+                  Environment=KEIGHTS_NODE_REGISTER=--register-node=true
 
-              - path: /etc/systemd/system/kube-proxy.service.d/environment.conf
+              - path: /etc/systemd/system/kube-router.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
                 content: |
                   [Service]
-                  Environment=KEIGHTS_MASTER=api-${ClusterName}.k8s.local:8080
+                  Environment=KEIGHTS_KUBE_ROUTER_IMAGE=cloudnativelabs/kube-router:v${KubeRouterVersion}
 
             runcmd:
               - systemctl enable keights-collector.timer
               - systemctl enable keights-collector.service
               - systemctl enable keights-share.path
-              - systemctl enable keights-templatize-kube-proxy.path
               - systemctl enable kubelet.service
-              - systemctl enable kube-proxy.service
+              - systemctl enable kube-router.service
               - systemctl start --no-block kubelet.service
-              - systemctl start --no-block kube-proxy.service
+              - systemctl start --no-block kube-router.service
 
 Outputs:
   AutoscalingGroupSecurityGroup:
