@@ -14,6 +14,10 @@ fpm:
     - deb
   bindir: /usr/bin
   files:
+    fpm/etc/cni/net.d/10-kuberouter.conf:
+      /etc/cni/net.d/10-kuberouter.conf
+    fpm/etc/cni/net.d/99-loopback.conf:
+      /etc/cni/net.d/99-loopback.conf
     fpm/usr/lib/tmpfiles.d/keights.conf:
       /usr/lib/tmpfiles.d/keights.conf
     fpm/usr/lib/systemd/system/keights-collector.service:
@@ -38,18 +42,14 @@ fpm:
       /usr/lib/systemd/system/keights-templatize-kube-controller-manager.path
     fpm/usr/lib/systemd/system/keights-templatize-kube-controller-manager.service:
       /usr/lib/systemd/system/keights-templatize-kube-controller-manager.service
-    fpm/usr/lib/systemd/system/keights-templatize-kube-proxy.path:
-      /usr/lib/systemd/system/keights-templatize-kube-proxy.path
-    fpm/usr/lib/systemd/system/keights-templatize-kube-proxy.service:
-      /usr/lib/systemd/system/keights-templatize-kube-proxy.service
     fpm/usr/lib/systemd/system/keights-templatize-kube-scheduler.path:
       /usr/lib/systemd/system/keights-templatize-kube-scheduler.path
     fpm/usr/lib/systemd/system/keights-templatize-kube-scheduler.service:
       /usr/lib/systemd/system/keights-templatize-kube-scheduler.service
     fpm/usr/lib/systemd/system/keights-volumize.service:
       /usr/lib/systemd/system/keights-volumize.service
-    fpm/usr/lib/systemd/system/kube-proxy.service:
-      /usr/lib/systemd/system/kube-proxy.service
+    fpm/usr/lib/systemd/system/kube-router.service:
+      /usr/lib/systemd/system/kube-router.service
     fpm/usr/lib/systemd/system/kubelet.service:
       /usr/lib/systemd/system/kubelet.service
     fpm/usr/lib/systemd/system/var-lib-etcd.mount:
@@ -60,7 +60,5 @@ fpm:
       /usr/share/keights/kube-apiserver.yml.template
     fpm/usr/share/keights/kube-controller-manager.yml.template:
       /usr/share/keights/kube-controller-manager.yml.template
-    fpm/usr/share/keights/kube-proxy.yml.template:
-      /usr/share/keights/kube-proxy.yml.template
     fpm/usr/share/keights/kube-scheduler.yml.template:
       /usr/share/keights/kube-scheduler.yml.template

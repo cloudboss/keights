@@ -1,0 +1,19 @@
+[Unit]
+Description=kube-router service
+
+[Service]
+Type=simple
+# Environment=KEIGHTS_KUBE_ROUTER_IMAGE=
+ExecStart=/usr/bin/docker run \
+            --rm \
+            --privileged \
+            --net=host \
+            -v /lib/modules:/lib/modules \
+            -v /etc/cni/net.d:/etc/cni/net.d \
+            -v /var/lib/kube-router/kubeconfig:/var/lib/kube-router/kubeconfig \
+            ${KEIGHTS_KUBE_ROUTER_IMAGE} --kubeconfig=/var/lib/kube-router/kubeconfig
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
