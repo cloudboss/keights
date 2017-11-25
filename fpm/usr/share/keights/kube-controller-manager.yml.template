@@ -17,6 +17,9 @@ spec:
     - --address=127.0.0.1
     - --leader-elect=true
     - --controllers=*,bootstrapsigner,tokencleaner
+    - --allocate-node-cidrs=true
+    - --cluster-cidr={{ .PodCidr }}
+    - --service-cluster-ip-range={{ .ServiceCidr }}
     image: {{ .KubeControllerManagerImage }}
     livenessProbe:
       failureThreshold: 8
