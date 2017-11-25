@@ -115,6 +115,15 @@
         # Pick a file, any file...
         creates: /mnt/usr/bin/vi
 
+    - name: create directories in chroot
+      file:
+        path: '{{ item }}'
+        state: directory
+        mode: '0755'
+      with_items:
+        - /mnt/etc/systemd/system/docker.service.d
+        - /mnt/usr/lib/cni
+
     - name: download software
       get_url:
         url: '{{ item.src }}'
@@ -126,17 +135,20 @@
           dest: /mnt/tmp/amazon-ssm-agent.deb
         - src: https://github.com/cloudboss/keights/releases/download/v{{ keights_version }}/keights_{{ keights_version }}_linux_amd64.deb
           dest: /mnt/tmp/keights.deb
+        - src: https://github.com/containernetworking/plugins/releases/download/v{{ cni_version }}/cni-plugins-amd64-v{{ cni_version }}.tgz
+          dest: /tmp/cni.tgz
 
     - name: unarchive software
-      unarchive:
-        src: '{{ item.src }}'
-        remote_src: true
-        dest: '{{ item.dest }}'
+      command: 'tar zxf {{ item.src }} -C {{ item.dest }}'
+      args:
         creates: '{{ item.creates }}'
       with_items:
         - src: /tmp/kubernetes-server-linux-amd64.tar.gz
           dest: /tmp
           creates: /tmp/kubernetes/server/bin
+        - src: /tmp/cni.tgz
+          dest: /mnt/usr/lib/cni
+          creates: /mnt/usr/lib/cni/bridge
 
     - name: copy software binaries to chroot
       command: 'install -m 0755 {{ item.src }} {{ item.dest }}'
@@ -151,8 +163,6 @@
           dest: /mnt/tmp/kube-apiserver.tar
         - src: /tmp/kubernetes/server/bin/kube-controller-manager.tar
           dest: /mnt/tmp/kube-controller-manager.tar
-        - src: /tmp/kubernetes/server/bin/kube-proxy.tar
-          dest: /mnt/tmp/kube-proxy.tar
         - src: /tmp/kubernetes/server/bin/kube-scheduler.tar
           dest: /mnt/tmp/kube-scheduler.tar
 
@@ -165,7 +175,6 @@
       with_items:
         - kubectl
         - kubelet
-        - kube-proxy
 
     - name: copy staging files into chroot
       copy:
@@ -233,20 +242,12 @@
         done
         docker load </tmp/kube-apiserver.tar
         docker load </tmp/kube-controller-manager.tar
-        docker load </tmp/kube-proxy.tar
         docker load </tmp/kube-scheduler.tar
+        docker pull cloudnativelabs/kube-router:v{{ kube_router_version }}
         kill ${pid}
         EOF
       args:
         creates: '/var/lib/docker/overlay2/*/diff/usr/local/bin/etcd'
-
-    - name: create directories in chroot
-      file:
-        path: '{{ item }}'
-        state: directory
-        mode: '0755'
-      with_items:
-        - /mnt/etc/systemd/system/docker.service.d
 
     - name: post copy staging files into chroot
       copy:
