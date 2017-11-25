@@ -243,6 +243,8 @@
         docker load </tmp/kube-apiserver.tar
         docker load </tmp/kube-controller-manager.tar
         docker load </tmp/kube-scheduler.tar
+        docker pull gcr.io/google_containers/etcd:{{ etcd_version }}
+        docker pull gcr.io/google_containers/pause-amd64:{{ pause_version }}
         docker pull cloudnativelabs/kube-router:v{{ kube_router_version }}
         kill ${pid}
         EOF

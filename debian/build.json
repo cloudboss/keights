@@ -7,7 +7,9 @@
     "k8s-version": "1.8.1",
     "keights-version": "0.2.0",
     "cni-version": "0.6.0",
-    "kube-router-version": "0.0.19"
+    "kube-router-version": "0.0.19",
+    "etcd-version": "3.0.17",
+    "pause-version": "3.0"
   },
 
   "builders": [{
@@ -45,7 +47,9 @@
       "k8s:version": "{{ user `k8s-version` }}",
       "keights:version": "{{ user `keights-version` }}",
       "cni:version": "{{ user `cni-version` }}",
-      "kube-router:version": "{{ user `kube-router-version` }}"
+      "kube-router:version": "{{ user `kube-router-version` }}",
+      "etcd:version": "{{ user `etcd-version` }}",
+      "pause:version": "{{ user `pause-version` }}"
     },
 
     "run_tags": {
@@ -78,7 +82,9 @@
 	"-e", "k8s_version={{ user `k8s-version` }}",
 	"-e", "keights_version={{ user `keights-version` }}",
 	"-e", "cni_version={{ user `cni-version` }}",
-	"-e", "kube_router_version={{ user `kube-router-version` }}"
+	"-e", "kube_router_version={{ user `kube-router-version` }}",
+	"-e", "etcd_version={{ user `etcd-version` }}",
+	"-e", "pause_version={{ user `pause-version` }}"
       ]
     }
   ]
