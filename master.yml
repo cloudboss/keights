@@ -31,7 +31,7 @@ Parameters:
     Description: IAM Instance profile to assign to instances
     Type: String
   ApiServerSecurityGroup:
-    Description: Security group for apiserver
+    Description: Security group for kube-apiserver
     Type: String
   KubeletSecurityGroup:
     Description: Security group for kubelet

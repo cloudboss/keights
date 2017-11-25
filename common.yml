@@ -100,7 +100,7 @@ Resources:
 
 Outputs:
   ApiServerSecurityGroup:
-    Description: Security group of apiserver
+    Description: Security group of kube-apiserver
     Value: !Ref ApiServerSecurityGroup
   KubeletSecurityGroup:
     Description: Security group of kube-router
