@@ -23,7 +23,16 @@ package response
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
+
+	"github.com/eawsy/aws-lambda-go-core/service/lambda/runtime"
+	"github.com/eawsy/aws-lambda-go-event/service/lambda/runtime/event/cloudformationevt"
+)
+
+const (
+	Failed  = "FAILED"
+	Success = "SUCCESS"
 )
 
 type ResponseBody struct {
@@ -34,6 +43,17 @@ type ResponseBody struct {
 	RequestID          string `json:"RequestId"`
 	LogicalResourceID  string `json:"LogicalResourceId"`
 	Data               map[string]string
+}
+
+func NewResponseBody(event *cloudformationevt.Event, ctx *runtime.Context) ResponseBody {
+	return ResponseBody{
+		Reason:             "",
+		PhysicalResourceID: ctx.LogStreamName,
+		StackID:            event.StackID,
+		RequestID:          event.RequestID,
+		LogicalResourceID:  event.LogicalResourceID,
+		Data:               map[string]string{},
+	}
 }
 
 func Respond(url string, body ResponseBody) error {
@@ -50,4 +70,12 @@ func Respond(url string, body ResponseBody) error {
 	req.Header.Add("Content-Length", string(len(jsonBody)))
 	_, err = client.Do(req)
 	return err
+}
+
+func FireResponse(url string, body ResponseBody) {
+	// No return value is sent because if this fails we can't recover.
+	err := Respond(url, body)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 }

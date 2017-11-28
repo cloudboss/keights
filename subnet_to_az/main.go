@@ -32,47 +32,32 @@ import (
 	"github.com/eawsy/aws-lambda-go-event/service/lambda/runtime/event/cloudformationevt"
 )
 
-func sendErrorResponse(event *cloudformationevt.Event, ctx *runtime.Context, reason string) {
-	responseBody := response.ResponseBody{
-		Status:             "FAILED",
-		Reason:             reason,
-		PhysicalResourceID: ctx.LogStreamName,
-		StackID:            event.StackID,
-		RequestID:          event.RequestID,
-		LogicalResourceID:  event.LogicalResourceID,
-		Data:               map[string]string{},
-	}
-	// No return value is sent because if this fails we can't recover.
-	err := response.Respond(event.ResponseURL, responseBody)
-	fmt.Println(err.Error())
-}
-
 func Handle(event *cloudformationevt.Event, ctx *runtime.Context) (interface{}, error) {
+	responseBody := response.NewResponseBody(event, ctx)
+
 	var props resourceProperties
 	err := json.Unmarshal(event.ResourceProperties, &props)
 	if err != nil {
-		sendErrorResponse(event, ctx, err.Error())
+		responseBody.Status = response.Failed
+		responseBody.Reason = err.Error()
+		response.FireResponse(event.ResponseURL, responseBody)
 		return nil, err
 	}
 
 	client := ec2.New(session.New())
 	az, err := subnetToAZ(client, *props.Region, *props.SubnetID)
 	if err != nil {
-		sendErrorResponse(event, ctx, err.Error())
+		responseBody.Status = response.Failed
+		responseBody.Reason = err.Error()
+		response.FireResponse(event.ResponseURL, responseBody)
 		return nil, err
 	}
 
-	responseBody := response.ResponseBody{
-		Status:             "SUCCESS",
-		Reason:             "",
-		PhysicalResourceID: ctx.LogStreamName,
-		StackID:            event.StackID,
-		RequestID:          event.RequestID,
-		LogicalResourceID:  event.LogicalResourceID,
-		Data:               map[string]string{"AvailabilityZone": az},
-	}
-	err = response.Respond(event.ResponseURL, responseBody)
-	return nil, err
+	responseBody.Status = response.Success
+	responseBody.Data = map[string]string{"AvailabilityZone": az}
+	response.FireResponse(event.ResponseURL, responseBody)
+
+	return nil, nil
 }
 
 type resourceProperties struct {
