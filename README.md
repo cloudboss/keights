@@ -1,4 +1,4 @@
-# stackrun
+# stackhand
 
 A collection of CloudFormation custom resource Lambdas written in Go.
 
@@ -28,7 +28,7 @@ Returns:
 }
 ```
 
-Hosted at s3://cloudboss-public/lambda/co/cloudboss/stackrun/subnet_to_az/0.1.0/python2.7/subnet_to_az-0.1.0.zip.
+Hosted at s3://cloudboss-public/lambda/co/cloudboss/stackhand/subnet_to_az/0.1.0/python2.7/subnet_to_az-0.1.0.zip.
 
 CloudFormation example:
 
@@ -45,7 +45,7 @@ Resources:
     Properties:
       Code:
         S3Bucket: cloudboss-public
-        S3Key: lambda/co/cloudboss/stackrun/subnet_to_az/0.1.0/python2.7/subnet_to_az-0.1.0.zip
+        S3Key: lambda/co/cloudboss/stackhand/subnet_to_az/0.1.0/python2.7/subnet_to_az-0.1.0.zip
       Handler: handler.Handle
       Runtime: python2.7
       Timeout: 30
