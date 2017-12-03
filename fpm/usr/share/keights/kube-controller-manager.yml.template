@@ -15,6 +15,8 @@ spec:
     - /usr/local/bin/kube-controller-manager
     - --cluster-name={{ .ClusterName }}
     - --master={{ .MyIP }}:8080
+    - --cloud-provider=aws
+    - --configure-cloud-routes=false
     - --address=127.0.0.1
     - --leader-elect=true
     - --controllers=*,bootstrapsigner,tokencleaner
