@@ -35,6 +35,12 @@ import (
 func Handle(event *cloudformationevt.Event, ctx *runtime.Context) (interface{}, error) {
 	responseBody := response.NewResponseBody(event, ctx)
 
+	if event.RequestType != "Create" {
+		responseBody.Status = response.Success
+		response.FireResponse(event.ResponseURL, responseBody)
+		return nil, nil
+	}
+
 	var props resourceProperties
 	err := json.Unmarshal(event.ResourceProperties, &props)
 	if err != nil {
