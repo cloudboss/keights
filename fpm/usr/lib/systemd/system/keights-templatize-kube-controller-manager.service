@@ -4,6 +4,7 @@ Description=keights-templatize-kube-controller-manager service
 [Service]
 Type=simple
 # Environment=AWS_REGION=
+# Environment=KEIGHTS_CLUSTER_NAME=
 # Environment=KEIGHTS_KUBE_CONTROLLER_MANAGER_IMAGE=
 # Environment=KEIGHTS_POD_CIDR=
 # Environment=KEIGHTS_SERVICE_CIDR=
@@ -12,6 +13,7 @@ ExecStart=/usr/bin/keights template \
             -i /run/keights-collector/asg \
             -t /usr/share/keights/kube-controller-manager.yml.template \
             -D /etc/kubernetes/manifests/kube-controller-manager.yml \
+            -v ClusterName=${KEIGHTS_CLUSTER_NAME} \
             -v PodCidr=${KEIGHTS_POD_CIDR} \
             -v ServiceCidr=${KEIGHTS_SERVICE_CIDR} \
             -v KubeControllerManagerImage=${KEIGHTS_KUBE_CONTROLLER_MANAGER_IMAGE}
