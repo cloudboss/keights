@@ -16,6 +16,7 @@ spec:
     - --address=127.0.0.1
     - --master={{ .MyIP }}:8080
     - --leader-elect=true
+    - --v=2
     image: {{ .KubeSchedulerImage }}
     livenessProbe:
       failureThreshold: 8
