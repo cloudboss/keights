@@ -305,6 +305,7 @@ Resources:
                 content: |
                   [Service]
                   Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
                   Environment=KEIGHTS_POD_CIDR=${PodCidr}
                   Environment=KEIGHTS_SERVICE_CIDR=${ServiceCidr}
                   Environment=KEIGHTS_KUBE_CONTROLLER_MANAGER_IMAGE=gcr.io/google_containers/kube-controller-manager:v${K8sVersion}
