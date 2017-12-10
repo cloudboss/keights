@@ -18,6 +18,9 @@ Parameters:
   SubnetIds:
     Description: List of subnets IDs in VPC where cluster will be placed
     Type: List<AWS::EC2::Subnet::Id>
+  LoadBalancerSubnetIds:
+    Description: List of subnets IDs in VPC for API load balancer
+    Type: List<AWS::EC2::Subnet::Id>
   ImageId:
     Description: ID of AMI used for instances
     Type: AWS::EC2::Image::Id
@@ -30,6 +33,13 @@ Parameters:
   IamInstanceProfile:
     Description: IAM Instance profile to assign to instances
     Type: String
+  LoadBalancerScheme:
+    Description: Scheme of API load balancer
+    Type: String
+    Default: internal
+    AllowedValues:
+      - internal
+      - internet-facing
   ApiServerSecurityGroup:
     Description: Security group for kube-apiserver
     Type: String
@@ -52,6 +62,10 @@ Parameters:
     Type: String
   SshAccessCidr:
     Description: CIDR block given ssh access to cluster
+    Default: 0.0.0.0/0
+    Type: String
+  ApiAccessCidr:
+    Description: CIDR block given API access to cluster
     Default: 0.0.0.0/0
     Type: String
   K8sVersion:
@@ -140,6 +154,57 @@ Resources:
       ToPort: 2380
       IpProtocol: tcp
 
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for API load balancer
+      VpcId: !Ref VpcId
+
+  LoadBalancerSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref LoadBalancerSecurityGroup
+      CidrIp: !Ref ApiAccessCidr
+      FromPort: 80
+      ToPort: 80
+      IpProtocol: tcp
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: !Ref LoadBalancerScheme
+      SecurityGroups:
+        - !Ref LoadBalancerSecurityGroup
+        - !Ref ApiServerSecurityGroup
+      Subnets: !Ref LoadBalancerSubnetIds
+      Type: application
+      IpAddressType: ipv4
+
+  LoadBalancerTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPath: /healthz
+      # HealthCheckPort: 6443
+      HealthCheckPort: 8080
+      # HealthCheckProtocol: HTTPS
+      HealthCheckProtocol: HTTP
+      Matcher:
+        HttpCode: 200
+      Name: !Ref ClusterName
+      Port: 8080
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+
+  LoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref LoadBalancerTargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+
   AutoscalingGroupSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -163,6 +228,7 @@ Resources:
       MaxSize: !FindInMap [MaxSizes, NumInstances, !Ref NumInstances]
       MinSize: !Ref NumInstances
       VPCZoneIdentifier: !Ref SubnetIds
+      TargetGroupARNs: [!Ref LoadBalancerTargetGroup]
       Tags:
         - Key: Name
           Value: !Sub ${ClusterName}-master
@@ -360,6 +426,12 @@ Resources:
               - systemctl start --no-block kube-router.service
 
 Outputs:
+  LoadBalancerDnsName:
+    Description: DNS name of load balancer
+    Value: !GetAtt [LoadBalancer, DNSName]
+  LoadBalancerSecurityGroup:
+    Description: Security group of load balancer
+    Value: !Ref LoadBalancerSecurityGroup
   AutoscalingGroupSecurityGroup:
     Description: Security group of autoscaling group
     Value: !Ref AutoscalingGroupSecurityGroup
