@@ -69,7 +69,7 @@ Mappings:
     AllFunctions:
       Bucket: cloudboss-public
     SubnetToAzFunction:
-      Key: lambda/co/cloudboss/stackboss/0.1.0/python3.6/stackboss-0.1.0.zip
+      Key: lambda/co/cloudboss/stackhand/subnet_to_az/0.1.0/python2.7/subnet_to_az-0.1.0.zip
   MaxSizes:
     NumInstances:
       '1': 2
@@ -85,8 +85,8 @@ Resources:
       Code:
         S3Bucket: !FindInMap [LambdaUrls, AllFunctions, Bucket]
         S3Key: !FindInMap [LambdaUrls, SubnetToAzFunction, Key]
-      Handler: stackboss.handlers.subnet_to_az
-      Runtime: python3.6
+      Handler: handler.Handle
+      Runtime: python2.7
       Timeout: 30
       Role: !Ref LambdaExecutionRole
 
