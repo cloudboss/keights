@@ -109,7 +109,6 @@ Resources:
     DependsOn: SubnetToAzFunction
     Properties:
       ServiceToken: !GetAtt [SubnetToAzFunction, Arn]
-      Region: !Ref AWS::Region
       SubnetId: !Select [0, !Ref SubnetIds]
 
   SubnetToAz2:
@@ -118,7 +117,6 @@ Resources:
     Condition: HasThreeMasters
     Properties:
       ServiceToken: !GetAtt [SubnetToAzFunction, Arn]
-      Region: !Ref AWS::Region
       SubnetId: !Select [1, !Ref SubnetIds]
 
   SubnetToAz3:
@@ -127,7 +125,6 @@ Resources:
     Condition: HasThreeMasters
     Properties:
       ServiceToken: !GetAtt [SubnetToAzFunction, Arn]
-      Region: !Ref AWS::Region
       SubnetId: !Select [2, !Ref SubnetIds]
 
   EtcdSecurityGroup:
