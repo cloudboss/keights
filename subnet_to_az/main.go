@@ -51,7 +51,7 @@ func Handle(event *cloudformationevt.Event, ctx *runtime.Context) (interface{}, 
 	}
 
 	client := ec2.New(session.New())
-	az, err := subnetToAZ(client, *props.Region, *props.SubnetID)
+	az, err := subnetToAZ(client, *props.SubnetID)
 	if err != nil {
 		responseBody.Status = response.Failed
 		responseBody.Reason = err.Error()
@@ -68,11 +68,10 @@ func Handle(event *cloudformationevt.Event, ctx *runtime.Context) (interface{}, 
 
 type resourceProperties struct {
 	ServiceToken *string
-	Region       *string
 	SubnetID     *string `json:"SubnetId"`
 }
 
-func subnetToAZ(client *ec2.EC2, region, subnetID string) (string, error) {
+func subnetToAZ(client *ec2.EC2, subnetID string) (string, error) {
 	subnetsOutput, err := client.DescribeSubnets(
 		&ec2.DescribeSubnetsInput{
 			SubnetIds: []*string{aws.String(subnetID)},
