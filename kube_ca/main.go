@@ -241,7 +241,7 @@ func handleCreate(props resourceProperties, ssmClient ssmiface.SSMAPI, responder
 func handleDelete(props resourceProperties, ssmClient ssmiface.SSMAPI, responder response.Responder) error {
 	clusterName := props.ClusterName
 	parameters := []string{
-		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.CACertName),
+		fmt.Sprintf(clusterSecretPath, clusterName, kubeadmconstants.CACertName),
 		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.CAKeyName),
 		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.APIServerCertName),
 		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.APIServerKeyName),
