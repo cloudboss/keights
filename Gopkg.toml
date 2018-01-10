@@ -24,3 +24,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/eawsy/aws-lambda-go-core"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/vektra/mockery"
