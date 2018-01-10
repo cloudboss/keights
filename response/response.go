@@ -35,6 +35,41 @@ const (
 	Success = "SUCCESS"
 )
 
+type responder struct {
+	responseURL  string
+	responseBody ResponseBody
+}
+
+type Responder interface {
+	FireSuccess() error
+	FireFailed(reason string) error
+}
+
+func (r *responder) FireSuccess() error {
+	r.responseBody.Status = Success
+	return Respond(r.responseURL, r.responseBody)
+}
+
+func (r *responder) FireFailed(reason string) error {
+	r.responseBody.Status = Failed
+	r.responseBody.Reason = reason
+	return Respond(r.responseURL, r.responseBody)
+}
+
+func NewResponder(event *cloudformationevt.Event, ctx *runtime.Context) Responder {
+	return &responder{
+		responseURL: event.ResponseURL,
+		responseBody: ResponseBody{
+			Reason:             "",
+			PhysicalResourceID: ctx.LogStreamName,
+			StackID:            event.StackID,
+			RequestID:          event.RequestID,
+			LogicalResourceID:  event.LogicalResourceID,
+			Data:               map[string]string{},
+		},
+	}
+}
+
 type ResponseBody struct {
 	Status             string
 	Reason             string
