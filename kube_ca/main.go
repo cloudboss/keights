@@ -220,10 +220,10 @@ func deleteParameter(ssmClient ssmiface.SSMAPI, path *string) error {
 
 func controllerNames(clusterName string, numInstances int) []string {
 	names := []string{
-		fmt.Sprintf("api-k8s-%s.k8s.local", clusterName),
+		fmt.Sprintf("api-%s.k8s.local", clusterName),
 	}
 	for i := 1; i <= numInstances; i++ {
-		name := fmt.Sprintf("k8s-%s-%d.k8s.local", clusterName, i)
+		name := fmt.Sprintf("%s-%d.k8s.local", clusterName, i)
 		names = append(names, name)
 	}
 	return names
