@@ -1,0 +1,13 @@
+[Unit]
+Description=keights-whisper-node service
+
+[Service]
+Type=oneshot
+# Environment=AWS_REGION=
+# Environment=KEIGHTS_CLUSTER_NAME=
+ExecStart=/usr/bin/keights whisper \
+            -p /${KEIGHTS_CLUSTER_NAME}/cluster/ca.crt:/run/kubernetes/pki/ca.crt \
+            -p /${KEIGHTS_CLUSTER_NAME}/cluster/boostrap-token:/run/kubernetes/pki/bootstrap-token
+
+[Install]
+WantedBy=keights-configure.target

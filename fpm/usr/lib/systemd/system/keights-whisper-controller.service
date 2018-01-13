@@ -1,0 +1,24 @@
+[Unit]
+Description=keights-whisper-controller service
+
+[Service]
+Type=oneshot
+# Environment=AWS_REGION=
+# Environment=KEIGHTS_CLUSTER_NAME=
+ExecStart=/usr/bin/keights whisper \
+            -p /${KEIGHTS_CLUSTER_NAME}/cluster/ca.crt:/run/kubernetes/pki/ca.crt \
+            -p /${KEIGHTS_CLUSTER_NAME}/cluster/boostrap-token:/run/kubernetes/pki/bootstrap-token \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/ca.key:/run/kubernetes/pki/ca.key \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/apiserver.crt:/run/kubernetes/pki/apiserver.crt \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/apiserver.key:/run/kubernetes/pki/apiserver.key \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd.crt:/run/kubernetes/pki/etcd.crt \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd.key:/run/kubernetes/pki/etcd.key \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-peer.crt:/run/kubernetes/pki/etcd-peer.crt \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-peer.key:/run/kubernetes/pki/etcd.key \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/apiserver-kubelet-client.crt:/run/kubernetes/pki/apiserver-kubelet-client.crt \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/apiserver-kubelet-client.key:/run/kubernetes/pki/apiserver-kubelet-client.key \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/sa.pub:/run/kubernetes/pki/sa.pub \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/sa.key:/run/kubernetes/pki/sa.key
+
+[Install]
+WantedBy=keights-configure.target
