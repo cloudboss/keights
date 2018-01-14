@@ -10,10 +10,14 @@ ExecStart=/usr/bin/keights whisper \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/ca.key:/run/kubernetes/pki/ca.key \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/apiserver.crt:/run/kubernetes/pki/apiserver.crt \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/apiserver.key:/run/kubernetes/pki/apiserver.key \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-ca.crt:/run/kubernetes/pki/etcd-ca.crt \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-ca.key:/run/kubernetes/pki/etcd-ca.key \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd.crt:/run/kubernetes/pki/etcd.crt \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd.key:/run/kubernetes/pki/etcd.key \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-peer.crt:/run/kubernetes/pki/etcd-peer.crt \
-            -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-peer.key:/run/kubernetes/pki/etcd.key \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-peer.key:/run/kubernetes/pki/etcd-peer.key \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-client.crt:/run/kubernetes/pki/etcd-client.crt \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-client.key:/run/kubernetes/pki/etcd-client.key \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/apiserver-kubelet-client.crt:/run/kubernetes/pki/apiserver-kubelet-client.crt \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/apiserver-kubelet-client.key:/run/kubernetes/pki/apiserver-kubelet-client.key \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/sa.pub:/run/kubernetes/pki/sa.pub \

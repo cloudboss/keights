@@ -15,25 +15,39 @@ spec:
       value: {{ .Prefix }}-{{ .MyIndex }}
     - name: ETCD_DATA_DIR
       value: /var/lib/etcd
-    - name: ETCD_LISTEN_PEER_URLS
-      value: http://{{ .MyIP }}:2380,http://127.0.0.1:2380
     - name: ETCD_LISTEN_CLIENT_URLS
-      value: http://{{ .MyIP }}:2379,http://127.0.0.1:2379
+      value: https://{{ .Prefix }}-{{ .MyIndex }}.{{ .Domain }}:2379
+    - name: ETCD_LISTEN_PEER_URLS
+      value: https://{{ .Prefix }}-{{ .MyIndex }}.{{ .Domain }}:2380
     - name: ETCD_ADVERTISE_CLIENT_URLS
-      value: http://{{ .Prefix }}-{{ .MyIndex }}.{{ .Domain }}:2379
+      value: https://{{ .Prefix }}-{{ .MyIndex }}.{{ .Domain }}:2379
     - name: ETCD_INITIAL_ADVERTISE_PEER_URLS
-      value: http://{{ .Prefix }}-{{ .MyIndex }}.{{ .Domain }}:2380
+      value: https://{{ .Prefix }}-{{ .MyIndex }}.{{ .Domain }}:2380
     - name: ETCD_INITIAL_CLUSTER_STATE
       value: new
     - name: ETCD_INITIAL_CLUSTER_TOKEN
       value: {{ .EtcdClusterToken }}
     - name: ETCD_INITIAL_CLUSTER
-      value: {{ range $i, $k := keys .HostMap }}{{ if $i }},{{end}}{{ $.Prefix }}-{{ $k }}=http://{{ $.Prefix }}-{{ $k }}.{{ $.Domain }}:2380{{ end }}
+      value: {{ range $i, $k := keys .HostMap }}{{ if $i }},{{end}}{{ $.Prefix }}-{{ $k }}=https://{{ $.Prefix }}-{{ $k }}.{{ $.Domain }}:2380{{ end }}
+    - name: ETCD_CERT_FILE
+      value: /run/kubernetes/pki/etcd.crt
+    - name: ETCD_KEY_FILE
+      value: /run/kubernetes/pki/etcd.key
+    - name: ETCD_PEER_CERT_FILE
+      value: /run/kubernetes/pki/etcd-peer.crt
+    - name: ETCD_PEER_KEY_FILE
+      value: /run/kubernetes/pki/etcd-peer.key
+    - name: ETCD_TRUSTED_CA_FILE
+      value: /run/kubernetes/pki/etcd-ca.crt
+    - name: ETCD_PEER_TRUSTED_CA_FILE
+      value: /run/kubernetes/pki/etcd-ca.crt
+    - name: ETCD_CLIENT_CERT_AUTH
+      value: '1'
+    - name: ETCD_PEER_CLIENT_CERT_AUTH
+      value: '1'
     image: {{ .EtcdImage }}
     livenessProbe:
-      httpGet:
-        host: 127.0.0.1
-        path: /health
+      tcpSocket:
         port: 2379
       initialDelaySeconds: 15
       timeoutSeconds: 15
@@ -49,16 +63,48 @@ spec:
       requests:
         cpu: 200m
     volumeMounts:
-    - mountPath: /etc/hosts
-      name: etchosts
     - mountPath: /var/lib/etcd
-      name: varlibetcd
+      name: var-lib-etcd
+      readOnly: false
+    - mountPath: /etc/hosts
+      name: etc-hosts
+      readOnly: true
+    - mountPath: /run/kubernetes/pki/etcd-ca.crt
+      name: run-kubernetes-pki-etcd-ca
+      readOnly: true
+    - mountPath: /run/kubernetes/pki/etcd.crt
+      name: run-kubernetes-pki-etcd
+      readOnly: true
+    - mountPath: /run/kubernetes/pki/etcd.key
+      name: run-kubernetes-pki-etcd-key
+      readOnly: true
+    - mountPath: /run/kubernetes/pki/etcd-peer.crt
+      name: run-kubernetes-pki-etcd-peer
+      readOnly: true
+    - mountPath: /run/kubernetes/pki/etcd-peer.key
+      name: run-kubernetes-pki-etcd-peer-key
+      readOnly: true
   hostNetwork: true
   volumes:
   - hostPath:
-      path: /etc/hosts
-    name: etchosts
-  - hostPath:
       path: /var/lib/etcd
-    name: varlibetcd
+    name: var-lib-etcd
+  - hostPath:
+      path: /etc/hosts
+    name: etc-hosts
+  - hostPath:
+      path: /run/kubernetes/pki/etcd-ca.crt
+    name: run-kubernetes-pki-etcd-ca
+  - hostPath:
+      path: /run/kubernetes/pki/etcd.crt
+    name: run-kubernetes-pki-etcd
+  - hostPath:
+      path: /run/kubernetes/pki/etcd.key
+    name: run-kubernetes-pki-etcd-key
+  - hostPath:
+      path: /run/kubernetes/pki/etcd-peer.crt
+    name: run-kubernetes-pki-etcd-peer
+  - hostPath:
+      path: /run/kubernetes/pki/etcd-peer.key
+    name: run-kubernetes-pki-etcd-peer-key
 status: {}

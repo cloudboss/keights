@@ -16,7 +16,10 @@ spec:
     - --bind-address={{ .MyIP }}
     - --insecure-bind-address={{ .MyIP }}
     - --service-cluster-ip-range={{ .ServiceCidr }}
-    - --etcd-servers={{ range $i, $k := keys .HostMap }}{{ if $i }},{{end}}http://{{ $.Prefix }}-{{ $k }}.{{ $.Domain }}:2379{{ end }}
+    - --etcd-servers={{ range $i, $k := keys .HostMap }}{{ if $i }},{{end}}https://{{ $.Prefix }}-{{ $k }}.{{ $.Domain }}:2379{{ end }}
+    - --etcd-cafile=/run/kubernetes/pki/etcd-ca.crt
+    - --etcd-certfile=/run/kubernetes/pki/etcd-client.crt
+    - --etcd-keyfile=/run/kubernetes/pki/etcd-client.key
     - --cloud-provider=aws
     - --v=2
     image: {{ .KubeApiserverImage }}
@@ -37,10 +40,28 @@ spec:
     - mountPath: /etc/ssl/certs
       name: ca-certs
       readOnly: true
+    - mountPath: /run/kubernetes/pki/etcd-ca.crt
+      name: run-kubernetes-pki-etcd-ca
+      readOnly: true
+    - mountPath: /run/kubernetes/pki/etcd-client.crt
+      name: run-kubernetes-pki-etcd-client
+      readOnly: true
+    - mountPath: /run/kubernetes/pki/etcd-client.key
+      name: run-kubernetes-pki-etcd-client-key
+      readOnly: true
   hostNetwork: true
   volumes:
   - hostPath:
       path: /etc/ssl/certs
       type: DirectoryOrCreate
     name: ca-certs
+  - hostPath:
+      path: /run/kubernetes/pki/etcd-ca.crt
+    name: run-kubernetes-pki-etcd-ca
+  - hostPath:
+      path: /run/kubernetes/pki/etcd-client.crt
+    name: run-kubernetes-pki-etcd-client
+  - hostPath:
+      path: /run/kubernetes/pki/etcd-client.key
+    name: run-kubernetes-pki-etcd-client-key
 status: {}
