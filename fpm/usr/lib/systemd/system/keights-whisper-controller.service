@@ -7,7 +7,6 @@ Type=oneshot
 # Environment=KEIGHTS_CLUSTER_NAME=
 ExecStart=/usr/bin/keights whisper \
             -p /${KEIGHTS_CLUSTER_NAME}/cluster/ca.crt:/run/kubernetes/pki/ca.crt \
-            -p /${KEIGHTS_CLUSTER_NAME}/cluster/boostrap-token:/run/kubernetes/pki/bootstrap-token \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/ca.key:/run/kubernetes/pki/ca.key \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/apiserver.crt:/run/kubernetes/pki/apiserver.crt \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/apiserver.key:/run/kubernetes/pki/apiserver.key \
