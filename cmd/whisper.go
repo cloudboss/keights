@@ -38,6 +38,6 @@ var (
 
 func init() {
 	RootCmd.AddCommand(whisperCmd)
-	collectCmd.Flags().StringSliceVarP(&paths, "path", "p",
+	whisperCmd.Flags().StringSliceVarP(&paths, "path", "p",
 		[]string{}, "Colon separated path and destination")
 }
