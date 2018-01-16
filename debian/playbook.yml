@@ -232,10 +232,14 @@
       register: chrooted_installation
       until: chrooted_installation | succeeded
 
+    - name: load overlay kernel module
+      modprobe:
+        name: overlay
+
     - name: import kubernetes docker images in chroot
       shell: |
         chroot /mnt sh -s<<' EOF'
-        dockerd >/dev/null 2>&1 </dev/null &
+        dockerd --storage-driver=overlay2 >/dev/null 2>&1 </dev/null &
         pid=${!}
         while [ ! -S /var/run/docker.sock ]; do
             sleep 0.5
