@@ -43,11 +43,15 @@ const (
 	clusterSecretPath    = "/%s/cluster/%s"
 	controllerSecretPath = "/%s/controller/%s"
 	etcd                 = "etcd"
+	etcdCaCertName       = "etcd-ca.crt"
+	etcdCaKeyName        = "etcd-ca.key"
 	etcdCertName         = "etcd.crt"
 	etcdKeyName          = "etcd.key"
 	etcdPeer             = "etcd-peer"
 	etcdPeerCertName     = "etcd-peer.crt"
 	etcdPeerKeyName      = "etcd-peer.key"
+	etcdClientCertName   = "etcd-client.crt"
+	etcdClientKeyName    = "etcd-client.key"
 )
 
 type resourceProperties struct {
@@ -76,8 +80,22 @@ func newClientKeyPair(caCert *x509.Certificate, caKey *rsa.PrivateKey) (*x509.Ce
 	return pkiutil.NewCertAndKey(caCert, caKey, config)
 }
 
+func newClientServerKeyPair(caCert *x509.Certificate, caKey *rsa.PrivateKey, cn string, dnsNames []string) (*x509.Certificate, *rsa.PrivateKey, error) {
+	config := certutil.Config{
+		CommonName: cn,
+		Usages:     []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		AltNames:   certutil.AltNames{DNSNames: dnsNames},
+	}
+	return pkiutil.NewCertAndKey(caCert, caKey, config)
+}
+
 func newCerts(ssmClient ssmiface.SSMAPI, clusterName, kmsKeyID, loadBalancerName string, controllerNames []string) error {
 	caCert, caKey, err := pkiutil.NewCertificateAuthority()
+	if err != nil {
+		return err
+	}
+
+	etcdCaCert, etcdCaKey, err := pkiutil.NewCertificateAuthority()
 	if err != nil {
 		return err
 	}
@@ -88,17 +106,22 @@ func newCerts(ssmClient ssmiface.SSMAPI, clusterName, kmsKeyID, loadBalancerName
 		return err
 	}
 
-	etcdCert, etcdKey, err := newServerKeyPair(caCert, caKey, etcd, controllerNames)
+	etcdCert, etcdKey, err := newServerKeyPair(etcdCaCert, etcdCaKey, etcd, controllerNames)
 	if err != nil {
 		return err
 	}
 
-	etcdPeerCert, etcdPeerKey, err := newServerKeyPair(caCert, caKey, etcdPeer, controllerNames)
+	etcdPeerCert, etcdPeerKey, err := newClientServerKeyPair(etcdCaCert, etcdCaKey, etcdPeer, controllerNames)
 	if err != nil {
 		return err
 	}
 
 	apiClientCert, apiClientKey, err := newClientKeyPair(caCert, caKey)
+	if err != nil {
+		return err
+	}
+
+	etcdClientCert, etcdClientKey, err := newClientKeyPair(etcdCaCert, etcdCaKey)
 	if err != nil {
 		return err
 	}
@@ -112,6 +135,19 @@ func newCerts(ssmClient ssmiface.SSMAPI, clusterName, kmsKeyID, loadBalancerName
 	caKeyPEM := string(certutil.EncodePrivateKeyPEM(caKey))
 	caKeyPath := fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.CAKeyName)
 	err = storeParameter(ssmClient, caKeyPath, kmsKeyID, &caKeyPEM)
+	if err != nil {
+		return err
+	}
+
+	etcdCaCertPEM := string(certutil.EncodeCertPEM(etcdCaCert))
+	etcdCaCertPath := fmt.Sprintf(controllerSecretPath, clusterName, etcdCaCertName)
+	err = storeParameter(ssmClient, etcdCaCertPath, kmsKeyID, &etcdCaCertPEM)
+	if err != nil {
+		return err
+	}
+	etcdCaKeyPEM := string(certutil.EncodePrivateKeyPEM(etcdCaKey))
+	etcdCaKeyPath := fmt.Sprintf(controllerSecretPath, clusterName, etcdCaKeyName)
+	err = storeParameter(ssmClient, etcdCaKeyPath, kmsKeyID, &etcdCaKeyPEM)
 	if err != nil {
 		return err
 	}
@@ -164,6 +200,19 @@ func newCerts(ssmClient ssmiface.SSMAPI, clusterName, kmsKeyID, loadBalancerName
 	apiClientKeyPEM := string(certutil.EncodePrivateKeyPEM(apiClientKey))
 	apiClientKeyPath := fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.APIServerKubeletClientKeyName)
 	err = storeParameter(ssmClient, apiClientKeyPath, kmsKeyID, &apiClientKeyPEM)
+	if err != nil {
+		return err
+	}
+
+	etcdClientCertPEM := string(certutil.EncodeCertPEM(etcdClientCert))
+	etcdClientCertPath := fmt.Sprintf(controllerSecretPath, clusterName, etcdClientCertName)
+	err = storeParameter(ssmClient, etcdClientCertPath, kmsKeyID, &etcdClientCertPEM)
+	if err != nil {
+		return err
+	}
+	etcdClientKeyPEM := string(certutil.EncodePrivateKeyPEM(etcdClientKey))
+	etcdClientKeyPath := fmt.Sprintf(controllerSecretPath, clusterName, etcdClientKeyName)
+	err = storeParameter(ssmClient, etcdClientKeyPath, kmsKeyID, &etcdClientKeyPEM)
 	if err != nil {
 		return err
 	}
@@ -245,10 +294,14 @@ func handleDelete(props resourceProperties, ssmClient ssmiface.SSMAPI, responder
 		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.CAKeyName),
 		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.APIServerCertName),
 		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.APIServerKeyName),
+		fmt.Sprintf(controllerSecretPath, clusterName, etcdCaCertName),
+		fmt.Sprintf(controllerSecretPath, clusterName, etcdCaKeyName),
 		fmt.Sprintf(controllerSecretPath, clusterName, etcdCertName),
 		fmt.Sprintf(controllerSecretPath, clusterName, etcdKeyName),
 		fmt.Sprintf(controllerSecretPath, clusterName, etcdPeerCertName),
 		fmt.Sprintf(controllerSecretPath, clusterName, etcdPeerKeyName),
+		fmt.Sprintf(controllerSecretPath, clusterName, etcdClientCertName),
+		fmt.Sprintf(controllerSecretPath, clusterName, etcdClientKeyName),
 		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.APIServerKubeletClientCertName),
 		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.APIServerKubeletClientKeyName),
 		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.ServiceAccountPrivateKeyName),
