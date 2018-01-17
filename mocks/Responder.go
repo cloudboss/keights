@@ -35,3 +35,17 @@ func (_m *Responder) FireSuccess() error {
 
 	return r0
 }
+
+// SendData provides a mock function with given fields: data
+func (_m *Responder) SendData(data map[string]string) error {
+	ret := _m.Called(data)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(map[string]string) error); ok {
+		r0 = rf(data)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}

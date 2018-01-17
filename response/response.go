@@ -43,6 +43,7 @@ type responder struct {
 type Responder interface {
 	FireSuccess() error
 	FireFailed(reason string) error
+	SendData(data map[string]string) error
 }
 
 func (r *responder) FireSuccess() error {
@@ -53,6 +54,12 @@ func (r *responder) FireSuccess() error {
 func (r *responder) FireFailed(reason string) error {
 	r.responseBody.Status = Failed
 	r.responseBody.Reason = reason
+	return Respond(r.responseURL, r.responseBody)
+}
+
+func (r *responder) SendData(data map[string]string) error {
+	r.responseBody.Status = Success
+	r.responseBody.Data = data
 	return Respond(r.responseURL, r.responseBody)
 }
 
