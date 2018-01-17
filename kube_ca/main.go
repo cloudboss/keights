@@ -26,13 +26,13 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/cloudboss/stackhand/response"
-	"github.com/eawsy/aws-lambda-go-core/service/lambda/runtime"
-	"github.com/eawsy/aws-lambda-go-event/service/lambda/runtime/event/cloudformationevt"
+	cf "github.com/eawsy/aws-lambda-go-event/service/lambda/runtime/event/cloudformationevt"
 	certutil "k8s.io/client-go/util/cert"
 	kubeadmconstants "k8s.io/kubernetes/cmd/kubeadm/app/constants"
 	"k8s.io/kubernetes/cmd/kubeadm/app/phases/certs"
@@ -315,32 +315,35 @@ func handleDelete(props resourceProperties, ssmClient ssmiface.SSMAPI, responder
 	return responder.FireSuccess()
 }
 
-func Handle(event *cloudformationevt.Event, ctx *runtime.Context) (interface{}, error) {
-	responder := response.NewResponder(event, ctx)
+func Handle(event *cf.Event) error {
+	responder := response.NewResponder(event)
 
 	if event.RequestType == "Update" {
-		return nil, responder.FireSuccess()
+		return responder.FireSuccess()
 	}
 
 	var props resourceProperties
 	err := json.Unmarshal(event.ResourceProperties, &props)
 	if err != nil {
-		return nil, responder.FireFailed(err.Error())
+		return responder.FireFailed(err.Error())
 	}
 
 	sess, err := session.NewSession()
 	if err != nil {
-		return nil, responder.FireFailed(err.Error())
+		return responder.FireFailed(err.Error())
 	}
 	ssmClient := ssm.New(sess)
 
 	if event.RequestType == "Create" {
-		return nil, handleCreate(props, ssmClient, responder)
+		return handleCreate(props, ssmClient, responder)
 	}
 
 	if event.RequestType == "Delete" {
-		return nil, handleDelete(props, ssmClient, responder)
+		return handleDelete(props, ssmClient, responder)
 	}
+	return nil
+}
 
-	return nil, nil
+func main() {
+	lambda.Start(Handle)
 }

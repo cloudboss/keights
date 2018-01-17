@@ -24,46 +24,39 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/cloudboss/stackhand/response"
-	"github.com/eawsy/aws-lambda-go-core/service/lambda/runtime"
-	"github.com/eawsy/aws-lambda-go-event/service/lambda/runtime/event/cloudformationevt"
+	cf "github.com/eawsy/aws-lambda-go-event/service/lambda/runtime/event/cloudformationevt"
 )
 
-func Handle(event *cloudformationevt.Event, ctx *runtime.Context) (interface{}, error) {
-	responseBody := response.NewResponseBody(event, ctx)
+func Handle(event *cf.Event) error {
+	responder := response.NewResponder(event)
 
 	if event.RequestType != "Create" {
-		responseBody.Status = response.Success
-		response.FireResponse(event.ResponseURL, responseBody)
-		return nil, nil
+		return responder.FireSuccess()
 	}
 
 	var props resourceProperties
 	err := json.Unmarshal(event.ResourceProperties, &props)
 	if err != nil {
-		responseBody.Status = response.Failed
-		responseBody.Reason = err.Error()
-		response.FireResponse(event.ResponseURL, responseBody)
-		return nil, err
+		return responder.FireFailed(err.Error())
 	}
 
-	client := ec2.New(session.New())
+	sess, err := session.NewSession()
+	if err != nil {
+		return responder.FireFailed(err.Error())
+	}
+	client := ec2.New(sess)
 	az, err := subnetToAZ(client, *props.SubnetID)
 	if err != nil {
-		responseBody.Status = response.Failed
-		responseBody.Reason = err.Error()
-		response.FireResponse(event.ResponseURL, responseBody)
-		return nil, err
+		return responder.FireFailed(err.Error())
 	}
 
-	responseBody.Status = response.Success
-	responseBody.Data = map[string]string{"AvailabilityZone": az}
-	response.FireResponse(event.ResponseURL, responseBody)
-
-	return nil, nil
+	data := map[string]string{"AvailabilityZone": az}
+	return responder.SendData(data)
 }
 
 type resourceProperties struct {
@@ -86,4 +79,8 @@ func subnetToAZ(client *ec2.EC2, subnetID string) (string, error) {
 	}
 	subnet := subnetsOutput.Subnets[0]
 	return *subnet.AvailabilityZone, nil
+}
+
+func main() {
+	lambda.Start(Handle)
 }
