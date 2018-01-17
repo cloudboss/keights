@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/eawsy/aws-lambda-go-core/service/lambda/runtime"
+	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/eawsy/aws-lambda-go-event/service/lambda/runtime/event/cloudformationevt"
 )
 
@@ -56,12 +56,12 @@ func (r *responder) FireFailed(reason string) error {
 	return Respond(r.responseURL, r.responseBody)
 }
 
-func NewResponder(event *cloudformationevt.Event, ctx *runtime.Context) Responder {
+func NewResponder(event *cloudformationevt.Event) Responder {
 	return &responder{
 		responseURL: event.ResponseURL,
 		responseBody: ResponseBody{
 			Reason:             "",
-			PhysicalResourceID: ctx.LogStreamName,
+			PhysicalResourceID: lambdacontext.LogStreamName,
 			StackID:            event.StackID,
 			RequestID:          event.RequestID,
 			LogicalResourceID:  event.LogicalResourceID,
@@ -80,10 +80,10 @@ type ResponseBody struct {
 	Data               map[string]string
 }
 
-func NewResponseBody(event *cloudformationevt.Event, ctx *runtime.Context) ResponseBody {
+func NewResponseBody(event *cloudformationevt.Event) ResponseBody {
 	return ResponseBody{
 		Reason:             "",
-		PhysicalResourceID: ctx.LogStreamName,
+		PhysicalResourceID: lambdacontext.LogStreamName,
 		StackID:            event.StackID,
 		RequestID:          event.RequestID,
 		LogicalResourceID:  event.LogicalResourceID,
