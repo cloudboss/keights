@@ -188,13 +188,13 @@
 
 [[projects]]
   name = "k8s.io/kubernetes"
-  packages = ["cmd/kubeadm/app/apis/kubeadm","cmd/kubeadm/app/constants","cmd/kubeadm/app/phases/certs","cmd/kubeadm/app/phases/certs/pkiutil","pkg/api","pkg/registry/core/service/allocator","pkg/registry/core/service/ipallocator","pkg/util/version","staging/src/k8s.io/apimachinery/pkg/util/validation"]
+  packages = ["cmd/kubeadm/app/apis/kubeadm","cmd/kubeadm/app/constants","cmd/kubeadm/app/phases/certs","cmd/kubeadm/app/phases/certs/pkiutil","cmd/kubeadm/app/util/token","pkg/api","pkg/registry/core/service/allocator","pkg/registry/core/service/ipallocator","pkg/util/version","staging/src/k8s.io/apimachinery/pkg/util/validation"]
   revision = "9befc2b8928a9426501d3bf62f72849d5cbcd5a3"
   version = "v1.8.4"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5e0b24edfb625729ed88f0e98d3fa75affb1eed318b20fae3621039e4f706baf"
+  inputs-digest = "6da8f6e58b5780074bdc84fd097b1ea41b4dd1dd328803eafeae20a96bf8cc24"
   solver-name = "gps-cdcl"
   solver-version = 1
