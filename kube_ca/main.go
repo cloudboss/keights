@@ -27,11 +27,9 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/cloudboss/stackhand/response"
+	"github.com/cloudboss/stackhand/whisperer"
 	cf "github.com/eawsy/aws-lambda-go-event/service/lambda/runtime/event/cloudformationevt"
 	certutil "k8s.io/client-go/util/cert"
 	kubeadmconstants "k8s.io/kubernetes/cmd/kubeadm/app/constants"
@@ -89,7 +87,7 @@ func newClientServerKeyPair(caCert *x509.Certificate, caKey *rsa.PrivateKey, cn 
 	return pkiutil.NewCertAndKey(caCert, caKey, config)
 }
 
-func newCerts(ssmClient ssmiface.SSMAPI, clusterName, kmsKeyID, loadBalancerName string, controllerNames []string) error {
+func newCerts(whisp whisperer.Whisperer, clusterName, kmsKeyID, loadBalancerName string, controllerNames []string) error {
 	caCert, caKey, err := pkiutil.NewCertificateAuthority()
 	if err != nil {
 		return err
@@ -128,96 +126,96 @@ func newCerts(ssmClient ssmiface.SSMAPI, clusterName, kmsKeyID, loadBalancerName
 
 	caCertPEM := string(certutil.EncodeCertPEM(caCert))
 	caCertPath := fmt.Sprintf(clusterSecretPath, clusterName, kubeadmconstants.CACertName)
-	err = storeParameter(ssmClient, caCertPath, kmsKeyID, &caCertPEM)
+	err = whisp.StoreParameter(caCertPath, kmsKeyID, &caCertPEM)
 	if err != nil {
 		return err
 	}
 	caKeyPEM := string(certutil.EncodePrivateKeyPEM(caKey))
 	caKeyPath := fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.CAKeyName)
-	err = storeParameter(ssmClient, caKeyPath, kmsKeyID, &caKeyPEM)
+	err = whisp.StoreParameter(caKeyPath, kmsKeyID, &caKeyPEM)
 	if err != nil {
 		return err
 	}
 
 	etcdCaCertPEM := string(certutil.EncodeCertPEM(etcdCaCert))
 	etcdCaCertPath := fmt.Sprintf(controllerSecretPath, clusterName, etcdCaCertName)
-	err = storeParameter(ssmClient, etcdCaCertPath, kmsKeyID, &etcdCaCertPEM)
+	err = whisp.StoreParameter(etcdCaCertPath, kmsKeyID, &etcdCaCertPEM)
 	if err != nil {
 		return err
 	}
 	etcdCaKeyPEM := string(certutil.EncodePrivateKeyPEM(etcdCaKey))
 	etcdCaKeyPath := fmt.Sprintf(controllerSecretPath, clusterName, etcdCaKeyName)
-	err = storeParameter(ssmClient, etcdCaKeyPath, kmsKeyID, &etcdCaKeyPEM)
+	err = whisp.StoreParameter(etcdCaKeyPath, kmsKeyID, &etcdCaKeyPEM)
 	if err != nil {
 		return err
 	}
 
 	apiCertPEM := string(certutil.EncodeCertPEM(apiCert))
 	apiCertPath := fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.APIServerCertName)
-	err = storeParameter(ssmClient, apiCertPath, kmsKeyID, &apiCertPEM)
+	err = whisp.StoreParameter(apiCertPath, kmsKeyID, &apiCertPEM)
 	if err != nil {
 		return err
 	}
 	apiKeyPEM := string(certutil.EncodePrivateKeyPEM(apiKey))
 	apiKeyPath := fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.APIServerKeyName)
-	err = storeParameter(ssmClient, apiKeyPath, kmsKeyID, &apiKeyPEM)
+	err = whisp.StoreParameter(apiKeyPath, kmsKeyID, &apiKeyPEM)
 	if err != nil {
 		return err
 	}
 
 	etcdCertPEM := string(certutil.EncodeCertPEM(etcdCert))
 	etcdCertPath := fmt.Sprintf(controllerSecretPath, clusterName, etcdCertName)
-	err = storeParameter(ssmClient, etcdCertPath, kmsKeyID, &etcdCertPEM)
+	err = whisp.StoreParameter(etcdCertPath, kmsKeyID, &etcdCertPEM)
 	if err != nil {
 		return err
 	}
 	etcdKeyPEM := string(certutil.EncodePrivateKeyPEM(etcdKey))
 	etcdKeyPath := fmt.Sprintf(controllerSecretPath, clusterName, etcdKeyName)
-	err = storeParameter(ssmClient, etcdKeyPath, kmsKeyID, &etcdKeyPEM)
+	err = whisp.StoreParameter(etcdKeyPath, kmsKeyID, &etcdKeyPEM)
 	if err != nil {
 		return err
 	}
 
 	etcdPeerCertPEM := string(certutil.EncodeCertPEM(etcdPeerCert))
 	etcdPeerCertPath := fmt.Sprintf(controllerSecretPath, clusterName, etcdPeerCertName)
-	err = storeParameter(ssmClient, etcdPeerCertPath, kmsKeyID, &etcdPeerCertPEM)
+	err = whisp.StoreParameter(etcdPeerCertPath, kmsKeyID, &etcdPeerCertPEM)
 	if err != nil {
 		return err
 	}
 	etcdPeerKeyPEM := string(certutil.EncodePrivateKeyPEM(etcdPeerKey))
 	etcdPeerKeyPath := fmt.Sprintf(controllerSecretPath, clusterName, etcdPeerKeyName)
-	err = storeParameter(ssmClient, etcdPeerKeyPath, kmsKeyID, &etcdPeerKeyPEM)
+	err = whisp.StoreParameter(etcdPeerKeyPath, kmsKeyID, &etcdPeerKeyPEM)
 	if err != nil {
 		return err
 	}
 
 	apiClientCertPEM := string(certutil.EncodeCertPEM(apiClientCert))
 	apiClientCertPath := fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.APIServerKubeletClientCertName)
-	err = storeParameter(ssmClient, apiClientCertPath, kmsKeyID, &apiClientCertPEM)
+	err = whisp.StoreParameter(apiClientCertPath, kmsKeyID, &apiClientCertPEM)
 	if err != nil {
 		return err
 	}
 	apiClientKeyPEM := string(certutil.EncodePrivateKeyPEM(apiClientKey))
 	apiClientKeyPath := fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.APIServerKubeletClientKeyName)
-	err = storeParameter(ssmClient, apiClientKeyPath, kmsKeyID, &apiClientKeyPEM)
+	err = whisp.StoreParameter(apiClientKeyPath, kmsKeyID, &apiClientKeyPEM)
 	if err != nil {
 		return err
 	}
 
 	etcdClientCertPEM := string(certutil.EncodeCertPEM(etcdClientCert))
 	etcdClientCertPath := fmt.Sprintf(controllerSecretPath, clusterName, etcdClientCertName)
-	err = storeParameter(ssmClient, etcdClientCertPath, kmsKeyID, &etcdClientCertPEM)
+	err = whisp.StoreParameter(etcdClientCertPath, kmsKeyID, &etcdClientCertPEM)
 	if err != nil {
 		return err
 	}
 	etcdClientKeyPEM := string(certutil.EncodePrivateKeyPEM(etcdClientKey))
 	etcdClientKeyPath := fmt.Sprintf(controllerSecretPath, clusterName, etcdClientKeyName)
-	err = storeParameter(ssmClient, etcdClientKeyPath, kmsKeyID, &etcdClientKeyPEM)
+	err = whisp.StoreParameter(etcdClientKeyPath, kmsKeyID, &etcdClientKeyPEM)
 	if err != nil {
 		return err
 	}
 
-	err = newServiceAccountArtifacts(ssmClient, clusterName, kmsKeyID)
+	err = newServiceAccountArtifacts(whisp, clusterName, kmsKeyID)
 	if err != nil {
 		return err
 	}
@@ -225,7 +223,7 @@ func newCerts(ssmClient ssmiface.SSMAPI, clusterName, kmsKeyID, loadBalancerName
 	return nil
 }
 
-func newServiceAccountArtifacts(ssmClient ssmiface.SSMAPI, clusterName, kmsKeyID string) error {
+func newServiceAccountArtifacts(whisp whisperer.Whisperer, clusterName, kmsKeyID string) error {
 	saSigningKey, err := certs.NewServiceAccountSigningKey()
 	if err != nil {
 		return err
@@ -233,7 +231,7 @@ func newServiceAccountArtifacts(ssmClient ssmiface.SSMAPI, clusterName, kmsKeyID
 
 	saSigningKeyPEM := string(certutil.EncodePrivateKeyPEM(saSigningKey))
 	saSigningKeyPath := fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.ServiceAccountPrivateKeyName)
-	err = storeParameter(ssmClient, saSigningKeyPath, kmsKeyID, &saSigningKeyPEM)
+	err = whisp.StoreParameter(saSigningKeyPath, kmsKeyID, &saSigningKeyPEM)
 	if err != nil {
 		return err
 	}
@@ -244,27 +242,7 @@ func newServiceAccountArtifacts(ssmClient ssmiface.SSMAPI, clusterName, kmsKeyID
 	}
 	saSigningPubKeyPEMStr := string(saSigningPubKeyPEM)
 	saSigningPubKeyPath := fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.ServiceAccountPublicKeyName)
-	return storeParameter(ssmClient, saSigningPubKeyPath, kmsKeyID, &saSigningPubKeyPEMStr)
-}
-
-func storeParameter(ssmClient ssmiface.SSMAPI, path, kmsKeyID string, content *string) error {
-	input := &ssm.PutParameterInput{
-		Name:  aws.String(path),
-		Type:  aws.String("SecureString"),
-		Value: content,
-	}
-	if kmsKeyID != "" {
-		input.KeyId = aws.String(kmsKeyID)
-	}
-	_, err := ssmClient.PutParameter(input)
-	return err
-}
-
-func deleteParameter(ssmClient ssmiface.SSMAPI, path *string) error {
-	_, err := ssmClient.DeleteParameter(&ssm.DeleteParameterInput{
-		Name: path,
-	})
-	return err
+	return whisp.StoreParameter(saSigningPubKeyPath, kmsKeyID, &saSigningPubKeyPEMStr)
 }
 
 func controllerNames(clusterName string, numInstances int) []string {
@@ -278,16 +256,16 @@ func controllerNames(clusterName string, numInstances int) []string {
 	return names
 }
 
-func handleCreate(props resourceProperties, ssmClient ssmiface.SSMAPI, responder response.Responder) error {
+func handleCreate(props resourceProperties, whisp whisperer.Whisperer, responder response.Responder) error {
 	names := controllerNames(props.ClusterName, props.NumInstances)
-	err := newCerts(ssmClient, props.ClusterName, props.KMSKeyID, props.LoadBalancerName, names)
+	err := newCerts(whisp, props.ClusterName, props.KMSKeyID, props.LoadBalancerName, names)
 	if err != nil {
 		return responder.FireFailed(err.Error())
 	}
 	return responder.FireSuccess()
 }
 
-func handleDelete(props resourceProperties, ssmClient ssmiface.SSMAPI, responder response.Responder) error {
+func handleDelete(props resourceProperties, whisp whisperer.Whisperer, responder response.Responder) error {
 	clusterName := props.ClusterName
 	parameters := []string{
 		fmt.Sprintf(clusterSecretPath, clusterName, kubeadmconstants.CACertName),
@@ -308,7 +286,7 @@ func handleDelete(props resourceProperties, ssmClient ssmiface.SSMAPI, responder
 		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.ServiceAccountPublicKeyName),
 	}
 	for _, parameter := range parameters {
-		if err := deleteParameter(ssmClient, &parameter); err != nil {
+		if err := whisp.DeleteParameter(&parameter); err != nil {
 			return responder.FireFailed(err.Error())
 		}
 	}
@@ -332,14 +310,14 @@ func Handle(event *cf.Event) error {
 	if err != nil {
 		return responder.FireFailed(err.Error())
 	}
-	ssmClient := ssm.New(sess)
+	whisp := whisperer.NewSSMWhisperer(sess)
 
 	if event.RequestType == "Create" {
-		return handleCreate(props, ssmClient, responder)
+		return handleCreate(props, whisp, responder)
 	}
 
 	if event.RequestType == "Delete" {
-		return handleDelete(props, ssmClient, responder)
+		return handleDelete(props, whisp, responder)
 	}
 	return nil
 }

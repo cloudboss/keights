@@ -24,45 +24,42 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/cloudboss/stackhand/mocks"
 	"github.com/stretchr/testify/mock"
 )
 
 func TestHandleCreateSuccess(t *testing.T) {
 	var tests = []struct {
-		setResponse     func(r *mocks.Responder)
-		setPutParameter func(s *mocks.SSMAPI)
+		setResponse       func(r *mocks.Responder)
+		setStoreParameter func(s *mocks.Whisperer)
 	}{
 		{
 			func(r *mocks.Responder) {
 				r.On("FireSuccess").Return(nil)
 			},
-			func(s *mocks.SSMAPI) {
-				typ := "*ssm.PutParameterInput"
-				output := &ssm.PutParameterOutput{}
-				s.On("PutParameter", mock.AnythingOfType(typ)).Return(output, nil)
+			func(w *mocks.Whisperer) {
+				w.On("StoreParameter", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 			},
 		},
 		{
 			func(r *mocks.Responder) {
-				r.On("FireFailed", mock.AnythingOfType("string")).Return(nil)
-			},
-			func(s *mocks.SSMAPI) {
-				typ := "*ssm.PutParameterInput"
 				err := fmt.Errorf("oops")
-				s.On("PutParameter", mock.AnythingOfType(typ)).Return(nil, err)
+				r.On("FireFailed", mock.Anything).Return(err)
+			},
+			func(w *mocks.Whisperer) {
+				err := fmt.Errorf("oops")
+				w.On("StoreParameter", mock.Anything, mock.Anything, mock.Anything).Return(err)
 			},
 		},
 	}
 	for _, test := range tests {
 		responder := &mocks.Responder{}
-		ssmClient := &mocks.SSMAPI{}
+		whisp := &mocks.Whisperer{}
 		props := resourceProperties{}
 		test.setResponse(responder)
-		test.setPutParameter(ssmClient)
-		_ = handleCreate(props, ssmClient, responder)
-		ssmClient.AssertExpectations(t)
+		test.setStoreParameter(whisp)
+		_ = handleCreate(props, whisp, responder)
+		whisp.AssertExpectations(t)
 		responder.AssertExpectations(t)
 	}
 }
