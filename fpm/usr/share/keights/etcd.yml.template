@@ -48,6 +48,7 @@ spec:
     image: {{ .EtcdImage }}
     livenessProbe:
       tcpSocket:
+        host: {{ .Prefix }}-{{ .MyIndex }}.{{ .Domain }}
         port: 2379
       initialDelaySeconds: 15
       timeoutSeconds: 15
