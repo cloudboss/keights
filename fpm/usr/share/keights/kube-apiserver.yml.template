@@ -14,19 +14,25 @@ spec:
   - command:
     - kube-apiserver
     - --bind-address={{ .MyIP }}
-    - --insecure-bind-address={{ .MyIP }}
+    - --insecure-bind-address=127.0.0.1
     - --service-cluster-ip-range={{ .ServiceCidr }}
     - --etcd-servers={{ range $i, $k := keys .HostMap }}{{ if $i }},{{end}}https://{{ $.Prefix }}-{{ $k }}.{{ $.Domain }}:2379{{ end }}
     - --etcd-cafile=/run/kubernetes/pki/etcd-ca.crt
     - --etcd-certfile=/run/kubernetes/pki/etcd-client.crt
     - --etcd-keyfile=/run/kubernetes/pki/etcd-client.key
+    - --client-ca-file=/run/kubernetes/pki/ca.crt
+    - --tls-cert-file=/run/kubernetes/pki/apiserver.crt
+    - --tls-private-key-file=/run/kubernetes/pki/apiserver.key
+    - --service-account-key-file=/run/kubernetes/pki/sa.pub
+    - --enable-bootstrap-token-auth
     - --cloud-provider=aws
+    - --authorization-mode=Node,RBAC
     - --v=2
     image: {{ .KubeApiserverImage }}
     livenessProbe:
       failureThreshold: 8
       httpGet:
-        host: {{ .MyIP }}
+        host: 127.0.0.1
         path: /healthz
         port: 8080
         scheme: HTTP
@@ -40,6 +46,15 @@ spec:
     - mountPath: /etc/ssl/certs
       name: ca-certs
       readOnly: true
+    - mountPath: /run/kubernetes/pki/ca.crt
+      name: run-kubernetes-pki-ca
+      readOnly: true
+    - mountPath: /run/kubernetes/pki/apiserver.crt
+      name: run-kubernetes-pki-apiserver
+      readOnly: true
+    - mountPath: /run/kubernetes/pki/apiserver.key
+      name: run-kubernetes-pki-apiserver-key
+      readOnly: true
     - mountPath: /run/kubernetes/pki/etcd-ca.crt
       name: run-kubernetes-pki-etcd-ca
       readOnly: true
@@ -49,12 +64,24 @@ spec:
     - mountPath: /run/kubernetes/pki/etcd-client.key
       name: run-kubernetes-pki-etcd-client-key
       readOnly: true
+    - mountPath: /run/kubernetes/pki/sa.pub
+      name: run-kubernetes-pki-sa-pub
+      readOnly: true
   hostNetwork: true
   volumes:
   - hostPath:
       path: /etc/ssl/certs
       type: DirectoryOrCreate
     name: ca-certs
+  - hostPath:
+      path: /run/kubernetes/pki/ca.crt
+    name: run-kubernetes-pki-ca
+  - hostPath:
+      path: /run/kubernetes/pki/apiserver.crt
+    name: run-kubernetes-pki-apiserver
+  - hostPath:
+      path: /run/kubernetes/pki/apiserver.key
+    name: run-kubernetes-pki-apiserver-key
   - hostPath:
       path: /run/kubernetes/pki/etcd-ca.crt
     name: run-kubernetes-pki-etcd-ca
@@ -64,4 +91,7 @@ spec:
   - hostPath:
       path: /run/kubernetes/pki/etcd-client.key
     name: run-kubernetes-pki-etcd-client-key
+  - hostPath:
+      path: /run/kubernetes/pki/sa.pub
+    name: run-kubernetes-pki-sa-pub
 status: {}
