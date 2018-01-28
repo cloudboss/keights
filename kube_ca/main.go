@@ -35,6 +35,7 @@ import (
 	kubeadmconstants "k8s.io/kubernetes/cmd/kubeadm/app/constants"
 	"k8s.io/kubernetes/cmd/kubeadm/app/phases/certs"
 	"k8s.io/kubernetes/cmd/kubeadm/app/phases/certs/pkiutil"
+	tokenutil "k8s.io/kubernetes/cmd/kubeadm/app/util/token"
 )
 
 const (
@@ -50,6 +51,7 @@ const (
 	etcdPeerKeyName      = "etcd-peer.key"
 	etcdClientCertName   = "etcd-client.crt"
 	etcdClientKeyName    = "etcd-client.key"
+	bootstrapTokenName   = "bootstrap-token"
 )
 
 type resourceProperties struct {
@@ -220,7 +222,7 @@ func newCerts(whisp whisperer.Whisperer, clusterName, kmsKeyID, loadBalancerName
 		return err
 	}
 
-	return nil
+	return newBootstrapToken(whisp, clusterName, kmsKeyID)
 }
 
 func newServiceAccountArtifacts(whisp whisperer.Whisperer, clusterName, kmsKeyID string) error {
@@ -243,6 +245,15 @@ func newServiceAccountArtifacts(whisp whisperer.Whisperer, clusterName, kmsKeyID
 	saSigningPubKeyPEMStr := string(saSigningPubKeyPEM)
 	saSigningPubKeyPath := fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.ServiceAccountPublicKeyName)
 	return whisp.StoreParameter(saSigningPubKeyPath, kmsKeyID, &saSigningPubKeyPEMStr)
+}
+
+func newBootstrapToken(whisp whisperer.Whisperer, clusterName, kmsKeyID string) error {
+	token, err := tokenutil.GenerateToken()
+	if err != nil {
+		return err
+	}
+	path := fmt.Sprintf(clusterSecretPath, clusterName, bootstrapTokenName)
+	return whisp.StoreParameter(path, kmsKeyID, &token)
 }
 
 func controllerNames(clusterName string, numInstances int) []string {
@@ -269,6 +280,7 @@ func handleDelete(props resourceProperties, whisp whisperer.Whisperer, responder
 	clusterName := props.ClusterName
 	parameters := []string{
 		fmt.Sprintf(clusterSecretPath, clusterName, kubeadmconstants.CACertName),
+		fmt.Sprintf(clusterSecretPath, clusterName, bootstrapTokenName),
 		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.CAKeyName),
 		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.APIServerCertName),
 		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.APIServerKeyName),
