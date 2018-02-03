@@ -23,6 +23,7 @@ ExecStart=/usr/local/bin/kubelet \
             --runtime-request-timeout=15m \
             --network-plugin=cni \
             --cni-bin-dir=/usr/lib/cni \
+            --cloud-provider=aws \
             --v=2 ${KEIGHTS_KUBELET_EXTRA_OPTS}
 Restart=always
 RestartSec=5
