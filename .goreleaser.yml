@@ -20,12 +20,24 @@ fpm:
       /etc/cni/net.d/99-loopback.conf
     fpm/usr/lib/tmpfiles.d/keights.conf:
       /usr/lib/tmpfiles.d/keights.conf
+    fpm/usr/lib/systemd/system/keights-bootstrap-kubeconfig.service:
+      /usr/lib/systemd/system/keights-bootstrap-kubeconfig.service
+    fpm/usr/lib/systemd/system/keights-bootstrap-token.service:
+      /usr/lib/systemd/system/keights-bootstrap-token.service
+    fpm/usr/lib/systemd/system/keights-bootstrap-token-splitter.path:
+      /usr/lib/systemd/system/keights-bootstrap-token-splitter.path
+    fpm/usr/lib/systemd/system/keights-bootstrap-token-splitter.service:
+      /usr/lib/systemd/system/keights-bootstrap-token-splitter.service
     fpm/usr/lib/systemd/system/keights-collector.service:
       /usr/lib/systemd/system/keights-collector.service
     fpm/usr/lib/systemd/system/keights-collector.timer:
       /usr/lib/systemd/system/keights-collector.timer
     fpm/usr/lib/systemd/system/keights-configure.target:
       /usr/lib/systemd/system/keights-configure.target
+    fpm/usr/lib/systemd/system/keights-manifests.target:
+      /usr/lib/systemd/system/keights-manifests.target
+    fpm/usr/lib/systemd/system/keights-prekubelet.service:
+      /usr/lib/systemd/system/keights-prekubelet.service
     fpm/usr/lib/systemd/system/keights-share.path:
       /usr/lib/systemd/system/keights-share.path
     fpm/usr/lib/systemd/system/keights-share.service:
