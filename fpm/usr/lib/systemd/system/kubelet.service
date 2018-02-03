@@ -6,7 +6,6 @@ After=keights-configure.target docker.socket
 [Service]
 Type=simple
 # Environment=KEIGHTS_DOMAIN=
-# Environment=KEIGHTS_POD_CIDR=
 # Environment=KEIGHTS_NODE_LABELS=
 # Environment=KEIGHTS_NODE_REGISTER=
 Environment=KEIGHTS_KUBELET_EXTRA_OPTS=
@@ -21,7 +20,6 @@ ExecStart=/usr/local/bin/kubelet \
             --cluster-domain=${KEIGHTS_DOMAIN} \
             --image-pull-progress-deadline=2m \
             --pod-manifest-path=/etc/kubernetes/manifests \
-            --pod-cidr=${KEIGHTS_POD_CIDR} \
             --runtime-request-timeout=15m \
             --network-plugin=cni \
             --cni-bin-dir=/usr/lib/cni \
