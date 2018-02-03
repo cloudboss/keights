@@ -13,8 +13,11 @@ Environment=KEIGHTS_KUBELET_EXTRA_OPTS=
 ExecStart=/usr/local/bin/kubelet \
             --node-labels=${KEIGHTS_NODE_LABELS} \
             ${KEIGHTS_NODE_REGISTER} \
+            --bootstrap-kubeconfig=/run/kubernetes/bootstrap.kubeconfig \
             --kubeconfig=/var/lib/kubelet/kubeconfig \
-            --anonymous-auth=true \
+            --tls-cert-file=/var/lib/kubelet/pki/kubelet-client.crt \
+            --tls-private-key-file=/var/lib/kubelet/pki/kubelet-client.key \
+            --client-ca-file=/run/kubernetes/pki/apiserver-kubelet-client.crt \
             --cluster-domain=${KEIGHTS_DOMAIN} \
             --image-pull-progress-deadline=2m \
             --pod-manifest-path=/etc/kubernetes/manifests \

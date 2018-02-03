@@ -14,4 +14,4 @@ ExecStart=/usr/bin/keights template \
             -v KubeSchedulerImage=${KEIGHTS_KUBE_SCHEDULER_IMAGE}
 
 [Install]
-WantedBy=keights-configure.target
+WantedBy=keights-manifests.target

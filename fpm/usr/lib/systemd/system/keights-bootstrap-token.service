@@ -1,0 +1,25 @@
+[Unit]
+Description=keights-bootstrap-token service
+Requires=keights-bootstrap-token-splitter.service keights-prekubelet.service
+After=keights-bootstrap-token-splitter.service keights-prekubelet.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/bin/sh -c ' \
+    while true; do \
+        /usr/local/bin/kubectl -n kube-system \
+          create secret generic bootstrap-token-`cat /run/kubernetes/bootstrap-token-id` \
+          --type bootstrap.kubernetes.io/token \
+          --from-literal description="cluster bootstrap token" \
+          --from-literal usage-bootstrap-authentication=true \
+          --from-literal usage-bootstrap-signing=true \
+          --from-file token-id=/run/kubernetes/bootstrap-token-id \
+          --from-file token-secret=/run/kubernetes/bootstrap-token-secret && \
+	  break; \
+        sleep 10; \
+    done \
+'
+
+[Install]
+WantedBy=keights-configure.target

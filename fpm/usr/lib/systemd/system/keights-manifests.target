@@ -1,0 +1,7 @@
+[Unit]
+Description=keights-manifests target
+Requires=keights-templatize-etcd.service keights-templatize-kube-apiserver.service keights-templatize-kube-controller-manager.service keights-templatize-kube-scheduler.service
+After=keights-templatize-etcd.service keights-templatize-kube-apiserver.service keights-templatize-kube-controller-manager.service keights-templatize-kube-scheduler.service
+
+[Install]
+RequiredBy=keights-bootstrap-token-splitter.service
