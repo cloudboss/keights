@@ -14,7 +14,6 @@ ExecStart=/bin/sh -c ' \
         kubectl -n kube-system \
           create secret generic bootstrap-token-$${token_id} \
           --type bootstrap.kubernetes.io/token \
-          --from-literal description="cluster bootstrap token" \
           --from-literal usage-bootstrap-authentication=true \
           --from-literal usage-bootstrap-signing=true \
           --from-file token-id=/run/kubernetes/bootstrap-token-id \
