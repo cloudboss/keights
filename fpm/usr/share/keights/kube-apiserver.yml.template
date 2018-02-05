@@ -23,8 +23,6 @@ spec:
     - --client-ca-file=/run/kubernetes/pki/ca.crt
     - --tls-cert-file=/run/kubernetes/pki/apiserver.crt
     - --tls-private-key-file=/run/kubernetes/pki/apiserver.key
-    - --kubelet-certificate-authority=/run/kubernetes/pki/ca.crt
-    - --kubelet-client-certificate=/run/kubernetes/pki/apiserver-kubelet-client.crt
     - --service-account-key-file=/run/kubernetes/pki/sa.pub
     - --enable-bootstrap-token-auth
     - --cloud-provider=aws
