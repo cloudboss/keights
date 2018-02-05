@@ -2,4 +2,4 @@
 Description=keights-manifests target
 
 [Install]
-RequiredBy=keights-bootstrap-token-splitter.service
+RequiredBy=keights-prekubelet.service
