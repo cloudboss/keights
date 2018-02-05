@@ -14,7 +14,7 @@ spec:
   - command:
     - kube-scheduler
     - --address=127.0.0.1
-    - --master={{ .MyIP }}:8080
+    - --master=127.0.0.1:8080
     - --leader-elect=true
     - --v=2
     image: {{ .KubeSchedulerImage }}
