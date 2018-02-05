@@ -1,7 +1,5 @@
 [Unit]
 Description=keights-bootstrap-token-splitter service
-Requires=keights-whisper-controller.service
-After=keights-whisper-controller.service
 Before=keights-bootstrap-token.service
 
 [Service]
