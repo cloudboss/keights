@@ -5,7 +5,6 @@ After=keights-bootstrap-token-splitter.service keights-prekubelet.service
 
 [Service]
 Type=oneshot
-RemainAfterExit=true
 ExecStart=/bin/sh -c ' \
     token_id=`cat /run/kubernetes/bootstrap-token-id`; \
     while true; do \

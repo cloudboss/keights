@@ -5,7 +5,6 @@ Before=keights-bootstrap-token.service
 
 [Service]
 Type=oneshot
-RemainAfterExit=true
 ExecStart=/bin/sh -c ' \
     /usr/local/bin/kubelet --pod-manifest-path=/etc/kubernetes/manifests >/dev/null 2>&1 & \
     pid=$${!}; \
