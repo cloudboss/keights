@@ -4,7 +4,6 @@ Before=keights-bootstrap-token.service
 
 [Service]
 Type=oneshot
-RemainAfterExit=true
 ExecStart=/bin/sh -c ' \
     cut -d . -f 1 /run/kubernetes/bootstrap-token | xargs echo -n > /run/kubernetes/bootstrap-token-id && \
     umask 266 && \
