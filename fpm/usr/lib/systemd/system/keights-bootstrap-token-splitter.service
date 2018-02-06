@@ -6,13 +6,9 @@ Before=keights-bootstrap-token.service
 Type=oneshot
 RemainAfterExit=true
 ExecStart=/bin/sh -c ' \
-    while true; do \
-        cut -d . -f 1 /run/kubernetes/bootstrap-token | xargs echo -n > /run/kubernetes/bootstrap-token-id && \
-        umask 266 && \
-        cut -d . -f 2 /run/kubernetes/bootstrap-token | xargs echo -n > /run/kubernetes/bootstrap-token-secret && \
-        break; \
-        sleep 10; \
-    done \
+    cut -d . -f 1 /run/kubernetes/bootstrap-token | xargs echo -n > /run/kubernetes/bootstrap-token-id && \
+    umask 266 && \
+    cut -d . -f 2 /run/kubernetes/bootstrap-token | xargs echo -n > /run/kubernetes/bootstrap-token-secret \
 '
 
 [Install]
