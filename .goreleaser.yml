@@ -18,6 +18,8 @@ fpm:
       /etc/cni/net.d/10-kuberouter.conf
     fpm/etc/cni/net.d/99-loopback.conf:
       /etc/cni/net.d/99-loopback.conf
+    fpm/etc/kubernetes/config/kube-router.yml:
+      /etc/kubernetes/config/kube-router.yml
     fpm/usr/lib/tmpfiles.d/keights.conf:
       /usr/lib/tmpfiles.d/keights.conf
     fpm/usr/lib/systemd/system/keights-bootstrap-kubeconfig.service:
@@ -34,6 +36,8 @@ fpm:
       /usr/lib/systemd/system/keights-collector.timer
     fpm/usr/lib/systemd/system/keights-configure.target:
       /usr/lib/systemd/system/keights-configure.target
+    fpm/usr/lib/systemd/system/keights-kubectl-create.service:
+      /usr/lib/systemd/system/keights-kubectl-create.service
     fpm/usr/lib/systemd/system/keights-manifests.target:
       /usr/lib/systemd/system/keights-manifests.target
     fpm/usr/lib/systemd/system/keights-prekubelet.service:
