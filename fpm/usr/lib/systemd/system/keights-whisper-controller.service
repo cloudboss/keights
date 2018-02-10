@@ -8,6 +8,7 @@ Type=oneshot
 ExecStart=/usr/bin/keights whisper \
             -p /${KEIGHTS_CLUSTER_NAME}/cluster/ca.crt:/run/kubernetes/pki/ca.crt \
             -p /${KEIGHTS_CLUSTER_NAME}/cluster/kube-router.crt:/run/kubernetes/pki/kube-router.crt \
+            -p /${KEIGHTS_CLUSTER_NAME}/cluster/kube-router.key:/run/kubernetes/pki/kube-router.key \
             -p /${KEIGHTS_CLUSTER_NAME}/cluster/bootstrap-token:/run/kubernetes/bootstrap-token \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/ca.key:/run/kubernetes/pki/ca.key \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/apiserver.crt:/run/kubernetes/pki/apiserver.crt \
