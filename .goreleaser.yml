@@ -68,6 +68,8 @@ fpm:
       /usr/lib/systemd/system/keights-whisper-controller.service
     fpm/usr/lib/systemd/system/keights-whisper-node.service:
       /usr/lib/systemd/system/keights-whisper-node.service
+    fpm/usr/lib/systemd/system/kube-router-kubeconfig.service:
+      /usr/lib/systemd/system/kube-router-kubeconfig.service
     fpm/usr/lib/systemd/system/kube-router.service:
       /usr/lib/systemd/system/kube-router.service
     fpm/usr/lib/systemd/system/kubelet.service:
