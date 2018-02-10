@@ -1,5 +1,6 @@
 [Unit]
 Description=keights-prekubelet service
+Requires=keights-manifests.target
 After=keights-manifests.target
 Before=keights-bootstrap-token.service
 
