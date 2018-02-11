@@ -7,13 +7,6 @@ Before=keights-bootstrap-token.service keights-kubectl-create.service
 [Service]
 Type=oneshot
 ExecStart=/bin/sh -c ' \
-    myip=`curl http://169.254.169.254/latest/meta-data/local-ipv4`; \
-    for entry in `cat /run/keights-collector/asg`; do \
-        index=`echo $${entry} | cut -d : -f 1`; \
-        ip=`echo $${entry} | cut -d : -f 2`; \
-        [ "$${myip}" = "$${ip}" ] && break; \
-    done; \
-    [ "$${index}" = "1" ] || exit; \
     /usr/local/bin/kubelet --pod-manifest-path=/etc/kubernetes/manifests >/dev/null 2>&1 & \
     pid=$${!}; \
     while true; do \
