@@ -27,6 +27,7 @@ spec:
     - --service-account-private-key-file=/run/kubernetes/pki/sa.key
     - --cluster-signing-cert-file=/run/kubernetes/pki/ca.crt
     - --cluster-signing-key-file=/run/kubernetes/pki/ca.key
+    - --root-ca-file=/run/kubernetes/pki/ca.crt
     - --v=2
     image: {{ .KubeControllerManagerImage }}
     livenessProbe:
