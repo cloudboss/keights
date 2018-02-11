@@ -1,7 +1,7 @@
 [Unit]
 Description=keights-kubectl-create service
-Requires=keights-configure.target
-After=keights-configure.target
+Requires=keights-prekubelet.service
+After=keights-prekubelet.service
 
 [Service]
 Type=oneshot
@@ -22,4 +22,4 @@ ExecStart=/usr/bin/flock /run/kubernetes/.kubectl.lock -c ' \
 '
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=keights-configure.target

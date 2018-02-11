@@ -1,8 +1,8 @@
 [Unit]
 Description=keights-prekubelet service
-Requires=keights-manifests.target
-After=keights-manifests.target
-Before=keights-bootstrap-token.service
+Requires=var-lib-etcd.mount keights-manifests.target
+After=var-lib-etcd.mount keights-manifests.target
+Before=keights-bootstrap-token.service keights-kubectl-create.service
 
 [Service]
 Type=oneshot
