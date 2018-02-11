@@ -27,6 +27,7 @@ spec:
     - --enable-bootstrap-token-auth
     - --cloud-provider=aws
     - --authorization-mode=Node,RBAC
+    - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota,DefaultTolerationSeconds
     - --v=2
     image: {{ .KubeApiserverImage }}
     livenessProbe:
