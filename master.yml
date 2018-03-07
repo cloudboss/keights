@@ -101,10 +101,6 @@ Mappings:
       Key: lambda/co/cloudboss/stackhand/kube_ca/0.1.0/go1.x/kube_ca-0.1.0.zip
     LoadBalancerIpFunction:
       Key: lambda/co/cloudboss/stackhand/lb_ip/0.1.0/go1.x/lb_ip-0.1.0.zip
-  MaxSizes:
-    NumInstances:
-      '1': 2
-      '3': 4
 
 Conditions:
   HasThreeMasters: !Equals [!Ref NumInstances, 3]
@@ -312,7 +308,7 @@ Resources:
     Properties:
       DesiredCapacity: !Ref NumInstances
       LaunchConfigurationName: !Ref LaunchConfiguration
-      MaxSize: !FindInMap [MaxSizes, NumInstances, !Ref NumInstances]
+      MaxSize: !Ref NumInstances
       MinSize: !Ref NumInstances
       VPCZoneIdentifier: !Ref SubnetIds
       TargetGroupARNs: [!Ref LoadBalancerTargetGroup]
