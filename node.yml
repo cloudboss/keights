@@ -83,6 +83,10 @@ Resources:
         - Key: Name
           Value: !Sub ${ClusterName}-node
           PropagateAtLaunch: true
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MaxBatchSize: 1
+        MinInstancesInService: 1
 
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
