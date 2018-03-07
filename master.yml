@@ -16,7 +16,9 @@ Parameters:
     Description: ID of VPC where cluster will be placed
     Type: AWS::EC2::VPC::Id
   SubnetIds:
-    Description: List of subnets IDs in VPC where cluster will be placed
+    Description: >-
+      List of subnets IDs in VPC where cluster will be placed.
+      The number of subnets must match the NumInstances parameter.
     Type: List<AWS::EC2::Subnet::Id>
   LoadBalancerSubnetIds:
     Description: List of subnets IDs in VPC for API load balancer
