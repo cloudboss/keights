@@ -72,9 +72,18 @@ Parameters:
     Description: CIDR block given API access to cluster
     Default: 0.0.0.0/0
     Type: String
-  K8sVersion:
-    Description: Version of Kubernetes
+  KubeApiServerImage:
+    Description: Docker image containing kube-apiserver
     Type: String
+    Default: gcr.io/google_containers/kube-apiserver:v1.8.7
+  KubeControllerManagerImage:
+    Description: Docker image containing kube-controller-manager
+    Type: String
+    Default: gcr.io/google_containers/kube-controller-manager:v1.8.7
+  KubeSchedulerImage:
+    Description: Docker image containing kube-scheduler
+    Type: String
+    Default: gcr.io/google_containers/kube-scheduler:v1.8.7
   EtcdVersion:
     Description: Version of etcd
     Type: String
@@ -411,7 +420,7 @@ Resources:
                   [Service]
                   Environment=AWS_REGION=${AWS::Region}
                   Environment=KEIGHTS_DOMAIN=k8s.local
-                  Environment=KEIGHTS_KUBE_APISERVER_IMAGE=gcr.io/google_containers/kube-apiserver:v${K8sVersion}
+                  Environment=KEIGHTS_KUBE_APISERVER_IMAGE=${KubeApiServerImage}
                   Environment=KEIGHTS_SERVICE_CIDR=${ServiceCidr}
                   Environment=KEIGHTS_PREFIX=${ClusterName}
 
@@ -424,7 +433,7 @@ Resources:
                   Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
                   Environment=KEIGHTS_POD_CIDR=${PodCidr}
                   Environment=KEIGHTS_SERVICE_CIDR=${ServiceCidr}
-                  Environment=KEIGHTS_KUBE_CONTROLLER_MANAGER_IMAGE=gcr.io/google_containers/kube-controller-manager:v${K8sVersion}
+                  Environment=KEIGHTS_KUBE_CONTROLLER_MANAGER_IMAGE=${KubeControllerManagerImage}
 
               - path: /etc/systemd/system/keights-templatize-kube-scheduler.service.d/environment.conf
                 owner: root:root
@@ -432,7 +441,7 @@ Resources:
                 content: |
                   [Service]
                   Environment=AWS_REGION=${AWS::Region}
-                  Environment=KEIGHTS_KUBE_SCHEDULER_IMAGE=gcr.io/google_containers/kube-scheduler:v${K8sVersion}
+                  Environment=KEIGHTS_KUBE_SCHEDULER_IMAGE=${KubeSchedulerImage}
                   Environment=KEIGHTS_POD_CIDR=${PodCidr}
 
               - path: /etc/systemd/system/keights-volumize.service.d/environment.conf
