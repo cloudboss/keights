@@ -52,6 +52,10 @@ Parameters:
   LambdaExecutionRole:
     Description: Role to assign to helper Lamba functions
     Type: String
+  KmsKeyId:
+    Description: KMS key used to manage secrets
+    Type: String
+    Default: ''
   PodCidr:
     Description: CIDR block of addresses for pods
     Default: 10.0.0.0/16
@@ -83,7 +87,11 @@ Mappings:
     AllFunctions:
       Bucket: cloudboss-public
     SubnetToAzFunction:
-      Key: lambda/co/cloudboss/stackhand/subnet_to_az/0.1.0/python2.7/subnet_to_az-0.1.0.zip
+      Key: lambda/co/cloudboss/stackhand/subnet_to_az/0.1.0/go1.x/subnet_to_az-0.1.0.zip
+    KubeCaFunction:
+      Key: lambda/co/cloudboss/stackhand/kube_ca/0.1.0/go1.x/kube_ca-0.1.0.zip
+    LoadBalancerIpFunction:
+      Key: lambda/co/cloudboss/stackhand/lb_ip/0.1.0/go1.x/lb_ip-0.1.0.zip
   MaxSizes:
     NumInstances:
       '1': 2
@@ -99,8 +107,31 @@ Resources:
       Code:
         S3Bucket: !FindInMap [LambdaUrls, AllFunctions, Bucket]
         S3Key: !FindInMap [LambdaUrls, SubnetToAzFunction, Key]
-      Handler: handler.Handle
-      Runtime: python2.7
+      Handler: subnet_to_az
+      Runtime: go1.x
+      Timeout: 30
+      Role: !Ref LambdaExecutionRole
+
+  KubeCaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !FindInMap [LambdaUrls, AllFunctions, Bucket]
+        S3Key: !FindInMap [LambdaUrls, KubeCaFunction, Key]
+      Handler: kube_ca
+      Runtime: go1.x
+      MemorySize: 512
+      Timeout: 30
+      Role: !Ref LambdaExecutionRole
+
+  LoadBalancerIpFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !FindInMap [LambdaUrls, AllFunctions, Bucket]
+        S3Key: !FindInMap [LambdaUrls, LoadBalancerIpFunction, Key]
+      Handler: lb_ip
+      Runtime: go1.x
       Timeout: 30
       Role: !Ref LambdaExecutionRole
 
@@ -127,6 +158,43 @@ Resources:
       ServiceToken: !GetAtt [SubnetToAzFunction, Arn]
       SubnetId: !Select [2, !Ref SubnetIds]
 
+  KubeCa:
+    Type: Custom::KubeCa
+    DependsOn: KubeCaFunction
+    Properties:
+      ServiceToken: !GetAtt [KubeCaFunction, Arn]
+      ClusterName: !Ref ClusterName
+      ServiceCidr: !Ref ServiceCidr
+      LoadBalancerName: !GetAtt [LoadBalancer, DNSName]
+      NumInstances: !Ref NumInstances
+      KmsKeyId: !Ref KmsKeyId
+
+  LoadBalancerIp1:
+    Type: Custom::LoadBancerIp
+    DependsOn: LoadBalancerIpFunction
+    Properties:
+      ServiceToken: !GetAtt [LoadBalancerIpFunction, Arn]
+      LoadBalancerName: !GetAtt [LoadBalancer, LoadBalancerFullName]
+      SubnetId: !Select [0, !Ref LoadBalancerSubnetIds]
+
+  LoadBalancerIp2:
+    Type: Custom::LoadBancerIp
+    DependsOn: LoadBalancerIpFunction
+    Condition: HasThreeMasters
+    Properties:
+      ServiceToken: !GetAtt [LoadBalancerIpFunction, Arn]
+      LoadBalancerName: !GetAtt [LoadBalancer, LoadBalancerFullName]
+      SubnetId: !Select [1, !Ref LoadBalancerSubnetIds]
+
+  LoadBalancerIp3:
+    Type: Custom::LoadBancerIp
+    DependsOn: LoadBalancerIpFunction
+    Condition: HasThreeMasters
+    Properties:
+      ServiceToken: !GetAtt [LoadBalancerIpFunction, Arn]
+      LoadBalancerName: !GetAtt [LoadBalancer, LoadBalancerFullName]
+      SubnetId: !Select [2, !Ref LoadBalancerSubnetIds]
+
   EtcdSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -151,45 +219,19 @@ Resources:
       ToPort: 2380
       IpProtocol: tcp
 
-  LoadBalancerSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for API load balancer
-      VpcId: !Ref VpcId
-
-  LoadBalancerSecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref LoadBalancerSecurityGroup
-      CidrIp: !Ref ApiAccessCidr
-      FromPort: 80
-      ToPort: 80
-      IpProtocol: tcp
-
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Scheme: !Ref LoadBalancerScheme
-      SecurityGroups:
-        - !Ref LoadBalancerSecurityGroup
-        - !Ref ApiServerSecurityGroup
       Subnets: !Ref LoadBalancerSubnetIds
-      Type: application
-      IpAddressType: ipv4
+      Type: network
 
   LoadBalancerTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      HealthCheckPath: /healthz
-      # HealthCheckPort: 6443
-      HealthCheckPort: 8080
-      # HealthCheckProtocol: HTTPS
-      HealthCheckProtocol: HTTP
-      Matcher:
-        HttpCode: 200
-      Name: !Ref ClusterName
-      Port: 8080
-      Protocol: HTTP
+      Name: !Sub '${ClusterName}-api'
+      Port: 6443
+      Protocol: TCP
       VpcId: !Ref VpcId
 
   LoadBalancerListener:
@@ -199,8 +241,8 @@ Resources:
         - TargetGroupArn: !Ref LoadBalancerTargetGroup
           Type: forward
       LoadBalancerArn: !Ref LoadBalancer
-      Port: 80
-      Protocol: HTTP
+      Port: 443
+      Protocol: TCP
 
   AutoscalingGroupSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -217,8 +259,47 @@ Resources:
       IpProtocol: tcp
       ToPort: 22
 
+  AutoscalingGroupIngressLoadBalancerHealthCheck1:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref AutoscalingGroupSecurityGroup
+      CidrIp: !Sub ${LoadBalancerIp1.PrivateIpAddress}/32
+      FromPort: 6443
+      IpProtocol: tcp
+      ToPort: 6443
+
+  AutoscalingGroupIngressLoadBalancerHealthCheck2:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasThreeMasters
+    Properties:
+      GroupId: !Ref AutoscalingGroupSecurityGroup
+      CidrIp: !Sub ${LoadBalancerIp2.PrivateIpAddress}/32
+      FromPort: 6443
+      IpProtocol: tcp
+      ToPort: 6443
+
+  AutoscalingGroupIngressLoadBalancerHealthCheck3:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasThreeMasters
+    Properties:
+      GroupId: !Ref AutoscalingGroupSecurityGroup
+      CidrIp: !Sub ${LoadBalancerIp3.PrivateIpAddress}/32
+      FromPort: 6443
+      IpProtocol: tcp
+      ToPort: 6443
+
+  AutoscalingGroupIngressApi:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref AutoscalingGroupSecurityGroup
+      CidrIp: !Ref ApiAccessCidr
+      FromPort: 6443
+      IpProtocol: tcp
+      ToPort: 6443
+
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: KubeCa
     Properties:
       DesiredCapacity: !Ref NumInstances
       LaunchConfigurationName: !Ref LaunchConfiguration
@@ -288,41 +369,13 @@ Resources:
           !Sub |
             #cloud-config
             write_files:
-              - path: /var/lib/kubelet/kubeconfig
+              - path: /etc/systemd/system/keights-bootstrap-kubeconfig.service.d/environment.conf
                 owner: root:root
-                permissions: '0600'
+                permissions: '0644'
                 content: |
-                  apiVersion: v1
-                  kind: Config
-                  clusters:
-                  - cluster:
-                      server: http://api-${ClusterName}.k8s.local:8080
-                    name: local
-                  contexts:
-                  - context:
-                      cluster: local
-                      user: kubelet
-                    name: service-account-context
-                  current-context: service-account-context
-                  preferences: {}
-
-              - path: /var/lib/kube-router/kubeconfig
-                owner: root:root
-                permissions: '0600'
-                content: |
-                  apiVersion: v1
-                  kind: Config
-                  clusters:
-                  - cluster:
-                      server: http://api-${ClusterName}.k8s.local:8080
-                    name: local
-                  contexts:
-                  - context:
-                      cluster: local
-                      user: kube-router
-                    name: service-account-context
-                  current-context: service-account-context
-                  preferences: {}
+                  [Service]
+                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
+                  Environment=KEIGHTS_DOMAIN=k8s.local
 
               - path: /etc/systemd/system/keights-collector.service.d/environment.conf
                 owner: root:root
@@ -390,6 +443,14 @@ Resources:
                   Environment=AWS_REGION=${AWS::Region}
                   Environment=KEIGHTS_VOLUME_TAG=etcd:instance
 
+              - path: /etc/systemd/system/keights-whisper-controller.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
+
               - path: /etc/systemd/system/kubelet.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
@@ -407,7 +468,16 @@ Resources:
                   [Service]
                   Environment=KEIGHTS_KUBE_ROUTER_IMAGE=cloudnativelabs/kube-router:v${KubeRouterVersion}
 
+              - path: /etc/systemd/system/kube-router-kubeconfig.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
+                  Environment=KEIGHTS_DOMAIN=k8s.local
+
             runcmd:
+              - systemctl daemon-reload
               - systemctl enable keights-volumize.service
               - systemctl enable var-lib-etcd.mount
               - systemctl enable keights-collector.timer
@@ -417,18 +487,27 @@ Resources:
               - systemctl enable keights-templatize-kube-apiserver.path
               - systemctl enable keights-templatize-kube-controller-manager.path
               - systemctl enable keights-templatize-kube-scheduler.path
+              - systemctl enable keights-whisper-controller.service
+              - systemctl enable keights-bootstrap-token-splitter.path
+              - systemctl enable keights-prekubelet.service
+              - systemctl enable keights-bootstrap-token.service
+              - systemctl enable keights-bootstrap-kubeconfig.service
+              - systemctl enable keights-kubectl-create.service
               - systemctl enable kubelet.service
               - systemctl enable kube-router.service
+              - systemctl enable kube-router-kubeconfig.service
+              - systemctl start --no-block keights-templatize-etcd.path
+              - systemctl start --no-block keights-templatize-kube-apiserver.path
+              - systemctl start --no-block keights-templatize-kube-controller-manager.path
+              - systemctl start --no-block keights-templatize-kube-scheduler.path
               - systemctl start --no-block kubelet.service
               - systemctl start --no-block kube-router.service
+              - systemctl start --no-block keights-kubectl-create.service
 
 Outputs:
   LoadBalancerDnsName:
     Description: DNS name of load balancer
     Value: !GetAtt [LoadBalancer, DNSName]
-  LoadBalancerSecurityGroup:
-    Description: Security group of load balancer
-    Value: !Ref LoadBalancerSecurityGroup
   AutoscalingGroupSecurityGroup:
     Description: Security group of autoscaling group
     Value: !Ref AutoscalingGroupSecurityGroup

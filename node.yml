@@ -102,41 +102,13 @@ Resources:
           !Sub |
             #cloud-config
             write_files:
-              - path: /var/lib/kubelet/kubeconfig
+              - path: /etc/systemd/system/keights-bootstrap-kubeconfig.service.d/environment.conf
                 owner: root:root
-                permissions: '0600'
+                permissions: '0644'
                 content: |
-                  apiVersion: v1
-                  kind: Config
-                  clusters:
-                  - cluster:
-                      server: http://api-${ClusterName}.k8s.local:8080
-                    name: local
-                  contexts:
-                  - context:
-                      cluster: local
-                      user: kubelet
-                    name: service-account-context
-                  current-context: service-account-context
-                  preferences: {}
-
-              - path: /var/lib/kube-router/kubeconfig
-                owner: root:root
-                permissions: '0600'
-                content: |
-                  apiVersion: v1
-                  kind: Config
-                  clusters:
-                  - cluster:
-                      server: http://api-${ClusterName}.k8s.local:8080
-                    name: local
-                  contexts:
-                  - context:
-                      cluster: local
-                      user: kube-router
-                    name: service-account-context
-                  current-context: service-account-context
-                  preferences: {}
+                  [Service]
+                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
+                  Environment=KEIGHTS_DOMAIN=k8s.local
 
               - path: /etc/systemd/system/keights-collector.service.d/environment.conf
                 owner: root:root
@@ -146,6 +118,11 @@ Resources:
                   Environment=AWS_REGION=${AWS::Region}
                   Environment=KEIGHTS_VOLUME_TAG=etcd:instance
                   Environment=KEIGHTS_ASG_NAME=${MasterAutoscalingGroup}
+                  ExecStart=
+                  ExecStart=/usr/bin/keights collect \
+                              -v ${!KEIGHTS_VOLUME_TAG} \
+                              -a ${!KEIGHTS_ASG_NAME} \
+                              -o /run/keights-collector/asg
 
               - path: /etc/systemd/system/keights-share.service.d/environment.conf
                 owner: root:root
@@ -154,6 +131,14 @@ Resources:
                   [Service]
                   Environment=KEIGHTS_DOMAIN=k8s.local
                   Environment=KEIGHTS_PREFIX=${ClusterName}
+
+              - path: /etc/systemd/system/keights-whisper-node.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
 
               - path: /etc/systemd/system/kubelet.service.d/environment.conf
                 owner: root:root
@@ -172,12 +157,24 @@ Resources:
                   [Service]
                   Environment=KEIGHTS_KUBE_ROUTER_IMAGE=cloudnativelabs/kube-router:v${KubeRouterVersion}
 
+              - path: /etc/systemd/system/kube-router-kubeconfig.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
+                  Environment=KEIGHTS_DOMAIN=k8s.local
+
             runcmd:
+              - systemctl daemon-reload
               - systemctl enable keights-collector.timer
               - systemctl enable keights-collector.service
               - systemctl enable keights-share.path
+              - systemctl enable keights-whisper-node.service
+              - systemctl enable keights-bootstrap-kubeconfig.service
               - systemctl enable kubelet.service
               - systemctl enable kube-router.service
+              - systemctl enable kube-router-kubeconfig.service
               - systemctl start --no-block kubelet.service
               - systemctl start --no-block kube-router.service
 
