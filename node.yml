@@ -49,12 +49,10 @@ Parameters:
     Description: CIDR block given ssh access to cluster
     Default: 0.0.0.0/0
     Type: String
-  K8sVersion:
-    Description: Version of Kubernetes
+  KubeRouterImage:
+    Description: Docker image containing kube-router
     Type: String
-  KubeRouterVersion:
-    Description: Version of kube-router
-    Type: String
+    Default: cloudnativelabs/kube-router:v0.0.20
 
 Resources:
   AutoscalingGroupSecurityGroup:
@@ -160,7 +158,7 @@ Resources:
                 permissions: '0644'
                 content: |
                   [Service]
-                  Environment=KEIGHTS_KUBE_ROUTER_IMAGE=cloudnativelabs/kube-router:v${KubeRouterVersion}
+                  Environment=KEIGHTS_KUBE_ROUTER_IMAGE=${KubeRouterImage}
 
               - path: /etc/systemd/system/kube-router-kubeconfig.service.d/environment.conf
                 owner: root:root
