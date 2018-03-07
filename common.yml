@@ -6,6 +6,12 @@ Parameters:
   VpcId:
     Description: ID of VPC where cluster will be placed
     Type: AWS::EC2::VPC::Id
+  ClusterName:
+    Description: Name of Kubernetes cluster
+    Type: String
+  KmsKeyId:
+    Description: KMS key used to manage secrets
+    Type: String
 
 Resources:
   ApiServerSecurityGroup:
@@ -98,6 +104,185 @@ Resources:
       ToPort: 179
       IpProtocol: tcp
 
+  K8sMasterAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - ec2:AttachVolume
+              - ec2:AuthorizeSecurityGroupIngress
+              - ec2:CreateTags
+              - ec2:CreateVolume
+              - ec2:CreateRoute
+              - ec2:CreateSecurityGroup
+              - ec2:DeleteSecurityGroup
+              - ec2:DeleteRoute
+              - ec2:DeleteVolume
+              - ec2:DescribeAvailabilityZones
+              - ec2:DescribeInstances
+              - ec2:DescribeRouteTables
+              - ec2:DescribeSubnets
+              - ec2:DescribeSecurityGroups
+              - ec2:DescribeVolumes
+              - ec2:DetachVolume
+              - ec2:ModifyInstanceAttribute
+              - ec2:RevokeSecurityGroupIngress
+            Resource:
+              - '*'
+          - Effect: Allow
+            Action:
+              - elasticloadbalancing:AttachLoadBalancerToSubnets
+              - elasticloadbalancing:ApplySecurityGroupsToLoadBalancer
+              - elasticloadbalancing:CreateLoadBalancer
+              - elasticloadbalancing:CreateLoadBalancerPolicy
+              - elasticloadbalancing:CreateLoadBalancerListeners
+              - elasticloadbalancing:ConfigureHealthCheck
+              - elasticloadbalancing:DeleteLoadBalancer
+              - elasticloadbalancing:DeleteLoadBalancerListeners
+              - elasticloadbalancing:DescribeLoadBalancers
+              - elasticloadbalancing:DescribeLoadBalancerAttributes
+              - elasticloadbalancing:DetachLoadBalancerFromSubnets
+              - elasticloadbalancing:DeregisterInstancesFromLoadBalancer
+              - elasticloadbalancing:ModifyLoadBalancerAttributes
+              - elasticloadbalancing:RegisterInstancesWithLoadBalancer
+              - elasticloadbalancing:SetLoadBalancerPoliciesForBackendServer
+            Resource:
+              - '*'
+          - Effect: Allow
+            Action:
+              - autoscaling:DescribeAutoScalingGroups
+              - autoscaling:DescribeAutoScalingInstances
+              - autoscaling:GetAsgForInstance
+              - autoscaling:SetDesiredCapacity
+              - autoscaling:TerminateInstanceInAutoScalingGroup
+              - autoscaling:UpdateAutoScalingGroup
+            Resource:
+              - '*'
+          - Effect: Allow
+            Action:
+              - iam:ListServerCertificates
+              - iam:GetServerCertificate
+            Resource:
+              - '*'
+          - Effect: Allow
+            Action:
+              - ssm:GetParameters
+            Resource:
+              - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}/cluster/*'
+              - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}/controller/*'
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${KmsKeyId}'
+
+  K8sNodeAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - autoscaling:DescribeAutoScalingGroups
+              - autoscaling:DescribeAutoScalingInstances
+              - ec2:DescribeInstances
+              - ec2:DescribeVolumes
+            Resource:
+              - '*'
+          - Effect: Allow
+            Action:
+              - 'ssm:GetParameters'
+            Resource:
+              - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}/cluster/*'
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${KmsKeyId}'
+
+  K8sLambdaAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              - 'arn:aws:logs:*:*:*'
+          - Effect: Allow
+            Action:
+              - 'ec2:Describe*'
+            Resource:
+              - '*'
+          - Effect: Allow
+            Action:
+              - ssm:PutParameter
+              - ssm:DeleteParameter
+            Resource:
+              - '*'
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+            Resource:
+              - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${KmsKeyId}'
+
+  MasterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub ${K8sMasterAccess}
+
+  MasterInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref MasterRole]
+
+  NodeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub ${K8sNodeAccess}
+
+  NodeInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref NodeRole]
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub ${K8sLambdaAccess}
+
 Outputs:
   ApiServerSecurityGroup:
     Description: Security group of kube-apiserver
@@ -108,3 +293,33 @@ Outputs:
   KubeRouterSecurityGroup:
     Description: Security group of kube-router
     Value: !Ref KubeRouterSecurityGroup
+  MasterInstanceProfile:
+    Description: Instance profile for master nodes
+    Value: !Ref MasterInstanceProfile
+  MasterInstanceProfileArn:
+    Description: Instance profile ARN for master nodes
+    Value: !Sub ${MasterInstanceProfile.Arn}
+  MasterRole:
+    Description: IAM role for master nodes
+    Value: !Ref MasterRole
+  MasterRoleArn:
+    Description: IAM role ARN for master nodes
+    Value: !Sub ${MasterRole.Arn}
+  NodeInstanceProfile:
+    Description: Instance profile for nodes
+    Value: !Ref NodeInstanceProfile
+  NodeInstanceProfileArn:
+    Description: Instance profile ARN for nodes
+    Value: !Sub ${NodeInstanceProfile.Arn}
+  NodeRole:
+    Description: IAM role for nodes
+    Value: !Ref NodeRole
+  NodeRoleArn:
+    Description: IAM role ARN for nodes
+    Value: !Sub ${NodeRole.Arn}
+  LambdaRole:
+    Description: IAM role for custom CloudFormation Lambdas
+    Value: !Ref LambdaRole
+  LambdaRoleArn:
+    Description: IAM role ARN for custom CloudFormation Lambdas
+    Value: !Sub ${LambdaRole.Arn}
