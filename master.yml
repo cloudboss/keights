@@ -32,7 +32,7 @@ Parameters:
     Description: SSH keypair assigned to instances
     Type: AWS::EC2::KeyPair::KeyName
   IamInstanceProfile:
-    Description: IAM Instance profile to assign to instances
+    Description: Name of IAM Instance profile to assign to instances
     Type: String
   LoadBalancerScheme:
     Description: Scheme of API load balancer
@@ -50,8 +50,8 @@ Parameters:
   KubeRouterSecurityGroup:
     Description: Security group for kube-router
     Type: String
-  LambdaExecutionRole:
-    Description: Role to assign to helper Lamba functions
+  LambdaExecutionRoleArn:
+    Description: Role ARN to assign to helper Lamba functions
     Type: String
   KmsKeyId:
     Description: KMS key used to manage secrets
@@ -116,7 +116,7 @@ Resources:
       Handler: subnet_to_az
       Runtime: go1.x
       Timeout: 30
-      Role: !Ref LambdaExecutionRole
+      Role: !Ref LambdaExecutionRoleArn
 
   KubeCaFunction:
     Type: AWS::Lambda::Function
@@ -128,7 +128,7 @@ Resources:
       Runtime: go1.x
       MemorySize: 512
       Timeout: 30
-      Role: !Ref LambdaExecutionRole
+      Role: !Ref LambdaExecutionRoleArn
 
   LoadBalancerIpFunction:
     Type: AWS::Lambda::Function
@@ -139,7 +139,7 @@ Resources:
       Handler: lb_ip
       Runtime: go1.x
       Timeout: 30
-      Role: !Ref LambdaExecutionRole
+      Role: !Ref LambdaExecutionRoleArn
 
   SubnetToAz1:
     Type: Custom::SubnetToAz
