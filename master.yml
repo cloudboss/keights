@@ -75,6 +75,10 @@ Parameters:
     Description: CIDR block given API access to cluster
     Default: 0.0.0.0/0
     Type: String
+  EtcdVolumeSize:
+    Description: Size of etcd volume in GB
+    Default: 10
+    Type: Number
   KubeApiServerImage:
     Description: Docker image containing kube-apiserver
     Type: String
@@ -336,7 +340,7 @@ Resources:
     Type: AWS::EC2::Volume
     Properties:
       AvailabilityZone: !GetAtt [SubnetToAz1, AvailabilityZone]
-      Size: 1
+      Size: !Ref EtcdVolumeSize
       VolumeType: gp2
       Tags:
         - Key: Name
@@ -349,7 +353,7 @@ Resources:
     Condition: HasThreeMasters
     Properties:
       AvailabilityZone: !GetAtt [SubnetToAz2, AvailabilityZone]
-      Size: 1
+      Size: !Ref EtcdVolumeSize
       VolumeType: gp2
       Tags:
         - Key: Name
@@ -362,7 +366,7 @@ Resources:
     Condition: HasThreeMasters
     Properties:
       AvailabilityZone: !GetAtt [SubnetToAz3, AvailabilityZone]
-      Size: 1
+      Size: !Ref EtcdVolumeSize
       VolumeType: gp2
       Tags:
         - Key: Name
