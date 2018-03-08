@@ -41,10 +41,6 @@ Parameters:
   KubeRouterSecurityGroup:
     Description: Security group for kube-router
     Type: String
-  PodCidr:
-    Description: CIDR block of addresses for pods
-    Default: 10.0.0.0/16
-    Type: String
   SshAccessCidr:
     Description: CIDR block given ssh access to cluster
     Default: 0.0.0.0/0
@@ -149,7 +145,6 @@ Resources:
                 content: |
                   [Service]
                   Environment=KEIGHTS_DOMAIN=k8s.local
-                  Environment=KEIGHTS_POD_CIDR=${PodCidr}
                   Environment=KEIGHTS_NODE_LABELS=kubernetes.io/role=node,node-role.kubernetes.io/node=
                   Environment=KEIGHTS_NODE_REGISTER=--register-node=true
 
