@@ -77,6 +77,7 @@
         name: '{{ item }}'
         update_cache: true
       with_items:
+        - ca-certificates
         - debootstrap
         - parted
 
