@@ -5,7 +5,7 @@ After=keights-bootstrap-token-splitter.service keights-prekubelet.service
 
 [Service]
 Type=oneshot
-ExecStart=/bin/sh -c ' \
+ExecStart=/usr/bin/flock /run/kubernetes/.kubectl.lock -c ' \
     while true; do \
       [ -f /run/kubernetes/bootstrap-token-id ] && break; \
       sleep 1; \
