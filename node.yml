@@ -49,6 +49,12 @@ Parameters:
     Description: Docker image containing kube-router
     Type: String
     Default: cloudnativelabs/kube-router:v0.0.20
+  NodeLabels:
+    Description: >-
+      Kubernetes node labels as a comma separated list of
+      key=value pairs, for example env=prod,size=large
+    Type: String
+    Default: ''
 
 Resources:
   AutoscalingGroupSecurityGroup:
@@ -145,7 +151,7 @@ Resources:
                 content: |
                   [Service]
                   Environment=KEIGHTS_DOMAIN=k8s.local
-                  Environment=KEIGHTS_NODE_LABELS=kubernetes.io/role=node,node-role.kubernetes.io/node=
+                  Environment=KEIGHTS_NODE_LABELS=kubernetes.io/role=node,node-role.kubernetes.io/node=,${NodeLabels}
                   Environment=KEIGHTS_NODE_REGISTER=--register-node=true
 
               - path: /etc/systemd/system/kube-router.service.d/environment.conf
