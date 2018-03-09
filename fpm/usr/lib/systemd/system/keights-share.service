@@ -1,5 +1,6 @@
 [Unit]
 Description=keights-share service
+Before=keights-prekubelet.service
 
 [Service]
 Type=oneshot

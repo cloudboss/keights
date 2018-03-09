@@ -19,4 +19,4 @@ ExecStart=/usr/bin/keights template \
             -v KubeControllerManagerImage=${KEIGHTS_KUBE_CONTROLLER_MANAGER_IMAGE}
 
 [Install]
-WantedBy=keights-configure.target
+WantedBy=keights-manifests.target

@@ -1,0 +1,14 @@
+[Unit]
+Description=keights-bootstrap-token-splitter service
+Before=keights-bootstrap-token.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c ' \
+    cut -d . -f 1 /run/kubernetes/bootstrap-token | xargs echo -n > /run/kubernetes/bootstrap-token-id && \
+    umask 266 && \
+    cut -d . -f 2 /run/kubernetes/bootstrap-token | xargs echo -n > /run/kubernetes/bootstrap-token-secret \
+'
+
+[Install]
+WantedBy=keights-configure.target

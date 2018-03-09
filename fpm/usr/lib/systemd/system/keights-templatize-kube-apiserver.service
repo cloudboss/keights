@@ -21,4 +21,4 @@ ExecStart=/usr/bin/keights template \
             -v Domain=${KEIGHTS_DOMAIN}
 
 [Install]
-WantedBy=keights-configure.target
+WantedBy=keights-manifests.target

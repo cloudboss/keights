@@ -1,0 +1,21 @@
+[Unit]
+Description=keights-prekubelet service
+Requires=var-lib-etcd.mount keights-manifests.target
+After=var-lib-etcd.mount keights-manifests.target
+Before=keights-bootstrap-token.service keights-kubectl-create.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c ' \
+    /usr/local/bin/kubelet --pod-manifest-path=/etc/kubernetes/manifests >/dev/null 2>&1 & \
+    pid=$${!}; \
+    while true; do \
+        health=`curl -s http://localhost:8080/healthz`; \
+        [ "$${health}" = "ok" ] && break; \
+        sleep 1; \
+    done; \
+    kill $${pid} \
+'
+
+[Install]
+RequiredBy=keights-bootstrap-token.service
