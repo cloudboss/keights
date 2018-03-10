@@ -330,11 +330,6 @@ Resources:
         MaxBatchSize: 1
         SuspendProcesses:
           - HealthCheck
-          - ReplaceUnhealthy
-          - AZRebalance
-          - AlarmNotification
-          - ScheduledActions
-          - AddToLoadBalancer
 
   Volume1:
     Type: AWS::EC2::Volume
