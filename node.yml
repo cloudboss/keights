@@ -19,7 +19,7 @@ Parameters:
   ImageId:
     Description: ID of AMI used for instances
     Type: AWS::EC2::Image::Id
-    Default: ami-0a31cbd757dda5aa8
+    Default: ami-0ea27a3490f9dfe8a
   InstanceType:
     Description: Type of EC2 instance
     Type: String
@@ -55,6 +55,9 @@ Parameters:
       key=value pairs, for example env=prod,size=large
     Type: String
     Default: ''
+  K8sApiServer:
+    Description: DNS name of kubernetes apiserver
+    Type: String
 
 Resources:
   AutoscalingGroupSecurityGroup:
@@ -113,29 +116,7 @@ Resources:
                 content: |
                   [Service]
                   Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
-                  Environment=KEIGHTS_DOMAIN=k8s.local
-
-              - path: /etc/systemd/system/keights-collector.service.d/environment.conf
-                owner: root:root
-                permissions: '0644'
-                content: |
-                  [Service]
-                  Environment=AWS_REGION=${AWS::Region}
-                  Environment=KEIGHTS_VOLUME_TAG=etcd:instance
-                  Environment=KEIGHTS_ASG_NAME=${MasterAutoscalingGroup}
-                  ExecStart=
-                  ExecStart=/usr/bin/keights collect \
-                              -v ${!KEIGHTS_VOLUME_TAG} \
-                              -a ${!KEIGHTS_ASG_NAME} \
-                              -o /run/keights-collector/asg
-
-              - path: /etc/systemd/system/keights-share.service.d/environment.conf
-                owner: root:root
-                permissions: '0644'
-                content: |
-                  [Service]
-                  Environment=KEIGHTS_DOMAIN=k8s.local
-                  Environment=KEIGHTS_PREFIX=${ClusterName}
+                  Environment=KEIGHTS_K8S_SERVER=${K8sApiServer}
 
               - path: /etc/systemd/system/keights-whisper-node.service.d/environment.conf
                 owner: root:root
@@ -167,13 +148,10 @@ Resources:
                 content: |
                   [Service]
                   Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
-                  Environment=KEIGHTS_DOMAIN=k8s.local
+                  Environment=KEIGHTS_K8S_SERVER=${K8sApiServer}
 
             runcmd:
               - systemctl daemon-reload
-              - systemctl enable keights-collector.timer
-              - systemctl enable keights-collector.service
-              - systemctl enable keights-share.path
               - systemctl enable keights-whisper-node.service
               - systemctl enable keights-bootstrap-kubeconfig.service
               - systemctl enable kubelet.service

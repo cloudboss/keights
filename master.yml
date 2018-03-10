@@ -26,7 +26,7 @@ Parameters:
   ImageId:
     Description: ID of AMI used for instances
     Type: AWS::EC2::Image::Id
-    Default: ami-0a31cbd757dda5aa8
+    Default: ami-0ea27a3490f9dfe8a
   InstanceType:
     Description: Type of EC2 instance
     Type: String
@@ -399,7 +399,7 @@ Resources:
                 content: |
                   [Service]
                   Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
-                  Environment=KEIGHTS_DOMAIN=k8s.local
+                  Environment=KEIGHTS_K8S_SERVER=${LoadBalancer.DNSName}
 
               - path: /etc/systemd/system/keights-collector.service.d/environment.conf
                 owner: root:root
@@ -498,7 +498,7 @@ Resources:
                 content: |
                   [Service]
                   Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
-                  Environment=KEIGHTS_DOMAIN=k8s.local
+                  Environment=KEIGHTS_K8S_SERVER=${LoadBalancer.DNSName}
 
             runcmd:
               - systemctl daemon-reload
