@@ -56,7 +56,7 @@ func NewVolumizer(sess *session.Session, availabilityZone, instanceID string) *V
 	}
 }
 
-func (v *Volumizer) WaitForVolume(asgName, volumeTag *string) (*ec2.Volume, error) {
+func (v *Volumizer) WaitForVolume(asgName, volumeTag *string, minutes time.Duration) (*ec2.Volume, error) {
 	var output *ec2.DescribeVolumesOutput
 	filters := []*ec2.Filter{
 		&ec2.Filter{
@@ -73,7 +73,7 @@ func (v *Volumizer) WaitForVolume(asgName, volumeTag *string) (*ec2.Volume, erro
 		},
 	}
 	input := &ec2.DescribeVolumesInput{Filters: filters}
-	err := helpers.WaitFor(10*time.Minute, func() error {
+	err := helpers.WaitFor(minutes*time.Minute, func() error {
 		var err error
 		output, err = v.ec2.DescribeVolumes(input)
 		if err != nil {
@@ -146,7 +146,7 @@ func (v *Volumizer) MakeFilesystem(device, fstype string) error {
 	return nil
 }
 
-func DoIt(device, volumeTag, fsType string) error {
+func DoIt(device, volumeTag, fsType string, minutes int) error {
 	sess := session.New()
 	metadata := ec2metadata.New(sess)
 	identity, err := metadata.GetInstanceIdentityDocument()
@@ -158,7 +158,7 @@ func DoIt(device, volumeTag, fsType string) error {
 	if err != nil {
 		return err
 	}
-	volume, err := volumizer.WaitForVolume(asgName, &volumeTag)
+	volume, err := volumizer.WaitForVolume(asgName, &volumeTag, time.Duration(minutes))
 	if err != nil {
 		return err
 	}
