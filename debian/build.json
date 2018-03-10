@@ -21,6 +21,7 @@
     "associate_public_ip_address": true,
     "ssh_username": "admin",
     "ssh_timeout": "5m",
+    "ami_groups": "all",
 
     "source_ami_filter": {
       "filters": {
