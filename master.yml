@@ -21,7 +21,9 @@ Parameters:
       The number of subnets must match the NumInstances parameter.
     Type: List<AWS::EC2::Subnet::Id>
   LoadBalancerSubnetIds:
-    Description: List of subnets IDs in VPC for API load balancer
+    Description: >-
+      List of subnets IDs in VPC for API load balancer.
+      The number of subnets must match the NumInstances parameter.
     Type: List<AWS::EC2::Subnet::Id>
   ImageId:
     Description: ID of AMI used for instances
