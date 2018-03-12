@@ -166,3 +166,14 @@ func InputToMapping(inputFile string) (map[string]string, error) {
 	}
 	return mapping, nil
 }
+
+func IdempotentDo(checker func() (bool, error), doer func() error) error {
+	affirmative, err := checker()
+	if err != nil {
+		return err
+	}
+	if !affirmative {
+		return doer()
+	}
+	return nil
+}
