@@ -29,9 +29,6 @@ Parameters:
   IamInstanceProfile:
     Description: IAM Instance profile to assign to instances
     Type: String
-  MasterAutoscalingGroup:
-    Description: Name of master autoscaling group
-    Type: String
   ApiServerSecurityGroup:
     Description: Security group of apiserver
     Type: String
