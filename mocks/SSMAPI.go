@@ -1918,6 +1918,84 @@ func (_m *SSMAPI) DescribeAutomationExecutionsWithContext(_a0 aws.Context, _a1 *
 	return r0, r1
 }
 
+// DescribeAutomationStepExecutions provides a mock function with given fields: _a0
+func (_m *SSMAPI) DescribeAutomationStepExecutions(_a0 *ssm.DescribeAutomationStepExecutionsInput) (*ssm.DescribeAutomationStepExecutionsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *ssm.DescribeAutomationStepExecutionsOutput
+	if rf, ok := ret.Get(0).(func(*ssm.DescribeAutomationStepExecutionsInput) *ssm.DescribeAutomationStepExecutionsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ssm.DescribeAutomationStepExecutionsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*ssm.DescribeAutomationStepExecutionsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeAutomationStepExecutionsRequest provides a mock function with given fields: _a0
+func (_m *SSMAPI) DescribeAutomationStepExecutionsRequest(_a0 *ssm.DescribeAutomationStepExecutionsInput) (*request.Request, *ssm.DescribeAutomationStepExecutionsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*ssm.DescribeAutomationStepExecutionsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *ssm.DescribeAutomationStepExecutionsOutput
+	if rf, ok := ret.Get(1).(func(*ssm.DescribeAutomationStepExecutionsInput) *ssm.DescribeAutomationStepExecutionsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*ssm.DescribeAutomationStepExecutionsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeAutomationStepExecutionsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *SSMAPI) DescribeAutomationStepExecutionsWithContext(_a0 aws.Context, _a1 *ssm.DescribeAutomationStepExecutionsInput, _a2 ...request.Option) (*ssm.DescribeAutomationStepExecutionsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *ssm.DescribeAutomationStepExecutionsOutput
+	if rf, ok := ret.Get(0).(func(aws.Context, *ssm.DescribeAutomationStepExecutionsInput, ...request.Option) *ssm.DescribeAutomationStepExecutionsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ssm.DescribeAutomationStepExecutionsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(aws.Context, *ssm.DescribeAutomationStepExecutionsInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DescribeAvailablePatches provides a mock function with given fields: _a0
 func (_m *SSMAPI) DescribeAvailablePatches(_a0 *ssm.DescribeAvailablePatchesInput) (*ssm.DescribeAvailablePatchesOutput, error) {
 	ret := _m.Called(_a0)
