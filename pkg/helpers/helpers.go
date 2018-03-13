@@ -167,6 +167,24 @@ func InputToMapping(inputFile string) (map[string]string, error) {
 	return mapping, nil
 }
 
+func MyIP(sess *session.Session) (string, error) {
+	metadata := ec2metadata.New(sess)
+	identity, err := metadata.GetInstanceIdentityDocument()
+	if err != nil {
+		return "", err
+	}
+	return identity.PrivateIP, nil
+}
+
+func MyIndex(mapping map[string]string, ip string) string {
+	for k, v := range mapping {
+		if v == ip {
+			return k
+		}
+	}
+	return "-1"
+}
+
 func IdempotentDo(checker func() (bool, error), doer func() error) error {
 	affirmative, err := checker()
 	if err != nil {
