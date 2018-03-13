@@ -105,13 +105,11 @@ Parameters:
 Mappings:
   LambdaUrls:
     AllFunctions:
-      Bucket: cloudboss-public
+      Bucket: pi-lambda-us-west-2
     SubnetToAzFunction:
       Key: lambda/co/cloudboss/stackhand/subnet_to_az/0.1.0/go1.x/subnet_to_az-0.1.0.zip
     KubeCaFunction:
       Key: lambda/co/cloudboss/stackhand/kube_ca/0.1.0/go1.x/kube_ca-0.1.0.zip
-    LoadBalancerIpFunction:
-      Key: lambda/co/cloudboss/stackhand/lb_ip/0.1.0/go1.x/lb_ip-0.1.0.zip
 
 Conditions:
   HasThreeMasters: !Equals [!Ref NumInstances, 3]
@@ -137,17 +135,6 @@ Resources:
       Handler: kube_ca
       Runtime: go1.x
       MemorySize: 512
-      Timeout: 30
-      Role: !Ref LambdaExecutionRoleArn
-
-  LoadBalancerIpFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      Code:
-        S3Bucket: !FindInMap [LambdaUrls, AllFunctions, Bucket]
-        S3Key: !FindInMap [LambdaUrls, LoadBalancerIpFunction, Key]
-      Handler: lb_ip
-      Runtime: go1.x
       Timeout: 30
       Role: !Ref LambdaExecutionRoleArn
 
@@ -185,32 +172,6 @@ Resources:
       NumInstances: !Ref NumInstances
       KmsKeyId: !Ref KmsKeyId
 
-  LoadBalancerIp1:
-    Type: Custom::LoadBancerIp
-    DependsOn: LoadBalancerIpFunction
-    Properties:
-      ServiceToken: !GetAtt [LoadBalancerIpFunction, Arn]
-      LoadBalancerName: !GetAtt [LoadBalancer, LoadBalancerFullName]
-      SubnetId: !Select [0, !Ref LoadBalancerSubnetIds]
-
-  LoadBalancerIp2:
-    Type: Custom::LoadBancerIp
-    DependsOn: LoadBalancerIpFunction
-    Condition: HasThreeMasters
-    Properties:
-      ServiceToken: !GetAtt [LoadBalancerIpFunction, Arn]
-      LoadBalancerName: !GetAtt [LoadBalancer, LoadBalancerFullName]
-      SubnetId: !Select [1, !Ref LoadBalancerSubnetIds]
-
-  LoadBalancerIp3:
-    Type: Custom::LoadBancerIp
-    DependsOn: LoadBalancerIpFunction
-    Condition: HasThreeMasters
-    Properties:
-      ServiceToken: !GetAtt [LoadBalancerIpFunction, Arn]
-      LoadBalancerName: !GetAtt [LoadBalancer, LoadBalancerFullName]
-      SubnetId: !Select [2, !Ref LoadBalancerSubnetIds]
-
   EtcdSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -235,30 +196,59 @@ Resources:
       ToPort: 2380
       IpProtocol: tcp
 
-  LoadBalancer:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
     Properties:
-      Scheme: !Ref LoadBalancerScheme
-      Subnets: !Ref LoadBalancerSubnetIds
-      Type: network
-
-  LoadBalancerTargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      Name: !Sub '${ClusterName}-api'
-      Port: 6443
-      Protocol: TCP
+      GroupDescription: !Sub ${ClusterName} load balancer
       VpcId: !Ref VpcId
 
-  LoadBalancerListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
+  LoadBalancerSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      DefaultActions:
-        - TargetGroupArn: !Ref LoadBalancerTargetGroup
-          Type: forward
-      LoadBalancerArn: !Ref LoadBalancer
-      Port: 443
-      Protocol: TCP
+      GroupId: !Ref EtcdSecurityGroup
+      SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+      FromPort: 2379
+      ToPort: 2380
+      IpProtocol: tcp
+
+  LoadBalancerSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref LoadBalancerSecurityGroup
+      CidrIp: !Ref ApiAccessCidr
+      FromPort: 443
+      IpProtocol: tcp
+      ToPort: 443
+
+  LoadBalancerSecurityGroupEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LoadBalancerSecurityGroup
+      DestinationSecurityGroupId: !Ref AutoscalingGroupSecurityGroup
+      FromPort: 6443
+      ToPort: 6443
+      IpProtocol: tcp
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      CrossZone: true
+      HealthCheck:
+        HealthyThreshold: 3
+        Interval: 30
+        Target: TCP:6443
+        Timeout: 10
+        UnhealthyThreshold: 3
+      LoadBalancerName: !Ref ClusterName
+      Listeners:
+        - InstancePort: 6443
+          InstanceProtocol: TCP
+          Protocol: TCP
+          LoadBalancerPort: 443
+      Scheme: !Ref LoadBalancerScheme
+      SecurityGroups:
+        - !Ref LoadBalancerSecurityGroup
+      Subnets: !Ref LoadBalancerSubnetIds
 
   AutoscalingGroupSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -275,40 +265,11 @@ Resources:
       IpProtocol: tcp
       ToPort: 22
 
-  AutoscalingGroupIngressLoadBalancerHealthCheck1:
+  AutoscalingGroupIngressLoadBalancer:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref AutoscalingGroupSecurityGroup
-      CidrIp: !Sub ${LoadBalancerIp1.PrivateIpAddress}/32
-      FromPort: 6443
-      IpProtocol: tcp
-      ToPort: 6443
-
-  AutoscalingGroupIngressLoadBalancerHealthCheck2:
-    Type: AWS::EC2::SecurityGroupIngress
-    Condition: HasThreeMasters
-    Properties:
-      GroupId: !Ref AutoscalingGroupSecurityGroup
-      CidrIp: !Sub ${LoadBalancerIp2.PrivateIpAddress}/32
-      FromPort: 6443
-      IpProtocol: tcp
-      ToPort: 6443
-
-  AutoscalingGroupIngressLoadBalancerHealthCheck3:
-    Type: AWS::EC2::SecurityGroupIngress
-    Condition: HasThreeMasters
-    Properties:
-      GroupId: !Ref AutoscalingGroupSecurityGroup
-      CidrIp: !Sub ${LoadBalancerIp3.PrivateIpAddress}/32
-      FromPort: 6443
-      IpProtocol: tcp
-      ToPort: 6443
-
-  AutoscalingGroupIngressApi:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref AutoscalingGroupSecurityGroup
-      CidrIp: !Ref ApiAccessCidr
+      SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
       FromPort: 6443
       IpProtocol: tcp
       ToPort: 6443
@@ -322,7 +283,7 @@ Resources:
       MaxSize: !Ref NumInstances
       MinSize: !Ref NumInstances
       VPCZoneIdentifier: !Ref SubnetIds
-      TargetGroupARNs: [!Ref LoadBalancerTargetGroup]
+      LoadBalancerNames: [!Ref LoadBalancer]
       Tags:
         - Key: Name
           Value: !Sub ${ClusterName}-master
