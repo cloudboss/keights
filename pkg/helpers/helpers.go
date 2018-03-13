@@ -185,6 +185,19 @@ func MyIndex(mapping map[string]string, ip string) string {
 	return "-1"
 }
 
+func IsIndexOne(sess *session.Session, inputFile string) (bool, error) {
+	mapping, err := InputToMapping(inputFile)
+	if err != nil {
+		return false, err
+	}
+	myIP, err := MyIP(sess)
+	if err != nil {
+		return false, err
+	}
+	myIndex := MyIndex(mapping, myIP)
+	return myIndex == "1", nil
+}
+
 func IdempotentDo(checker func() (bool, error), doer func() error) error {
 	affirmative, err := checker()
 	if err != nil {
