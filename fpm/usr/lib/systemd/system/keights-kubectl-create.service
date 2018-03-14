@@ -16,7 +16,7 @@ ExecStart=/usr/bin/flock /run/kubernetes/.kubectl.lock -c ' \
         ip=`echo $${entry} | cut -d : -f 2`; \
         [ "$${myip}" = "$${ip}" ] && break; \
     done; \
-    [ "$${index}" = "1" ] || exit; \
+    [ "$${index}" = "1" ] || exit 0; \
     while true; do \
         health=`curl -s http://localhost:8080/healthz`; \
         [ "$${health}" = "ok" ] && break; \
