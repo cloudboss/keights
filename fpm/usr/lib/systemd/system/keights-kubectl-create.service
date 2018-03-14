@@ -1,7 +1,7 @@
 [Unit]
 Description=keights-kubectl-create service
-Requires=keights-prekubelet.service
-After=keights-prekubelet.service
+Requires=keights-collector.service
+After=keights-collector.service
 
 [Service]
 Type=oneshot
