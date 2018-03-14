@@ -84,6 +84,12 @@ func (c *Collector) Instances() ([]*ec2.Instance, error) {
 	}
 	desc, err := c.ec2.DescribeInstances(&ec2.DescribeInstancesInput{
 		InstanceIds: InstanceIds(c.asg.Instances),
+		Filters: []*ec2.Filter{
+			&ec2.Filter{
+				Name:   aws.String("instance-state-name"),
+				Values: []*string{aws.String("running")},
+			},
+		},
 	})
 	if err != nil {
 		return nil, err
