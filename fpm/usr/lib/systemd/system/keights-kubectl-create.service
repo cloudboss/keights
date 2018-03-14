@@ -4,7 +4,8 @@ Requires=keights-collector.service
 After=keights-collector.service
 
 [Service]
-Type=oneshot
+Type=simple
+RemainAfterExit=true
 ExecStart=/usr/bin/flock /run/kubernetes/.kubectl.lock -c ' \
     while true; do \
         [ -f /run/keights-collector/asg ] && break; \
@@ -24,6 +25,7 @@ ExecStart=/usr/bin/flock /run/kubernetes/.kubectl.lock -c ' \
     done; \
     kubectl apply -f /etc/kubernetes/config \
 '
+Restart=on-failure
 
 [Install]
 WantedBy=keights-configure.target
