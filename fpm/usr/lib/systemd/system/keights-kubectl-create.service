@@ -22,7 +22,7 @@ ExecStart=/usr/bin/flock /run/kubernetes/.kubectl.lock -c ' \
         [ "$${health}" = "ok" ] && break; \
         sleep 1; \
     done; \
-    kubectl create -f /etc/kubernetes/config \
+    kubectl apply -f /etc/kubernetes/config \
 '
 
 [Install]
