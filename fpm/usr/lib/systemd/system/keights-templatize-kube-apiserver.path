@@ -1,9 +1,0 @@
-[Unit]
-Description=keights-templatize-kube-apiserver path watcher
-
-[Path]
-PathExists=/run/keights-collector/asg
-PathChanged=/run/keights-collector/asg
-
-[Install]
-WantedBy=keights-manifests.target
