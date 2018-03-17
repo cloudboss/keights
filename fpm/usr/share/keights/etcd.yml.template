@@ -1,10 +1,13 @@
 apiVersion: v1
 kind: Pod
 metadata:
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ""
   creationTimestamp: null
   labels:
-    k8s-app: etcd-server
-  name: etcd-server
+    component: etcd
+    tier: control-plane
+  name: etcd
   namespace: kube-system
 spec:
   containers:
@@ -47,9 +50,12 @@ spec:
       value: '1'
     image: {{ .EtcdImage }}
     livenessProbe:
-      tcpSocket:
+      failureThreshold: 8
+      httpGet:
         host: {{ .Prefix }}-{{ .MyIndex }}.{{ .Domain }}
+        path: /health
         port: 2379
+        scheme: HTTP
       initialDelaySeconds: 15
       timeoutSeconds: 15
     name: etcd-container
