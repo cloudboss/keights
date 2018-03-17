@@ -132,8 +132,6 @@
       with_items:
         - src: https://dl.k8s.io/v{{ k8s_version }}/kubernetes-server-linux-amd64.tar.gz
           dest: /tmp/kubernetes-server-linux-amd64.tar.gz
-        - src: https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_amd64/amazon-ssm-agent.deb
-          dest: /mnt/tmp/amazon-ssm-agent.deb
         - src: https://github.com/cloudboss/keights/releases/download/v{{ keights_version }}/keights_{{ keights_version }}_linux_amd64.deb
           dest: /mnt/tmp/keights.deb
         - src: https://github.com/containernetworking/plugins/releases/download/v{{ cni_version }}/cni-plugins-amd64-v{{ cni_version }}.tgz
@@ -219,15 +217,13 @@
           locales \
           openssh-server \
           docker-engine={{ docker_version }} && \
-        dpkg -i /tmp/amazon-ssm-agent.deb && \
         dpkg -i /tmp/keights.deb && \
         apt-get clean && \
-        systemctl enable amazon-ssm-agent && \
         systemctl disable apt-daily.timer && \
         systemctl disable apt-daily-upgrade.timer
         EOF
       args:
-        creates: /mnt/usr/bin/amazon-ssm-agent
+        creates: /mnt/usr/bin/keights
       # Retry due to occasional network issues
       retries: 3
       register: chrooted_installation
