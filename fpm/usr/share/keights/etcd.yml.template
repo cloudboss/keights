@@ -33,17 +33,17 @@ spec:
     - name: ETCD_INITIAL_CLUSTER
       value: {{ range $i, $k := keys .HostMap }}{{ if $i }},{{end}}{{ $.Prefix }}-{{ $k }}=https://{{ $.Prefix }}-{{ $k }}.{{ $.Domain }}:2380{{ end }}
     - name: ETCD_CERT_FILE
-      value: /run/kubernetes/pki/etcd.crt
+      value: /etc/kubernetes/pki/etcd.crt
     - name: ETCD_KEY_FILE
-      value: /run/kubernetes/pki/etcd.key
+      value: /etc/kubernetes/pki/etcd.key
     - name: ETCD_PEER_CERT_FILE
-      value: /run/kubernetes/pki/etcd-peer.crt
+      value: /etc/kubernetes/pki/etcd-peer.crt
     - name: ETCD_PEER_KEY_FILE
-      value: /run/kubernetes/pki/etcd-peer.key
+      value: /etc/kubernetes/pki/etcd-peer.key
     - name: ETCD_TRUSTED_CA_FILE
-      value: /run/kubernetes/pki/etcd-ca.crt
+      value: /etc/kubernetes/pki/etcd-ca.crt
     - name: ETCD_PEER_TRUSTED_CA_FILE
-      value: /run/kubernetes/pki/etcd-ca.crt
+      value: /etc/kubernetes/pki/etcd-ca.crt
     - name: ETCD_CLIENT_CERT_AUTH
       value: '1'
     - name: ETCD_PEER_CLIENT_CERT_AUTH
@@ -76,20 +76,20 @@ spec:
     - mountPath: /etc/hosts
       name: etc-hosts
       readOnly: true
-    - mountPath: /run/kubernetes/pki/etcd-ca.crt
-      name: run-kubernetes-pki-etcd-ca
+    - mountPath: /etc/kubernetes/pki/etcd-ca.crt
+      name: etc-kubernetes-pki-etcd-ca
       readOnly: true
-    - mountPath: /run/kubernetes/pki/etcd.crt
-      name: run-kubernetes-pki-etcd
+    - mountPath: /etc/kubernetes/pki/etcd.crt
+      name: etc-kubernetes-pki-etcd
       readOnly: true
-    - mountPath: /run/kubernetes/pki/etcd.key
-      name: run-kubernetes-pki-etcd-key
+    - mountPath: /etc/kubernetes/pki/etcd.key
+      name: etc-kubernetes-pki-etcd-key
       readOnly: true
-    - mountPath: /run/kubernetes/pki/etcd-peer.crt
-      name: run-kubernetes-pki-etcd-peer
+    - mountPath: /etc/kubernetes/pki/etcd-peer.crt
+      name: etc-kubernetes-pki-etcd-peer
       readOnly: true
-    - mountPath: /run/kubernetes/pki/etcd-peer.key
-      name: run-kubernetes-pki-etcd-peer-key
+    - mountPath: /etc/kubernetes/pki/etcd-peer.key
+      name: etc-kubernetes-pki-etcd-peer-key
       readOnly: true
   hostNetwork: true
   volumes:
@@ -100,18 +100,18 @@ spec:
       path: /etc/hosts
     name: etc-hosts
   - hostPath:
-      path: /run/kubernetes/pki/etcd-ca.crt
-    name: run-kubernetes-pki-etcd-ca
+      path: /etc/kubernetes/pki/etcd-ca.crt
+    name: etc-kubernetes-pki-etcd-ca
   - hostPath:
-      path: /run/kubernetes/pki/etcd.crt
-    name: run-kubernetes-pki-etcd
+      path: /etc/kubernetes/pki/etcd.crt
+    name: etc-kubernetes-pki-etcd
   - hostPath:
-      path: /run/kubernetes/pki/etcd.key
-    name: run-kubernetes-pki-etcd-key
+      path: /etc/kubernetes/pki/etcd.key
+    name: etc-kubernetes-pki-etcd-key
   - hostPath:
-      path: /run/kubernetes/pki/etcd-peer.crt
-    name: run-kubernetes-pki-etcd-peer
+      path: /etc/kubernetes/pki/etcd-peer.crt
+    name: etc-kubernetes-pki-etcd-peer
   - hostPath:
-      path: /run/kubernetes/pki/etcd-peer.key
-    name: run-kubernetes-pki-etcd-peer-key
+      path: /etc/kubernetes/pki/etcd-peer.key
+    name: etc-kubernetes-pki-etcd-peer-key
 status: {}
