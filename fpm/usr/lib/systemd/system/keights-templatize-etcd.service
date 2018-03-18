@@ -21,4 +21,4 @@ ExecStart=/usr/bin/keights template \
             -v EtcdClusterToken=${KEIGHTS_ETCD_CLUSTER_TOKEN}
 
 [Install]
-RequiredBy=keights-manifests.target
+RequiredBy=keights-templates.target

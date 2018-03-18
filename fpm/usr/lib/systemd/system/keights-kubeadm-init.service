@@ -1,7 +1,7 @@
 [Unit]
 Description=keights-kubeadm-init service
-Requires=var-lib-etcd.mount keights-whisper-controller.service keights-manifests.target
-After=var-lib-etcd.mount keights-whisper-controller.service keights-manifests.target
+Requires=var-lib-etcd.mount keights-whisper-controller.service keights-templates.target
+After=var-lib-etcd.mount keights-whisper-controller.service keights-templates.target
 ConditionPathExists=!/var/lib/kubeadm/initialized
 
 [Service]

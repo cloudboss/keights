@@ -1,5 +1,5 @@
 [Unit]
-Description=keights-manifests target
+Description=keights-templates target
 Requires=keights-collector.service
 After=keights-collector.service
 

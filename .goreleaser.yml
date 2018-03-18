@@ -24,8 +24,8 @@ fpm:
       /usr/lib/systemd/system/keights-kubeadm-init.service
     fpm/usr/lib/systemd/system/keights-kubeadm-join.service:
       /usr/lib/systemd/system/keights-kubeadm-join.service
-    fpm/usr/lib/systemd/system/keights-manifests.target:
-      /usr/lib/systemd/system/keights-manifests.target
+    fpm/usr/lib/systemd/system/keights-templates.target:
+      /usr/lib/systemd/system/keights-templates.target
     fpm/usr/lib/systemd/system/keights-share.path:
       /usr/lib/systemd/system/keights-share.path
     fpm/usr/lib/systemd/system/keights-share.service:

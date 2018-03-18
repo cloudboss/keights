@@ -33,4 +33,4 @@ ExecStart=/bin/sh -c ' \
 '
 
 [Install]
-RequiredBy=keights-manifests.target
+RequiredBy=keights-templates.target
