@@ -40,8 +40,6 @@ fpm:
       /usr/lib/systemd/system/keights-whisper-controller.service
     fpm/usr/lib/systemd/system/keights-whisper-node.service:
       /usr/lib/systemd/system/keights-whisper-node.service
-    fpm/usr/lib/systemd/system/kube-router.service:
-      /usr/lib/systemd/system/kube-router.service
     fpm/usr/lib/systemd/system/var-lib-etcd.mount:
       /usr/lib/systemd/system/var-lib-etcd.mount
     fpm/usr/share/keights/etcd.yml.template:
