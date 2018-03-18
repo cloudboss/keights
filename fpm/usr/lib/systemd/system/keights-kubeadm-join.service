@@ -7,7 +7,7 @@ ConditionPathExists=!/var/lib/kubeadm/initialized
 [Service]
 # Environment=KEIGHTS_APISERVER=
 Environment=KEIGHTS_APISERVER_PORT=443
-Type=oneshot
+Type=simple
 ExecStart=/bin/sh -c ' \
     while true; do \
       [ -f /run/kubernetes/bootstrap-token ] && break; \
@@ -21,9 +21,12 @@ ExecStart=/bin/sh -c ' \
     /usr/bin/kubeadm join \
       --token=$${token} \
       --discovery-token-ca-cert-hash=sha256:$${ca_cert_hash} \
+      --ignore-preflight-errors=all \
       ${KEIGHTS_APISERVER}:${KEIGHTS_APISERVER_PORT} && \
     touch /var/lib/kubeadm/initialized \
 '
+Restart=on-failure
+RestartSec=10s
 
 [Install]
 WantedBy=multi-user.target
