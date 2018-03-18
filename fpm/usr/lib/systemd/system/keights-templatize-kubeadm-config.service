@@ -1,0 +1,36 @@
+[Unit]
+Description=keights-templatize-kubeadm-config service
+Requires=keights-collector.service keights-whisper-controller.service
+After=keights-collector.service keights-whisper-controller.service
+
+[Service]
+Type=simple
+# Environment=AWS_REGION=
+# Environment=KEIGHTS_DOMAIN=
+# Environment=KEIGHTS_PREFIX=
+# Environment=KEIGHTS_APISERVER=
+# Environment=KEIGHTS_POD_SUBNET=
+# Environment=KEIGHTS_SERVICE_SUBNET=
+ExecStartPre=/usr/bin/systemd-tmpfiles --create --prefix /var/lib/kubeadm
+ExecStart=/bin/sh -c ' \
+    while true; do \
+      [ -f /run/keights-collector/asg -a -f /run/kubernetes/bootstrap-token ] && break; \
+      sleep 1; \
+    done && \
+    node_name=`hostname -f` && \
+    token=`cat /run/kubernetes/bootstrap-token` && \
+    /usr/bin/keights template \
+      -i /run/keights-collector/asg \
+      -t /usr/share/keights/kubeadm-config.yml.template \
+      -D /var/lib/kubeadm/config.yml \
+      -v Domain=${KEIGHTS_DOMAIN} \
+      -v Prefix=${KEIGHTS_PREFIX} \
+      -v APIServer=${KEIGHTS_APISERVER} \
+      -v PodSubnet=${KEIGHTS_POD_SUBNET} \
+      -v ServiceSubnet=${KEIGHTS_SERVICE_SUBNET} \
+      -v NodeName=$${node_name} \
+      -v Token=$${token} \
+'
+
+[Install]
+RequiredBy=keights-manifests.target
