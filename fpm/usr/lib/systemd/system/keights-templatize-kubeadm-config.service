@@ -22,8 +22,8 @@ ExecStart=/bin/sh -c ' \
     token=`cat /run/kubernetes/bootstrap-token` && \
     /usr/bin/keights template \
       -i /run/keights-collector/asg \
-      -t /usr/share/keights/kubeadm-config.yml.template \
-      -D /var/lib/kubeadm/config.yml \
+      -t /usr/share/keights/kubeadm-config.yaml.template \
+      -D /var/lib/kubeadm/config.yaml \
       -v Domain=${KEIGHTS_DOMAIN} \
       -v Prefix=${KEIGHTS_PREFIX} \
       -v APIServer=${KEIGHTS_APISERVER} \
