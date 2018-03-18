@@ -51,11 +51,9 @@ spec:
     image: {{ .EtcdImage }}
     livenessProbe:
       failureThreshold: 8
-      httpGet:
+      tcpSocket:
         host: {{ .Prefix }}-{{ .MyIndex }}.{{ .Domain }}
-        path: /health
         port: 2379
-        scheme: HTTP
       initialDelaySeconds: 15
       timeoutSeconds: 15
     name: etcd-container
