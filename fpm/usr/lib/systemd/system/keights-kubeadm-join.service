@@ -1,0 +1,29 @@
+[Unit]
+Description=keights-kubeadm-join service
+Requires=keights-whisper-node.service
+After=keights-whisper-node.service
+ConditionPathExists=!/var/lib/kubeadm/initialized
+
+[Service]
+# Environment=KEIGHTS_APISERVER=
+Environment=KEIGHTS_APISERVER_PORT=443
+Type=oneshot
+ExecStart=/bin/sh -c ' \
+    while true; do \
+      [ -f /run/kubernetes/bootstrap-token ] && break; \
+      sleep 1; \
+    done && \
+    token=`cat /run/kubernetes/bootstrap-token` && \
+    ca_cert_hash=`openssl x509 -pubkey -in /run/kubernetes/pki/ca.crt | \
+                    openssl rsa -pubin -outform der 2>/dev/null | \
+                    openssl dgst -sha256 -hex | \
+                    sed "s/^.* //"` && \
+    /usr/bin/kubeadm join \
+      --token=$${token} \
+      --discovery-token-ca-cert-hash=sha256:$${ca_cert_hash} \
+      ${KEIGHTS_APISERVER}:${KEIGHTS_APISERVER_PORT} && \
+    touch /var/lib/kubeadm/initialized \
+'
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,18 @@
+[Unit]
+Description=keights-kubeadm-init service
+Requires=var-lib-etcd.mount keights-whisper-controller.service keights-manifests.target
+After=var-lib-etcd.mount keights-whisper-controller.service keights-manifests.target
+ConditionPathExists=!/var/lib/kubeadm/initialized
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c ' \
+    /usr/bin/kubeadm init \
+      --config=/var/lib/kubeadm/config.yml \
+      --ignore-preflight-errors=all && \
+    touch /var/lib/kubeadm/initialized \
+'
+ExecStartPost=/bin/rm /var/lib/kubeadm/config.yml
+
+[Install]
+WantedBy=multi-user.target
