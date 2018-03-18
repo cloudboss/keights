@@ -31,3 +31,4 @@ apiServerExtraArgs:
   external-hostname: {{ .APIServer }}
 controllerManagerExtraArgs:
   configure-cloud-routes: 'false'
+unifiedControlPlaneImage: {{ .HyperkubeImage }}
