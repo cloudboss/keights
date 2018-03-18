@@ -19,6 +19,3 @@ ExecStart=/usr/bin/keights whisper \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-peer.key:/etc/kubernetes/pki/etcd-peer.key \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-client.crt:/etc/kubernetes/pki/etcd-client.crt \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-client.key:/etc/kubernetes/pki/etcd-client.key
-
-[Install]
-WantedBy=keights-configure.target

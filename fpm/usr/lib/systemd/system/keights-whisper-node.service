@@ -1,5 +1,6 @@
 [Unit]
 Description=keights-whisper-node service
+Before=keights-kubeadm-join.service
 
 [Service]
 Type=oneshot
@@ -10,4 +11,4 @@ ExecStart=/usr/bin/keights whisper \
             -p /${KEIGHTS_CLUSTER_NAME}/cluster/bootstrap-token:/run/kubernetes/bootstrap-token
 
 [Install]
-WantedBy=keights-configure.target
+WantedBy=multi-user.target

@@ -9,4 +9,4 @@ Type=oneshot
 ExecStart=/usr/bin/keights volumize -v ${KEIGHTS_VOLUME_TAG}
 
 [Install]
-WantedBy=keights-configure.target
+WantedBy=multi-user.target

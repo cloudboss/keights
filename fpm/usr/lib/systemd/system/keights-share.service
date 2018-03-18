@@ -1,6 +1,5 @@
 [Unit]
 Description=keights-share service
-Before=keights-prekubelet.service
 
 [Service]
 Type=oneshot
@@ -12,4 +11,4 @@ ExecStart=/usr/bin/keights share \
             -d ${KEIGHTS_DOMAIN}
 
 [Install]
-WantedBy=keights-configure.target
+WantedBy=multi-user.target

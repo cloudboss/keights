@@ -1,5 +1,7 @@
 [Unit]
 Description=keights-templatize-etcd service
+Requires=keights-collector.service
+After=keights-collector.service
 
 [Service]
 Type=simple
@@ -19,4 +21,4 @@ ExecStart=/usr/bin/keights template \
             -v EtcdClusterToken=${KEIGHTS_ETCD_CLUSTER_TOKEN}
 
 [Install]
-WantedBy=keights-manifests.target
+RequiredBy=keights-manifests.target

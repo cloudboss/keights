@@ -4,4 +4,4 @@ Requires=keights-collector.service
 After=keights-collector.service
 
 [Install]
-RequiredBy=keights-prekubelet.service
+RequiredBy=keights-kubeadm-init.service
