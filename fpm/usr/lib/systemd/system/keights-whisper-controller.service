@@ -6,6 +6,7 @@ Before=keights-kubeadm-init.service
 Type=oneshot
 # Environment=AWS_REGION=
 # Environment=KEIGHTS_CLUSTER_NAME=
+ExecStartPre=/usr/bin/systemd-tmpfiles --create --prefix /etc/kubernetes/pki
 ExecStart=/usr/bin/keights whisper \
             -p /${KEIGHTS_CLUSTER_NAME}/cluster/bootstrap-token:/run/kubernetes/bootstrap-token \
             -p /${KEIGHTS_CLUSTER_NAME}/cluster/ca.crt:/etc/kubernetes/pki/ca.crt \
