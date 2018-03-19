@@ -35,17 +35,16 @@ Parameters:
   KubeletSecurityGroup:
     Description: Security group for kubelet
     Type: String
-  KubeRouterSecurityGroup:
-    Description: Security group for kube-router
-    Type: String
   SshAccessCidr:
     Description: CIDR block given ssh access to cluster
     Default: 0.0.0.0/0
     Type: String
-  KubeRouterImage:
-    Description: Docker image containing kube-router
+  ClusterDns:
+    Description: >-
+      IP addres of cluster DNS server; should be
+      the value of ServiceCidr + 10
+    Default: 10.96.0.10
     Type: String
-    Default: cloudnativelabs/kube-router:v0.0.20
   NodeLabels:
     Description: >-
       Kubernetes node labels as a comma separated list of
@@ -87,7 +86,6 @@ Resources:
     UpdatePolicy:
       AutoScalingRollingUpdate:
         MaxBatchSize: 1
-        MinInstancesInService: 1
 
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -101,7 +99,6 @@ Resources:
         - !Ref AutoscalingGroupSecurityGroup
         - !Ref ApiServerSecurityGroup
         - !Ref KubeletSecurityGroup
-        - !Ref KubeRouterSecurityGroup
       UserData:
         Fn::Base64:
           !Sub |
@@ -123,39 +120,43 @@ Resources:
                   Environment=AWS_REGION=${AWS::Region}
                   Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
 
-              - path: /etc/systemd/system/kubelet.service.d/environment.conf
+              - path: /etc/systemd/system/keights-kubeadm-join.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
                 content: |
                   [Service]
-                  Environment=KEIGHTS_DOMAIN=k8s.local
+                  Environment=KEIGHTS_APISERVER=${K8sApiServer}
+
+              - path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=KEIGHTS_CLUSTER_DOMAIN=k8s.local
                   Environment=KEIGHTS_NODE_LABELS=kubernetes.io/role=node,node-role.kubernetes.io/node=,${NodeLabels}
-                  Environment=KEIGHTS_NODE_REGISTER=--register-node=true
-
-              - path: /etc/systemd/system/kube-router.service.d/environment.conf
-                owner: root:root
-                permissions: '0644'
-                content: |
-                  [Service]
-                  Environment=KEIGHTS_KUBE_ROUTER_IMAGE=${KubeRouterImage}
-
-              - path: /etc/systemd/system/kube-router-kubeconfig.service.d/environment.conf
-                owner: root:root
-                permissions: '0644'
-                content: |
-                  [Service]
-                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
-                  Environment=KEIGHTS_K8S_SERVER=${K8sApiServer}
+                  ExecStart=
+                  ExecStart=/usr/bin/kubelet \
+                              --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf \
+                              --kubeconfig=/etc/kubernetes/kubelet.conf \
+                              --pod-manifest-path=/etc/kubernetes/manifests \
+                              --allow-privileged=true \
+                              --network-plugin=cni \
+                              --cni-conf-dir=/etc/cni/net.d \
+                              --cni-bin-dir=/opt/cni/bin \
+                              --cluster-dns=${ClusterDns} \
+                              --cluster-domain=${!KEIGHTS_CLUSTER_DOMAIN} \
+                              --authorization-mode=Webhook \
+                              --client-ca-file=/etc/kubernetes/pki/ca.crt \
+                              --cadvisor-port=0 \
+                              --rotate-certificates=true \
+                              --cert-dir=/var/lib/kubelet/pki \
+                              --cloud-provider=aws \
+                              --node-labels=${!KEIGHTS_NODE_LABELS}
 
             runcmd:
               - systemctl daemon-reload
-              - systemctl enable keights-whisper-node.service
-              - systemctl enable keights-bootstrap-kubeconfig.service
               - systemctl enable kubelet.service
-              - systemctl enable kube-router.service
-              - systemctl enable kube-router-kubeconfig.service
-              - systemctl start --no-block kubelet.service
-              - systemctl start --no-block kube-router.service
+              - systemctl start keights-kubeadm-join.service
 
 Outputs:
   AutoscalingGroupSecurityGroup:
