@@ -24,7 +24,11 @@
 
   vars:
     base_repo: http://cdn-aws.deb.debian.org/debian/
-    docker_gpg_key: F76221572C52609D
+    gpg_keys:
+      - name: docker
+        url: https://apt.dockerproject.org/gpg
+      - name: google
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
     partitions:
       - number: 1
         start: 0%
@@ -51,7 +55,9 @@
       - wget
       - whiptail
     bootstrap_include:
+      - apt-transport-https
       - bind9-host
+      - ca-certificates
       - curl
       - dbus
       - dirmngr
@@ -123,57 +129,20 @@
         mode: '0755'
       with_items:
         - /mnt/etc/systemd/system/docker.service.d
-        - /mnt/usr/lib/cni
 
     - name: download software
       get_url:
         url: '{{ item.src }}'
         dest: '{{ item.dest }}'
       with_items:
-        - src: https://dl.k8s.io/v{{ k8s_version }}/kubernetes-server-linux-amd64.tar.gz
-          dest: /tmp/kubernetes-server-linux-amd64.tar.gz
         - src: https://github.com/cloudboss/keights/releases/download/v{{ keights_version }}/keights_{{ keights_version }}_linux_amd64.deb
           dest: /mnt/tmp/keights.deb
-        - src: https://github.com/containernetworking/plugins/releases/download/v{{ cni_version }}/cni-plugins-amd64-v{{ cni_version }}.tgz
-          dest: /tmp/cni.tgz
 
-    - name: unarchive software
-      command: 'tar zxf {{ item.src }} -C {{ item.dest }}'
-      args:
-        creates: '{{ item.creates }}'
-      with_items:
-        - src: /tmp/kubernetes-server-linux-amd64.tar.gz
-          dest: /tmp
-          creates: /tmp/kubernetes/server/bin
-        - src: /tmp/cni.tgz
-          dest: /mnt/usr/lib/cni
-          creates: /mnt/usr/lib/cni/bridge
-
-    - name: copy software binaries to chroot
-      command: 'install -m 0755 {{ item.src }} {{ item.dest }}'
-      args:
-        creates: '{{ item.dest }}'
-      with_items:
-        - src: /tmp/kubernetes/server/bin/hyperkube
-          dest: /mnt/usr/local/bin/hyperkube
-        - src: /tmp/kubernetes/server/bin/kubeadm
-          dest: /mnt/usr/local/bin/kubeadm
-        - src: /tmp/kubernetes/server/bin/kube-apiserver.tar
-          dest: /mnt/tmp/kube-apiserver.tar
-        - src: /tmp/kubernetes/server/bin/kube-controller-manager.tar
-          dest: /mnt/tmp/kube-controller-manager.tar
-        - src: /tmp/kubernetes/server/bin/kube-scheduler.tar
-          dest: /mnt/tmp/kube-scheduler.tar
-
-    - name: create hyperkube symlinks
-      file:
-        src: /usr/local/bin/hyperkube
-        path: '/mnt/usr/local/bin/{{ item }}'
-        state: link
-        force: true
-      with_items:
-        - kubectl
-        - kubelet
+    - name: download apt gpg keys into chroot
+      get_url:
+        url: '{{ item.url }}'
+        dest: /mnt/tmp/{{ item.name }}.gpg
+      with_items: '{{ gpg_keys }}'
 
     - name: copy staging files into chroot
       copy:
@@ -182,6 +151,8 @@
         mode: '{{ item.mode }}'
       with_items:
         - path: etc/apt/sources.list.d/docker.list
+          mode: '0644'
+        - path: etc/apt/sources.list.d/kubernetes.list
           mode: '0644'
 
     - name: expand staging templates into chroot
@@ -205,18 +176,32 @@
         - proc
         - sys
 
+    - name: add apt gpg keys in chroot
+      shell: |
+        chroot /mnt sh -s<<' EOF'
+        apt-key \
+          --keyring /etc/apt/trusted.gpg.d/{{ item.name }}.gpg \
+          add /tmp/{{ item.name }}.gpg
+        EOF
+      args:
+        creates: /mnt/etc/apt/trusted.gpg.d/{{ item.name }}.gpg
+      with_items: '{{ gpg_keys }}'
+
     - name: install and configure additional packages in chroot
       shell: |
         chroot /mnt sh -s<<' EOF'
         debconf-set-selections /tmp/debconf-selections && \
-        apt-key adv --recv-keys {{ docker_gpg_key }} && \
         apt-get update && \
         DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
           cloud-init \
           grub-pc \
           locales \
           openssh-server \
-          docker-engine={{ docker_version }} && \
+          docker-engine={{ docker_version }} \
+          kubernetes-cni={{ cni_version }}-00 \
+          kubectl={{ k8s_version }}-00 \
+          kubeadm={{ k8s_version }}-00 \
+          kubelet={{ k8s_version }}-00 && \
         dpkg -i /tmp/keights.deb && \
         apt-get clean && \
         systemctl disable apt-daily.timer && \
@@ -241,12 +226,13 @@
         while [ ! -S /var/run/docker.sock ]; do
             sleep 0.5
         done
-        docker load </tmp/kube-apiserver.tar
-        docker load </tmp/kube-controller-manager.tar
-        docker load </tmp/kube-scheduler.tar
-        docker pull gcr.io/google_containers/etcd:{{ etcd_version }}
+        docker pull gcr.io/google_containers/hyperkube-amd64:v{{ k8s_version }}
+        docker pull gcr.io/google_containers/etcd-amd64:{{ etcd_version }}
         docker pull gcr.io/google_containers/pause-amd64:{{ pause_version }}
+        docker pull gcr.io/google_containers/kube-addon-manager-amd64:v{{ addon_manager_version }}
+        docker pull gcr.io/google_containers/kubernetes-dashboard-amd64:v{{ dashboard_version }}
         docker pull cloudnativelabs/kube-router:v{{ kube_router_version }}
+        docker pull busybox:{{ busybox_version }}
         kill ${pid}
         EOF
       args:

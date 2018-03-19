@@ -4,12 +4,15 @@
     "debian-release": "stretch",
     "ebs-vol": "xvdf",
     "docker-version": "1.12.6-0~debian-stretch",
-    "k8s-version": "1.8.1",
+    "k8s-version": "1.9.4",
     "keights-version": "0.2.0",
     "cni-version": "0.6.0",
-    "kube-router-version": "0.0.19",
+    "kube-router-version": "0.0.20",
     "etcd-version": "3.0.17",
-    "pause-version": "3.0"
+    "pause-version": "3.0",
+    "addon-manager-version": "8.6",
+    "dashboard-version": "1.8.3",
+    "busybox-version": "1.28.1"
   },
 
   "builders": [{
@@ -50,7 +53,10 @@
       "cni:version": "{{ user `cni-version` }}",
       "kube-router:version": "{{ user `kube-router-version` }}",
       "etcd:version": "{{ user `etcd-version` }}",
-      "pause:version": "{{ user `pause-version` }}"
+      "pause:version": "{{ user `pause-version` }}",
+      "addon-manager:version": "{{ user `addon-manager-version` }}",
+      "dashboard:version": "{{ user `dashboard-version` }}",
+      "busybox:version": "{{ user `busybox-version` }}"
     },
 
     "run_tags": {
@@ -85,7 +91,10 @@
 	"-e", "cni_version={{ user `cni-version` }}",
 	"-e", "kube_router_version={{ user `kube-router-version` }}",
 	"-e", "etcd_version={{ user `etcd-version` }}",
-	"-e", "pause_version={{ user `pause-version` }}"
+	"-e", "pause_version={{ user `pause-version` }}",
+	"-e", "addon_manager_version={{ user `addon-manager-version` }}",
+	"-e", "dashboard_version={{ user `dashboard-version` }}",
+	"-e", "busybox_version={{ user `busybox-version` }}"
       ]
     }
   ]
