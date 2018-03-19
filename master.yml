@@ -87,11 +87,11 @@ Parameters:
   HyperkubeImage:
     Description: Docker image containing kube-apiserver
     Type: String
-    Default: k8s.gcr.io/hyperkube-amd64:v1.9.4
+    Default: gcr.io/google_containers/hyperkube-amd64:v1.9.4
   EtcdImage:
     Description: Docker image containing etcd
     Type: String
-    Default: k8s.gcr.io/etcd-amd64:3.0.17
+    Default: gcr.io/google_containers/etcd-amd64:3.0.17
 
 Mappings:
   LambdaUrls:
