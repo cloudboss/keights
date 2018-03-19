@@ -14,6 +14,10 @@ fpm:
     - deb
   bindir: /usr/bin
   files:
+    fpm/etc/kubernetes/manifests/kube-addon-manager.yaml:
+      /etc/kubernetes/manifests/kube-addon-manager.yaml
+    fpm/etc/kubernetes/addons/kubernetes-dashboard.yaml:
+      /etc/kubernetes/addons/kubernetes-dashboard.yaml
     fpm/usr/lib/tmpfiles.d/keights.conf:
       /usr/lib/tmpfiles.d/keights.conf
     fpm/usr/lib/systemd/system/keights-collector.service:
