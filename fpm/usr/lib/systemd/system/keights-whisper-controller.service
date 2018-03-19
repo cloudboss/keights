@@ -18,4 +18,6 @@ ExecStart=/usr/bin/keights whisper \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-peer.crt:/etc/kubernetes/pki/etcd-peer.crt \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-peer.key:/etc/kubernetes/pki/etcd-peer.key \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-client.crt:/etc/kubernetes/pki/etcd-client.crt \
-            -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-client.key:/etc/kubernetes/pki/etcd-client.key
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-client.key:/etc/kubernetes/pki/etcd-client.key \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/sa.key:/etc/kubernetes/pki/sa.key \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/sa.pub:/etc/kubernetes/pki/sa.pub
