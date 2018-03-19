@@ -52,8 +52,7 @@ spec:
             fieldRef:
               fieldPath: spec.nodeName
         livenessProbe:
-          httpGet:
-            path: /healthz
+          tcpSocket:
             port: 20244
           initialDelaySeconds: 10
           periodSeconds: 3
