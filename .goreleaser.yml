@@ -14,14 +14,14 @@ fpm:
     - deb
   bindir: /usr/bin
   files:
-    fpm/etc/kubernetes/manifests/kube-addon-manager.yaml:
-      /etc/kubernetes/manifests/kube-addon-manager.yaml
     fpm/etc/kubernetes/addons/kubernetes-dashboard.yaml:
       /etc/kubernetes/addons/kubernetes-dashboard.yaml
     fpm/etc/kubernetes/addons/kube-router.yaml:
       /etc/kubernetes/addons/kube-router.yaml
     fpm/usr/lib/tmpfiles.d/keights.conf:
       /usr/lib/tmpfiles.d/keights.conf
+    fpm/usr/lib/systemd/system/keights-add-addon.service:
+      /usr/lib/systemd/system/keights-add-addon.service
     fpm/usr/lib/systemd/system/keights-collector.service:
       /usr/lib/systemd/system/keights-collector.service
     fpm/usr/lib/systemd/system/keights-collector.timer:
@@ -48,6 +48,8 @@ fpm:
       /usr/lib/systemd/system/keights-whisper-node.service
     fpm/usr/lib/systemd/system/var-lib-etcd.mount:
       /usr/lib/systemd/system/var-lib-etcd.mount
+    fpm/usr/share/keights/kube-addon-manager.yaml:
+      /usr/share/keights/kube-addon-manager.yaml
     fpm/usr/share/keights/etcd.yaml.template:
       /usr/share/keights/etcd.yaml.template
     fpm/usr/share/keights/kubeadm-config.yaml.template:
