@@ -12,6 +12,7 @@ Type=simple
 # Environment=KEIGHTS_POD_SUBNET=
 # Environment=KEIGHTS_SERVICE_SUBNET=
 # Environment=KEIGHTS_HYPERKUBE_IMAGE=
+# Environment=KEIGHTS_KUBERNETES_VERSION=
 ExecStartPre=/usr/bin/systemd-tmpfiles --create --prefix /var/lib/kubeadm
 ExecStart=/bin/sh -c ' \
     while true; do \
@@ -32,6 +33,7 @@ ExecStart=/bin/sh -c ' \
       -v NodeName=$${node_name} \
       -v Token=$${token} \
       -v HyperkubeImage=${KEIGHTS_HYPERKUBE_IMAGE} \
+      -v KubernetesVersion=${KEIGHTS_KUBERNETES_VERSION} \
 '
 
 [Install]
