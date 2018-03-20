@@ -436,6 +436,7 @@ Resources:
               - systemctl enable keights-templatize-kubeadm-config.service
               - systemctl enable keights-whisper-controller.service
               - systemctl start --no-block kubelet.service
+              - systemctl start --no-block keights-add-addon.service
               - systemctl start --no-block keights-collector.timer
               - systemctl start --no-block keights-share.path
               - systemctl start --no-block keights-kubeadm-init.service
