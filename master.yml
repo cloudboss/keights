@@ -28,7 +28,7 @@ Parameters:
   ImageId:
     Description: ID of AMI used for instances
     Type: AWS::EC2::Image::Id
-    Default: ami-0ea27a3490f9dfe8a
+    Default: ami-0b61bf8fdbe1ad958
   InstanceType:
     Description: Type of EC2 instance
     Type: String
