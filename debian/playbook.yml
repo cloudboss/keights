@@ -230,6 +230,9 @@
         docker pull gcr.io/google_containers/etcd-amd64:{{ etcd_version }}
         docker pull gcr.io/google_containers/pause-amd64:{{ pause_version }}
         docker pull gcr.io/google_containers/kube-addon-manager-amd64:v{{ addon_manager_version }}
+        docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:{{ kube_dns_version }}
+        docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:{{ kube_dns_version }}
+        docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:{{ kube_dns_version }}
         docker pull gcr.io/google_containers/kubernetes-dashboard-amd64:v{{ dashboard_version }}
         docker pull cloudnativelabs/kube-router:v{{ kube_router_version }}
         docker pull busybox:{{ busybox_version }}
