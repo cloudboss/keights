@@ -18,6 +18,8 @@ fpm:
       /etc/kubernetes/addons/kubernetes-dashboard.yaml
     fpm/etc/kubernetes/addons/kube-router.yaml:
       /etc/kubernetes/addons/kube-router.yaml
+    fpm/etc/kubernetes/addons/storage.yaml:
+      /etc/kubernetes/addons/storage.yaml
     fpm/usr/lib/tmpfiles.d/keights.conf:
       /usr/lib/tmpfiles.d/keights.conf
     fpm/usr/lib/systemd/system/keights-add-addon.service:
