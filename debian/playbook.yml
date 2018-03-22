@@ -33,22 +33,36 @@
       - number: 1
         start: 0%
         end: 2GiB
+        part_type: primary
         mount: /
         mount_opts: rw,barrier=0,noatime,errors=remount-ro
       - number: 2
         start: 2GiB
         end: 4GiB
+        part_type: primary
         mount: /usr
         mount_opts: ro,barrier=0,noatime
       - number: 3
         start: 4GiB
         end: 6GiB
+        part_type: primary
         mount: /var
         mount_opts: rw,barrier=0,noatime,errors=remount-ro
       - number: 4
         start: 6GiB
         end: 100%
+        part_type: extended
+      - number: 5
+        start: 6291457KiB
+        end: 8388608KiB
+        part_type: logical
         mount: /var/log
+        mount_opts: rw,barrier=0,noatime,errors=remount-ro
+      - number: 6
+        start: 8388609KiB
+        end: 100%
+        part_type: logical
+        mount: /var/lib/docker
         mount_opts: rw,barrier=0,noatime,errors=remount-ro
     bootstrap_exclude:
       - nano
@@ -93,6 +107,7 @@
         number: '{{ item.number }}'
         part_start: '{{ item.start }}'
         part_end: '{{ item.end }}'
+        part_type: '{{ item.part_type }}'
         state: present
       with_items: '{{ partitions }}'
 
@@ -102,6 +117,7 @@
         dev: '/dev/{{ ebs_vol }}{{ item.number }}'
         opts: '-L {{ item.mount }}'
       with_items: '{{ partitions }}'
+      when: 'item.part_type != "extended"'
 
     - name: mount ebs volume partitions
       mount:
@@ -110,6 +126,7 @@
         fstype: ext4
         state: mounted
       with_items: '{{ partitions }}'
+      when: 'item.part_type != "extended"'
 
     - name: bootstrap operating system onto ebs volume
       shell: |
@@ -265,6 +282,7 @@
         fstab: /mnt/etc/fstab
         state: present
       with_items: '{{ partitions }}'
+      when: 'item.part_type != "extended"'
 
     - name: clean up default fstab
       lineinfile:
@@ -308,5 +326,6 @@
         - mount: /mnt/proc
         - mount: /mnt/sys
         - mount: /mnt/var/log
+        - mount: /mnt/var/lib/docker
         - mount: /mnt/var
         - mount: /mnt/usr
