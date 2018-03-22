@@ -39,7 +39,7 @@
 
     "launch_block_device_mappings": [
       {
-        "device_name": "/dev/xvdf",
+        "device_name": "/dev/{{ user `ebs-vol` }}",
         "delete_on_termination": true,
         "volume_size": 8,
         "volume_type": "gp2"
@@ -73,7 +73,7 @@
     "ami_description": "Cloudboss Kube Debian {{ user `debian-release` }}",
     "ami_virtualization_type": "hvm",
     "ami_root_device": {
-      "source_device_name": "/dev/xvdf",
+      "source_device_name": "/dev/{{ user `ebs-vol` }}",
       "device_name": "/dev/xvda",
       "delete_on_termination": true,
       "volume_size": 8,
