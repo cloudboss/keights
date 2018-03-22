@@ -45,6 +45,13 @@
         "volume_type": "gp2"
       }
     ],
+    "ami_root_device": {
+      "source_device_name": "/dev/{{ user `ebs-vol` }}",
+      "device_name": "/dev/xvda",
+      "delete_on_termination": true,
+      "volume_size": 30,
+      "volume_type": "gp2"
+    },
 
     "tags": {
       "os:version": "debian-{{ user `debian-release` }}",
@@ -71,14 +78,7 @@
 
     "ami_name": "debian-{{ user `debian-release` }}-k8s-hvm-amd64-{{ user `ami-version` }}",
     "ami_description": "Cloudboss Kube Debian {{ user `debian-release` }}",
-    "ami_virtualization_type": "hvm",
-    "ami_root_device": {
-      "source_device_name": "/dev/{{ user `ebs-vol` }}",
-      "device_name": "/dev/xvda",
-      "delete_on_termination": true,
-      "volume_size": 30,
-      "volume_type": "gp2"
-    }
+    "ami_virtualization_type": "hvm"
   }],
 
   "provisioners": [
