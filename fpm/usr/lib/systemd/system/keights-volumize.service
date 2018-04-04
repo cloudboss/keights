@@ -5,8 +5,11 @@ Before=var-lib-etcd.mount
 [Service]
 # Environment=AWS_REGION=
 # Environment=KEIGHTS_VOLUME_TAG=
+# Environment=KEIGHTS_VOLUME_DEVICE=
 Type=oneshot
-ExecStart=/usr/bin/keights volumize -v ${KEIGHTS_VOLUME_TAG}
+ExecStart=/usr/bin/keights volumize \
+            -d ${KEIGHTS_VOLUME_DEVICE} \
+            -v ${KEIGHTS_VOLUME_TAG}
 
 [Install]
 WantedBy=multi-user.target
