@@ -62,7 +62,7 @@ Resources:
       GroupDescription: Security group for kubelet
       VpcId: !Ref VpcId
 
-  KubeletSecurityGroupBgpIngress:
+  KubeletSecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref KubeletSecurityGroup
@@ -71,7 +71,7 @@ Resources:
       ToPort: 10250
       IpProtocol: tcp
 
-  KubeletSecurityGroupBgpEgress:
+  KubeletSecurityGroupEgress:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
       GroupId: !Ref KubeletSecurityGroup
@@ -265,7 +265,7 @@ Outputs:
     Description: Security group of kube-apiserver
     Value: !Ref ApiServerSecurityGroup
   KubeletSecurityGroup:
-    Description: Security group of kube-router
+    Description: Security group of kubelet
     Value: !Ref KubeletSecurityGroup
   MasterInstanceProfile:
     Description: Instance profile for master nodes
