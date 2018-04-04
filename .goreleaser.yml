@@ -4,7 +4,7 @@ builds:
       - linux
     goarch:
       - amd64
-fpm:
+nfpm:
   vendor: Cloudboss Corporation
   homepage: https://github.com/cloudboss/keights
   maintainer: Joseph Wright <joseph@cloudboss.co>
