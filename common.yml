@@ -80,6 +80,24 @@ Resources:
       ToPort: 10250
       IpProtocol: tcp
 
+  KubeletSecurityGroupServiceIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref KubeletSecurityGroup
+      SourceSecurityGroupId: !Ref KubeletSecurityGroup
+      FromPort: 30000
+      ToPort: 30000
+      IpProtocol: tcp
+
+  KubeletSecurityGroupServiceEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref KubeletSecurityGroup
+      DestinationSecurityGroupId: !Ref KubeletSecurityGroup
+      FromPort: 32767
+      ToPort: 32767
+      IpProtocol: tcp
+
   K8sMasterAccess:
     Type: AWS::IAM::ManagedPolicy
     Properties:
