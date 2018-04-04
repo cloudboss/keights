@@ -1,0 +1,21 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: standard
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: standard-encrypted
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+  encrypted: 'true'

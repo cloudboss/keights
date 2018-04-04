@@ -14,73 +14,45 @@ fpm:
     - deb
   bindir: /usr/bin
   files:
-    fpm/etc/cni/net.d/10-kuberouter.conf:
-      /etc/cni/net.d/10-kuberouter.conf
-    fpm/etc/cni/net.d/99-loopback.conf:
-      /etc/cni/net.d/99-loopback.conf
-    fpm/etc/kubernetes/config/kube-router.yml:
-      /etc/kubernetes/config/kube-router.yml
+    fpm/etc/kubernetes/addons/kubernetes-dashboard.yaml:
+      /etc/kubernetes/addons/kubernetes-dashboard.yaml
+    fpm/etc/kubernetes/addons/kube-router.yaml:
+      /etc/kubernetes/addons/kube-router.yaml
+    fpm/etc/kubernetes/addons/storage.yaml:
+      /etc/kubernetes/addons/storage.yaml
     fpm/usr/lib/tmpfiles.d/keights.conf:
       /usr/lib/tmpfiles.d/keights.conf
-    fpm/usr/lib/systemd/system/keights-bootstrap-kubeconfig.service:
-      /usr/lib/systemd/system/keights-bootstrap-kubeconfig.service
-    fpm/usr/lib/systemd/system/keights-bootstrap-token.service:
-      /usr/lib/systemd/system/keights-bootstrap-token.service
-    fpm/usr/lib/systemd/system/keights-bootstrap-token-splitter.path:
-      /usr/lib/systemd/system/keights-bootstrap-token-splitter.path
-    fpm/usr/lib/systemd/system/keights-bootstrap-token-splitter.service:
-      /usr/lib/systemd/system/keights-bootstrap-token-splitter.service
+    fpm/usr/lib/systemd/system/keights-add-addon.service:
+      /usr/lib/systemd/system/keights-add-addon.service
     fpm/usr/lib/systemd/system/keights-collector.service:
       /usr/lib/systemd/system/keights-collector.service
     fpm/usr/lib/systemd/system/keights-collector.timer:
       /usr/lib/systemd/system/keights-collector.timer
-    fpm/usr/lib/systemd/system/keights-configure.target:
-      /usr/lib/systemd/system/keights-configure.target
-    fpm/usr/lib/systemd/system/keights-kubectl-create.service:
-      /usr/lib/systemd/system/keights-kubectl-create.service
-    fpm/usr/lib/systemd/system/keights-manifests.target:
-      /usr/lib/systemd/system/keights-manifests.target
-    fpm/usr/lib/systemd/system/keights-prekubelet.service:
-      /usr/lib/systemd/system/keights-prekubelet.service
+    fpm/usr/lib/systemd/system/keights-kubeadm-init.service:
+      /usr/lib/systemd/system/keights-kubeadm-init.service
+    fpm/usr/lib/systemd/system/keights-kubeadm-join.service:
+      /usr/lib/systemd/system/keights-kubeadm-join.service
+    fpm/usr/lib/systemd/system/keights-templates.target:
+      /usr/lib/systemd/system/keights-templates.target
     fpm/usr/lib/systemd/system/keights-share.path:
       /usr/lib/systemd/system/keights-share.path
     fpm/usr/lib/systemd/system/keights-share.service:
       /usr/lib/systemd/system/keights-share.service
-    fpm/usr/lib/systemd/system/keights-templatize-etcd.path:
-      /usr/lib/systemd/system/keights-templatize-etcd.path
     fpm/usr/lib/systemd/system/keights-templatize-etcd.service:
       /usr/lib/systemd/system/keights-templatize-etcd.service
-    fpm/usr/lib/systemd/system/keights-templatize-kube-apiserver.path:
-      /usr/lib/systemd/system/keights-templatize-kube-apiserver.path
-    fpm/usr/lib/systemd/system/keights-templatize-kube-apiserver.service:
-      /usr/lib/systemd/system/keights-templatize-kube-apiserver.service
-    fpm/usr/lib/systemd/system/keights-templatize-kube-controller-manager.path:
-      /usr/lib/systemd/system/keights-templatize-kube-controller-manager.path
-    fpm/usr/lib/systemd/system/keights-templatize-kube-controller-manager.service:
-      /usr/lib/systemd/system/keights-templatize-kube-controller-manager.service
-    fpm/usr/lib/systemd/system/keights-templatize-kube-scheduler.path:
-      /usr/lib/systemd/system/keights-templatize-kube-scheduler.path
-    fpm/usr/lib/systemd/system/keights-templatize-kube-scheduler.service:
-      /usr/lib/systemd/system/keights-templatize-kube-scheduler.service
+    fpm/usr/lib/systemd/system/keights-templatize-kubeadm-config.service:
+      /usr/lib/systemd/system/keights-templatize-kubeadm-config.service
     fpm/usr/lib/systemd/system/keights-volumize.service:
       /usr/lib/systemd/system/keights-volumize.service
     fpm/usr/lib/systemd/system/keights-whisper-controller.service:
       /usr/lib/systemd/system/keights-whisper-controller.service
     fpm/usr/lib/systemd/system/keights-whisper-node.service:
       /usr/lib/systemd/system/keights-whisper-node.service
-    fpm/usr/lib/systemd/system/kube-router-kubeconfig.service:
-      /usr/lib/systemd/system/kube-router-kubeconfig.service
-    fpm/usr/lib/systemd/system/kube-router.service:
-      /usr/lib/systemd/system/kube-router.service
-    fpm/usr/lib/systemd/system/kubelet.service:
-      /usr/lib/systemd/system/kubelet.service
     fpm/usr/lib/systemd/system/var-lib-etcd.mount:
       /usr/lib/systemd/system/var-lib-etcd.mount
-    fpm/usr/share/keights/etcd.yml.template:
-      /usr/share/keights/etcd.yml.template
-    fpm/usr/share/keights/kube-apiserver.yml.template:
-      /usr/share/keights/kube-apiserver.yml.template
-    fpm/usr/share/keights/kube-controller-manager.yml.template:
-      /usr/share/keights/kube-controller-manager.yml.template
-    fpm/usr/share/keights/kube-scheduler.yml.template:
-      /usr/share/keights/kube-scheduler.yml.template
+    fpm/usr/share/keights/kube-addon-manager.yaml:
+      /usr/share/keights/kube-addon-manager.yaml
+    fpm/usr/share/keights/etcd.yaml.template:
+      /usr/share/keights/etcd.yaml.template
+    fpm/usr/share/keights/kubeadm-config.yaml.template:
+      /usr/share/keights/kubeadm-config.yaml.template

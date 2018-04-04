@@ -6,4 +6,4 @@ PathExists=/run/keights-collector/asg
 PathChanged=/run/keights-collector/asg
 
 [Install]
-WantedBy=keights-configure.target
+WantedBy=multi-user.target

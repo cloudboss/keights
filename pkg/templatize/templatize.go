@@ -28,7 +28,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/cloudboss/keights/pkg/helpers"
 )
@@ -54,25 +53,6 @@ func VarsToMap(vars []string) (map[string]interface{}, error) {
 		mapping[parts[0]] = parts[1]
 	}
 	return mapping, nil
-}
-
-func MyIP() (string, error) {
-	sess := session.New()
-	metadata := ec2metadata.New(sess)
-	identity, err := metadata.GetInstanceIdentityDocument()
-	if err != nil {
-		return "", err
-	}
-	return identity.PrivateIP, nil
-}
-
-func MyIndex(mapping map[string]string, ip string) string {
-	for k, v := range mapping {
-		if v == ip {
-			return k
-		}
-	}
-	return "-1"
 }
 
 func Render(templateFile string, mapping map[string]interface{}) (bytes.Buffer, error) {
@@ -119,12 +99,16 @@ func DoIt(templateFile, inputFile, ip, dest, owner, group string, mode int, vars
 	if ip != "" {
 		myIP = ip
 	} else {
-		myIP, err = MyIP()
+		sess, err := session.NewSession()
+		if err != nil {
+			return err
+		}
+		myIP, err = helpers.MyIP(sess)
 		if err != nil {
 			return err
 		}
 	}
-	myIndex := MyIndex(inputFileMapping, myIP)
+	myIndex := helpers.MyIndex(inputFileMapping, myIP)
 	mapping := MergeMaps(cliMapping, map[string]interface{}{
 		"MyIP":    myIP,
 		"MyIndex": myIndex,

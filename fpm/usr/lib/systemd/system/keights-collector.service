@@ -11,4 +11,4 @@ ExecStart=/usr/bin/keights collect \
             -o /run/keights-collector/asg
 
 [Install]
-WantedBy=keights-configure.target
+WantedBy=multi-user.target

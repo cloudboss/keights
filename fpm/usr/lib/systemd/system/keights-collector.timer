@@ -6,4 +6,4 @@ OnBootSec=1min
 OnUnitActiveSec=1min
 
 [Install]
-WantedBy=keights-configure.target
+WantedBy=multi-user.target
