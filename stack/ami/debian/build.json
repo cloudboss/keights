@@ -1,0 +1,112 @@
+{
+  "variables": {
+    "ami-version": "",
+    "debian-release": "stretch",
+    "root-vol": "xvde",
+    "docker-vol": "xvdf",
+    "docker-version": "1.12.6-0~debian-stretch",
+    "k8s-version": "1.9.4",
+    "keights-version": "0.2.0",
+    "cni-version": "0.6.0",
+    "kube-router-version": "0.0.20",
+    "kube-dns-version": "1.14.7",
+    "etcd-version": "3.0.17",
+    "pause-version": "3.0",
+    "addon-manager-version": "8.6",
+    "dashboard-version": "1.8.3",
+    "busybox-version": "1.28.1"
+  },
+
+  "builders": [{
+    "type": "amazon-ebssurrogate",
+    "spot_price_auto_product": "Linux/UNIX (Amazon VPC)",
+
+    "ssh_pty": true,
+    "instance_type": "t2.micro",
+    "associate_public_ip_address": true,
+    "ssh_username": "admin",
+    "ssh_timeout": "5m",
+    "ami_groups": "all",
+
+    "source_ami_filter": {
+      "filters": {
+        "virtualization-type": "hvm",
+        "name": "debian-{{ user `debian-release` }}-hvm-x86_64-gp2-*",
+        "root-device-type": "ebs"
+      },
+      "owners": ["379101102735"],
+      "most_recent": true
+    },
+
+    "launch_block_device_mappings": [
+      {
+        "device_name": "/dev/{{ user `root-vol` }}",
+        "delete_on_termination": true,
+        "volume_size": 8,
+        "volume_type": "gp2"
+      },
+      {
+        "device_name": "/dev/{{ user `docker-vol` }}",
+        "delete_on_termination": true,
+        "volume_size": 22,
+        "volume_type": "gp2"
+      }
+    ],
+    "ami_root_device": {
+      "source_device_name": "/dev/{{ user `root-vol` }}",
+      "device_name": "/dev/xvda",
+      "delete_on_termination": true,
+      "volume_size": 8,
+      "volume_type": "gp2"
+    },
+
+    "tags": {
+      "os:version": "debian-{{ user `debian-release` }}",
+      "docker:version": "{{ user `docker-version` }}",
+      "k8s:version": "{{ user `k8s-version` }}",
+      "keights:version": "{{ user `keights-version` }}",
+      "cni:version": "{{ user `cni-version` }}",
+      "kube-router:version": "{{ user `kube-router-version` }}",
+      "kube-dns:version": "{{ user `kube-dns-version` }}",
+      "etcd:version": "{{ user `etcd-version` }}",
+      "pause:version": "{{ user `pause-version` }}",
+      "addon-manager:version": "{{ user `addon-manager-version` }}",
+      "dashboard:version": "{{ user `dashboard-version` }}",
+      "busybox:version": "{{ user `busybox-version` }}"
+    },
+
+    "run_tags": {
+      "Name": "ami-builder-{{ user `debian-release` }}"
+    },
+
+    "run_volume_tags": {
+      "Name": "ami-volume-{{ user `debian-release` }}"
+    },
+
+    "ami_name": "debian-{{ user `debian-release` }}-k8s-hvm-amd64-{{ user `ami-version` }}",
+    "ami_description": "Cloudboss Kube Debian {{ user `debian-release` }}",
+    "ami_virtualization_type": "hvm"
+  }],
+
+  "provisioners": [
+    {
+      "type": "ansible",
+      "playbook_file": "./playbook.yml",
+      "extra_arguments": [
+	"-e", "root_vol={{ user `root-vol` }}",
+	"-e", "docker_vol={{ user `docker-vol` }}",
+	"-e", "docker_version={{ user `docker-version` }}",
+	"-e", "k8s_version={{ user `k8s-version` }}",
+	"-e", "keights_version={{ user `keights-version` }}",
+	"-e", "cni_version={{ user `cni-version` }}",
+	"-e", "kube_router_version={{ user `kube-router-version` }}",
+	"-e", "kube_dns_version={{ user `kube-dns-version` }}",
+	"-e", "etcd_version={{ user `etcd-version` }}",
+	"-e", "pause_version={{ user `pause-version` }}",
+	"-e", "addon_manager_version={{ user `addon-manager-version` }}",
+	"-e", "dashboard_version={{ user `dashboard-version` }}",
+	"-e", "busybox_version={{ user `busybox-version` }}"
+      ]
+    }
+  ]
+}

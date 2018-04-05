@@ -1,0 +1,1 @@
+DOCKER_OPTS=--ip-masq=false --iptables=false --log-driver=journald --storage-driver=overlay2
