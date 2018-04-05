@@ -381,6 +381,13 @@ Resources:
                   Environment=KEIGHTS_VOLUME_TAG=etcd:instance
                   Environment=KEIGHTS_VOLUME_DEVICE=xvdg
 
+              - path: /etc/systemd/system/var-lib-etcd.mount.d/mount.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Mount]
+                  What=/dev/xvdg
+
               - path: /etc/systemd/system/keights-whisper-controller.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
