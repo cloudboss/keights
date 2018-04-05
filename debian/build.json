@@ -2,7 +2,7 @@
   "variables": {
     "ami-version": "",
     "debian-release": "stretch",
-    "ebs-vol": "xvde",
+    "root-vol": "xvde",
     "docker-vol": "xvdf",
     "docker-version": "1.12.6-0~debian-stretch",
     "k8s-version": "1.9.4",
@@ -40,7 +40,7 @@
 
     "launch_block_device_mappings": [
       {
-        "device_name": "/dev/{{ user `ebs-vol` }}",
+        "device_name": "/dev/{{ user `root-vol` }}",
         "delete_on_termination": true,
         "volume_size": 8,
         "volume_type": "gp2"
@@ -53,7 +53,7 @@
       }
     ],
     "ami_root_device": {
-      "source_device_name": "/dev/{{ user `ebs-vol` }}",
+      "source_device_name": "/dev/{{ user `root-vol` }}",
       "device_name": "/dev/xvda",
       "delete_on_termination": true,
       "volume_size": 8,
@@ -93,7 +93,7 @@
       "type": "ansible",
       "playbook_file": "./playbook.yml",
       "extra_arguments": [
-	"-e", "ebs_vol={{ user `ebs-vol` }}",
+	"-e", "root_vol={{ user `root-vol` }}",
 	"-e", "docker_vol={{ user `docker-vol` }}",
 	"-e", "docker_version={{ user `docker-version` }}",
 	"-e", "k8s_version={{ user `k8s-version` }}",

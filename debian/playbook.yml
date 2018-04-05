@@ -93,9 +93,9 @@
         - debootstrap
         - parted
 
-    - name: partition ebs volume
+    - name: partition root volume
       parted:
-        device: '/dev/{{ ebs_vol }}'
+        device: '/dev/{{ root_vol }}'
         number: '{{ item.number }}'
         part_start: '{{ item.start }}'
         part_end: '{{ item.end }}'
@@ -103,10 +103,10 @@
         state: present
       with_items: '{{ partitions }}'
 
-    - name: make filesystems on ebs volume partitions
+    - name: make filesystems on root volume partitions
       filesystem:
         fstype: ext4
-        dev: '/dev/{{ ebs_vol }}{{ item.number }}'
+        dev: '/dev/{{ root_vol }}{{ item.number }}'
         opts: '-L {{ item.mount }}'
       with_items: '{{ partitions }}'
       when: 'item.part_type != "extended"'
@@ -117,9 +117,9 @@
         dev: '/dev/{{ docker_vol }}'
         opts: '-L {{ docker_mount }}'
 
-    - name: mount ebs volume partitions
+    - name: mount root volume partitions
       mount:
-        src: '/dev/{{ ebs_vol }}{{ item.number }}'
+        src: '/dev/{{ root_vol }}{{ item.number }}'
         path: '/mnt{{ item.mount }}'
         fstype: ext4
         state: mounted
@@ -133,7 +133,7 @@
         fstype: ext4
         state: mounted
 
-    - name: bootstrap operating system onto ebs volume
+    - name: bootstrap operating system onto root volume
       shell: |
         debootstrap \
           --merged-usr \
