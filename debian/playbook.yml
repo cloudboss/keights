@@ -51,19 +51,11 @@
       - number: 4
         start: 6GiB
         end: 100%
-        part_type: extended
-      - number: 5
-        start: 6291457KiB
-        end: 8388608KiB
-        part_type: logical
+        part_type: primary
         mount: /var/log
         mount_opts: rw,barrier=0,noatime,errors=remount-ro
-      - number: 6
-        start: 8388609KiB
-        end: 100%
-        part_type: logical
-        mount: /var/lib/docker
-        mount_opts: rw,barrier=0,noatime,errors=remount-ro
+    docker_mount: /var/lib/docker
+    docker_mount_opts: rw,barrier=0,noatime,errors=remount-ro
     bootstrap_exclude:
       - nano
       - wget
@@ -119,6 +111,12 @@
       with_items: '{{ partitions }}'
       when: 'item.part_type != "extended"'
 
+    - name: make filesystem on docker volume
+      filesystem:
+        fstype: ext4
+        dev: '/dev/{{ docker_vol }}'
+        opts: '-L {{ docker_mount }}'
+
     - name: mount ebs volume partitions
       mount:
         src: '/dev/{{ ebs_vol }}{{ item.number }}'
@@ -127,6 +125,13 @@
         state: mounted
       with_items: '{{ partitions }}'
       when: 'item.part_type != "extended"'
+
+    - name: mount docker volume
+      mount:
+        src: '/dev/{{ docker_vol }}'
+        path: '/mnt{{ docker_mount }}'
+        fstype: ext4
+        state: mounted
 
     - name: bootstrap operating system onto ebs volume
       shell: |
@@ -283,6 +288,15 @@
         state: present
       with_items: '{{ partitions }}'
       when: 'item.part_type != "extended"'
+
+    - name: set fstab filesystem mount for docker volume
+      mount:
+        src: 'LABEL={{ docker_mount }}'
+        path: '{{ docker_mount }}'
+        fstype: ext4
+        opts: '{{ docker_mount_opts }}'
+        fstab: /mnt/etc/fstab
+        state: present
 
     - name: clean up default fstab
       lineinfile:

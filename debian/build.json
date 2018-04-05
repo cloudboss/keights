@@ -2,7 +2,8 @@
   "variables": {
     "ami-version": "",
     "debian-release": "stretch",
-    "ebs-vol": "xvdf",
+    "ebs-vol": "xvde",
+    "docker-vol": "xvdf",
     "docker-version": "1.12.6-0~debian-stretch",
     "k8s-version": "1.9.4",
     "keights-version": "0.2.0",
@@ -41,7 +42,13 @@
       {
         "device_name": "/dev/{{ user `ebs-vol` }}",
         "delete_on_termination": true,
-        "volume_size": 30,
+        "volume_size": 8,
+        "volume_type": "gp2"
+      },
+      {
+        "device_name": "/dev/{{ user `docker-vol` }}",
+        "delete_on_termination": true,
+        "volume_size": 22,
         "volume_type": "gp2"
       }
     ],
@@ -49,7 +56,7 @@
       "source_device_name": "/dev/{{ user `ebs-vol` }}",
       "device_name": "/dev/xvda",
       "delete_on_termination": true,
-      "volume_size": 30,
+      "volume_size": 8,
       "volume_type": "gp2"
     },
 
@@ -87,6 +94,7 @@
       "playbook_file": "./playbook.yml",
       "extra_arguments": [
 	"-e", "ebs_vol={{ user `ebs-vol` }}",
+	"-e", "docker_vol={{ user `docker-vol` }}",
 	"-e", "docker_version={{ user `docker-version` }}",
 	"-e", "k8s_version={{ user `k8s-version` }}",
 	"-e", "keights_version={{ user `keights-version` }}",
