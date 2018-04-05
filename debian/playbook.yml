@@ -109,7 +109,6 @@
         dev: '/dev/{{ root_vol }}{{ item.number }}'
         opts: '-L {{ item.mount }}'
       with_items: '{{ partitions }}'
-      when: 'item.part_type != "extended"'
 
     - name: make filesystem on docker volume
       filesystem:
@@ -124,7 +123,6 @@
         fstype: ext4
         state: mounted
       with_items: '{{ partitions }}'
-      when: 'item.part_type != "extended"'
 
     - name: mount docker volume
       mount:
@@ -289,7 +287,6 @@
         fstab: /mnt/etc/fstab
         state: present
       with_items: '{{ partitions }}'
-      when: 'item.part_type != "extended"'
 
     - name: set fstab filesystem mount for docker volume
       mount:
