@@ -1,0 +1,344 @@
+# Copyright © 2018 Joseph Wright <joseph@cloudboss.co>
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+---
+- hosts: all
+  gather_facts: false
+  become: true
+
+  vars:
+    base_repo: http://cdn-aws.deb.debian.org/debian/
+    gpg_keys:
+      - name: docker
+        url: https://apt.dockerproject.org/gpg
+      - name: google
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    partitions:
+      - number: 1
+        start: 0%
+        end: 2GiB
+        part_type: primary
+        mount: /
+        mount_opts: rw,barrier=0,noatime,errors=remount-ro
+      - number: 2
+        start: 2GiB
+        end: 4GiB
+        part_type: primary
+        mount: /usr
+        mount_opts: ro,barrier=0,noatime
+      - number: 3
+        start: 4GiB
+        end: 6GiB
+        part_type: primary
+        mount: /var
+        mount_opts: rw,barrier=0,noatime,errors=remount-ro
+      - number: 4
+        start: 6GiB
+        end: 100%
+        part_type: primary
+        mount: /var/log
+        mount_opts: rw,barrier=0,noatime,errors=remount-ro
+    docker_mount: /var/lib/docker
+    docker_mount_opts: rw,barrier=0,noatime,errors=remount-ro
+    bootstrap_exclude:
+      - nano
+      - wget
+      - whiptail
+    bootstrap_include:
+      - apt-transport-https
+      - bind9-host
+      - ca-certificates
+      - curl
+      - dbus
+      - dirmngr
+      - ebtables
+      - ethtool
+      - file
+      - groff-base
+      - less
+      - linux-image-amd64
+      - logrotate
+      - net-tools
+      - socat
+      - sudo
+      - strace
+      - sysstat
+      - tcpdump
+      - traceroute
+      - vim-tiny
+
+  tasks:
+    - name: install packages for bootstrapping
+      apt:
+        name: '{{ item }}'
+        update_cache: true
+      with_items:
+        - ca-certificates
+        - debootstrap
+        - parted
+
+    - name: partition root volume
+      parted:
+        device: '/dev/{{ root_vol }}'
+        number: '{{ item.number }}'
+        part_start: '{{ item.start }}'
+        part_end: '{{ item.end }}'
+        part_type: '{{ item.part_type }}'
+        state: present
+      with_items: '{{ partitions }}'
+
+    - name: make filesystems on root volume partitions
+      filesystem:
+        fstype: ext4
+        dev: '/dev/{{ root_vol }}{{ item.number }}'
+        opts: '-L {{ item.mount }}'
+      with_items: '{{ partitions }}'
+
+    - name: make filesystem on docker volume
+      filesystem:
+        fstype: ext4
+        dev: '/dev/{{ docker_vol }}'
+        opts: '-L {{ docker_mount }}'
+
+    - name: mount root volume partitions
+      mount:
+        src: '/dev/{{ root_vol }}{{ item.number }}'
+        path: '/mnt{{ item.mount }}'
+        fstype: ext4
+        state: mounted
+      with_items: '{{ partitions }}'
+
+    - name: mount docker volume
+      mount:
+        src: '/dev/{{ docker_vol }}'
+        path: '/mnt{{ docker_mount }}'
+        fstype: ext4
+        state: mounted
+
+    - name: bootstrap operating system onto root volume
+      shell: |
+        debootstrap \
+          --merged-usr \
+          --exclude={{ bootstrap_exclude | join(",") }} \
+          --include={{ bootstrap_include | join(",") }} \
+          stable /mnt {{ base_repo }}
+      args:
+        # Pick a file, any file...
+        creates: /mnt/usr/bin/vi
+
+    - name: create directories in chroot
+      file:
+        path: '{{ item }}'
+        state: directory
+        mode: '0755'
+      with_items:
+        - /mnt/etc/systemd/system/docker.service.d
+
+    - name: download software
+      get_url:
+        url: '{{ item.src }}'
+        dest: '{{ item.dest }}'
+      with_items:
+        - src: https://github.com/cloudboss/keights/releases/download/v{{ keights_version }}/keights_{{ keights_version }}_linux_amd64.deb
+          dest: /mnt/tmp/keights.deb
+
+    - name: download apt gpg keys into chroot
+      get_url:
+        url: '{{ item.url }}'
+        dest: /mnt/tmp/{{ item.name }}.gpg
+      with_items: '{{ gpg_keys }}'
+
+    - name: copy staging files into chroot
+      copy:
+        src: 'staging/{{ item.path }}'
+        dest: '/mnt/{{ item.path }}'
+        mode: '{{ item.mode }}'
+      with_items:
+        - path: etc/systemd/timesyncd.conf
+          mode: '0644'
+        - path: etc/apt/sources.list.d/docker.list
+          mode: '0644'
+        - path: etc/apt/sources.list.d/kubernetes.list
+          mode: '0644'
+
+    - name: expand staging templates into chroot
+      template:
+        src: 'staging/{{ item.path }}.j2'
+        dest: '/mnt/{{ item.path }}'
+        mode: '{{ item.mode }}'
+      with_items:
+        - path: tmp/debconf-selections
+          mode: '0644'
+
+    - name: mount memory filesystems into chroot
+      mount:
+        src: '/{{ item }}'
+        path: '/mnt/{{ item }}'
+        fstype: none
+        opts: rbind
+        state: mounted
+      with_items:
+        - dev
+        - proc
+        - sys
+
+    - name: add apt gpg keys in chroot
+      shell: |
+        chroot /mnt sh -s<<' EOF'
+        apt-key \
+          --keyring /etc/apt/trusted.gpg.d/{{ item.name }}.gpg \
+          add /tmp/{{ item.name }}.gpg
+        EOF
+      args:
+        creates: /mnt/etc/apt/trusted.gpg.d/{{ item.name }}.gpg
+      with_items: '{{ gpg_keys }}'
+
+    - name: install and configure additional packages in chroot
+      shell: |
+        chroot /mnt sh -s<<' EOF'
+        debconf-set-selections /tmp/debconf-selections && \
+        apt-get update && \
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+          cloud-init \
+          grub-pc \
+          locales \
+          openssh-server \
+          docker-engine={{ docker_version }} \
+          kubernetes-cni={{ cni_version }}-00 \
+          kubectl={{ k8s_version }}-00 \
+          kubeadm={{ k8s_version }}-00 \
+          kubelet={{ k8s_version }}-00 && \
+        dpkg -i /tmp/keights.deb && \
+        apt-get clean && \
+        systemctl disable apt-daily.timer && \
+        systemctl disable apt-daily-upgrade.timer
+        EOF
+      args:
+        creates: /mnt/usr/bin/keights
+      # Retry due to occasional network issues
+      retries: 3
+      register: chrooted_installation
+      until: chrooted_installation | succeeded
+
+    - name: load overlay kernel module
+      modprobe:
+        name: overlay
+
+    - name: import kubernetes docker images in chroot
+      shell: |
+        chroot /mnt sh -s<<' EOF'
+        dockerd --storage-driver=overlay2 >/dev/null 2>&1 </dev/null &
+        pid=${!}
+        while [ ! -S /var/run/docker.sock ]; do
+            sleep 0.5
+        done
+        docker pull gcr.io/google_containers/hyperkube-amd64:v{{ k8s_version }}
+        docker pull gcr.io/google_containers/etcd-amd64:{{ etcd_version }}
+        docker pull gcr.io/google_containers/pause-amd64:{{ pause_version }}
+        docker pull gcr.io/google_containers/kube-addon-manager-amd64:v{{ addon_manager_version }}
+        docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:{{ kube_dns_version }}
+        docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:{{ kube_dns_version }}
+        docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:{{ kube_dns_version }}
+        docker pull gcr.io/google_containers/kubernetes-dashboard-amd64:v{{ dashboard_version }}
+        docker pull cloudnativelabs/kube-router:v{{ kube_router_version }}
+        docker pull busybox:{{ busybox_version }}
+        kill ${pid}
+        EOF
+      args:
+        creates: '/var/lib/docker/overlay2/*/diff/usr/local/bin/etcd'
+
+    - name: post copy staging files into chroot
+      copy:
+        src: 'staging/{{ item.path }}'
+        dest: '/mnt/{{ item.path }}'
+        mode: '{{ item.mode }}'
+      with_items:
+        - path: etc/network/interfaces
+          mode: '0644'
+        - path: etc/cloud/cloud.cfg.d/01_cloudboss.cfg
+          mode: '0644'
+        - path: etc/default/docker
+          mode: '0644'
+        - path: etc/systemd/system/docker.service.d/cloudboss.conf
+          mode: '0644'
+
+    - name: set fstab filesystem mounts
+      mount:
+        src: 'LABEL={{ item.mount }}'
+        path: '{{ item.mount }}'
+        fstype: ext4
+        opts: '{{ item.mount_opts }}'
+        fstab: /mnt/etc/fstab
+        state: present
+      with_items: '{{ partitions }}'
+
+    - name: set fstab filesystem mount for docker volume
+      mount:
+        src: 'LABEL={{ docker_mount }}'
+        path: '{{ docker_mount }}'
+        fstype: ext4
+        opts: '{{ docker_mount_opts }}'
+        fstab: /mnt/etc/fstab
+        state: present
+
+    - name: clean up default fstab
+      lineinfile:
+        path: /mnt/etc/fstab
+        regexp: UNCONFIGURED FSTAB
+        state: absent
+
+    - name: find tmp files
+      command: find /mnt/tmp -mindepth 1 -maxdepth 1
+      register: tmp_files
+      changed_when: false
+
+    - name: find apt lists
+      command: find /mnt/var/lib/apt/lists -mindepth 1 -maxdepth 1
+      register: apt_lists
+      changed_when: false
+
+    - name: find log files
+      command: find /mnt/var/log -type f
+      register: log_files
+      changed_when: false
+
+    - name: clean up
+      file:
+        path: '{{ item }}'
+        state: absent
+      with_flattened:
+        - /mnt/initrd.img.old
+        - /mnt/vmlinuz.old
+        - /mnt/etc/cloud/cloud.cfg.d/00_debian.cfg
+        - '{{ tmp_files.stdout_lines }}'
+        - '{{ apt_lists.stdout_lines }}'
+        - '{{ log_files.stdout_lines }}'
+
+    - name: unmount chroot mounts
+      mount:
+        path: '{{ item }}'
+        state: unmounted
+      with_items:
+        - mount: /mnt/dev
+        - mount: /mnt/proc
+        - mount: /mnt/sys
+        - mount: /mnt/var/log
+        - mount: /mnt/var/lib/docker
+        - mount: /mnt/var
+        - mount: /mnt/usr

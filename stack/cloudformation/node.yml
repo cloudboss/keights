@@ -1,0 +1,167 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Kubernetes node resources
+
+Parameters:
+  ClusterName:
+    Description: Name of Kubernetes cluster
+    Type: String
+  NumInstances:
+    Description: Number of node instances
+    Type: Number
+    Default: 1
+  VpcId:
+    Description: ID of VPC where cluster will be placed
+    Type: AWS::EC2::VPC::Id
+  SubnetIds:
+    Description: List of subnets IDs in VPC where cluster will be placed
+    Type: List<AWS::EC2::Subnet::Id>
+  ImageId:
+    Description: ID of AMI used for instances
+    Type: AWS::EC2::Image::Id
+    Default: ami-03d0b653e1a63db94
+  InstanceType:
+    Description: Type of EC2 instance
+    Type: String
+  KeyPair:
+    Description: SSH keypair assigned to instances
+    Type: AWS::EC2::KeyPair::KeyName
+  IamInstanceProfile:
+    Description: IAM Instance profile to assign to instances
+    Type: String
+  ApiServerSecurityGroup:
+    Description: Security group of apiserver
+    Type: String
+  KubeletSecurityGroup:
+    Description: Security group for kubelet
+    Type: String
+  SshAccessCidr:
+    Description: CIDR block given ssh access to cluster
+    Default: 0.0.0.0/0
+    Type: String
+  ClusterDns:
+    Description: >-
+      IP addres of cluster DNS server; should be
+      the value of ServiceCidr + 10
+    Default: 10.96.0.10
+    Type: String
+  NodeLabels:
+    Description: >-
+      Kubernetes node labels as a comma separated list of
+      key=value pairs, for example env=prod,size=large
+    Type: String
+    Default: ''
+  K8sApiServer:
+    Description: DNS name of kubernetes apiserver
+    Type: String
+
+Resources:
+  AutoscalingGroupSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for autoscaling group
+      VpcId: !Ref VpcId
+
+  AutoscalingGroupIngressSsh:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref AutoscalingGroupSecurityGroup
+      CidrIp: !Ref SshAccessCidr
+      FromPort: 22
+      IpProtocol: tcp
+      ToPort: 22
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      DesiredCapacity: !Ref NumInstances
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MaxSize: !Ref NumInstances
+      MinSize: !Ref NumInstances
+      VPCZoneIdentifier: !Ref SubnetIds
+      Tags:
+        - Key: Name
+          Value: !Sub ${ClusterName}-node
+          PropagateAtLaunch: true
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MaxBatchSize: 1
+
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      IamInstanceProfile: !Ref IamInstanceProfile
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPair
+      PlacementTenancy: default
+      SecurityGroups:
+        - !Ref AutoscalingGroupSecurityGroup
+        - !Ref ApiServerSecurityGroup
+        - !Ref KubeletSecurityGroup
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #cloud-config
+            write_files:
+              - path: /etc/systemd/system/keights-bootstrap-kubeconfig.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
+                  Environment=KEIGHTS_K8S_SERVER=${K8sApiServer}
+
+              - path: /etc/systemd/system/keights-whisper-node.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
+
+              - path: /etc/systemd/system/keights-kubeadm-join.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=KEIGHTS_APISERVER=${K8sApiServer}
+
+              - path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=KEIGHTS_CLUSTER_DOMAIN=k8s.local
+                  Environment=KEIGHTS_NODE_LABELS=kubernetes.io/role=node,node-role.kubernetes.io/node=,${NodeLabels}
+                  ExecStart=
+                  ExecStart=/usr/bin/kubelet \
+                              --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf \
+                              --kubeconfig=/etc/kubernetes/kubelet.conf \
+                              --pod-manifest-path=/etc/kubernetes/manifests \
+                              --allow-privileged=true \
+                              --network-plugin=cni \
+                              --cni-conf-dir=/etc/cni/net.d \
+                              --cni-bin-dir=/opt/cni/bin \
+                              --cluster-dns=${ClusterDns} \
+                              --cluster-domain=${!KEIGHTS_CLUSTER_DOMAIN} \
+                              --authorization-mode=Webhook \
+                              --client-ca-file=/etc/kubernetes/pki/ca.crt \
+                              --cadvisor-port=0 \
+                              --rotate-certificates=true \
+                              --cert-dir=/var/lib/kubelet/pki \
+                              --cloud-provider=aws \
+                              --node-labels=${!KEIGHTS_NODE_LABELS}
+
+            runcmd:
+              - systemctl daemon-reload
+              - systemctl enable kubelet.service
+              - systemctl start keights-kubeadm-join.service
+
+Outputs:
+  AutoscalingGroupSecurityGroup:
+    Description: Security group of autoscaling group
+    Value: !Ref AutoscalingGroupSecurityGroup
+  AutoScalingGroup:
+    Description: Name of autoscaling group
+    Value: !Ref AutoScalingGroup
