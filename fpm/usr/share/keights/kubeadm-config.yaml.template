@@ -30,6 +30,7 @@ kubeProxy:
     featureGates: SupportIPVSProxyMode=true
 featureGates:
   HighAvailability: true
+  CoreDNS: true
 apiServerExtraArgs:
   external-hostname: {{ .APIServer }}
 controllerManagerExtraArgs:
