@@ -1,0 +1,81 @@
+- hosts: localhost
+  connection: local
+
+  vars_files:
+    - vars/{{ env }}.yml
+
+  vars:
+    cf_base: ../cloudformation
+
+  tasks:
+    - name: set cluster dns ip from service cidr
+      set_fact:
+        cluster_dns: '{{ service_cidr.split(".")[:-1] | join(".") }}.10'
+
+    - name: build common stack
+      cloudformation:
+        stack_name: '{{ cluster_name }}-common'
+        template: '{{ cf_base }}/common.yml'
+        template_parameters:
+          VpcId: '{{ vpc_id }}'
+          ClusterName: '{{ cluster_name }}'
+          KmsKeyId: '{{ kms_key_id }}'
+        tags:
+          KubernetesCluster: '{{ cluster_name }}'
+      register: common_stack
+
+    - name: build master stack
+      cloudformation:
+        stack_name: '{{ cluster_name }}-master'
+        template: '{{ cf_base }}/master.yml'
+        template_parameters:
+          ClusterName: '{{ cluster_name }}'
+          NumInstances: '{{ num_masters }}'
+          VpcId: '{{ vpc_id }}'
+          SubnetIds: '{{ subnet_ids }}'
+          LoadBalancerSubnetIds: '{{ subnet_ids }}'
+          ImageId: '{{ image_id }}'
+          InstanceType: '{{ instance_type }}'
+          KeyPair: '{{ keypair }}'
+          IamInstanceProfile: '{{ common_stack.stack_outputs.MasterInstanceProfile }}'
+          LoadBalancerScheme: '{{ load_balancer_scheme }}'
+          ApiServerSecurityGroup: '{{ common_stack.stack_outputs.ApiServerSecurityGroup }}'
+          KubeletSecurityGroup: '{{ common_stack.stack_outputs.KubeletSecurityGroup }}'
+          LambdaRoleArn: '{{ common_stack.stack_outputs.LambdaRoleArn }}'
+          KmsKeyId: '{{ kms_key_alias }}'
+          PodCidr: '{{ pod_cidr }}'
+          ServiceCidr: '{{ service_cidr }}'
+          SshAccessCidr: '{{ ssh_access_cidr }}'
+          ApiAccessCidr: '{{ api_access_cidr }}'
+          ClusterDns: '{{ cluster_dns }}'
+          EtcdVolumeSize: '{{ etcd_volume_size }}'
+          HyperkubeImage: 'gcr.io/google_containers/hyperkube-amd64:v{{ k8s_version }}'
+          EtcdImage: 'gcr.io/google_containers/etcd-amd64:{{ etcd_version }}'
+          KubernetesVersion: '{{ k8s_version }}'
+        tags:
+          KubernetesCluster: '{{ cluster_name }}'
+      register: master_stack
+
+    # Additional node groups may be added by repeating this stack with different parameters,
+    # making sure to pass unique stack_name and node_labels to each.
+    - name: build node stack
+      cloudformation:
+        stack_name: '{{ cluster_name }}-node'
+        template: '{{ cf_base }}/node.yml'
+        template_parameters:
+          ClusterName: '{{ cluster_name }}'
+          NumInstances: '{{ num_nodes }}'
+          VpcId: '{{ vpc_id }}'
+          SubnetIds: '{{ subnet_ids }}'
+          ImageId: '{{ image_id }}'
+          InstanceType: '{{ instance_type }}'
+          KeyPair: '{{ keypair }}'
+          IamInstanceProfile: '{{ common_stack.stack_outputs.NodeInstanceProfile }}'
+          ApiServerSecurityGroup: '{{ common_stack.stack_outputs.ApiServerSecurityGroup }}'
+          KubeletSecurityGroup: '{{ common_stack.stack_outputs.KubeletSecurityGroup }}'
+          SshAccessCidr: '{{ ssh_access_cidr }}'
+          ClusterDns: '{{ cluster_dns }}'
+          NodeLabels: '{{ node_labels | default("") }}'
+          K8sApiServer: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
+        tags:
+          KubernetesCluster: '{{ cluster_name }}'
