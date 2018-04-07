@@ -7,6 +7,11 @@ if [ -z "${cluster}" ]; then
     exit 1
 fi
 
+if ! which aws 1>/dev/null; then
+    echo "The aws CLI must be on your PATH."
+    exit 1
+fi
+
 ca_cert=`mktemp`
 cert=`mktemp`
 key=`mktemp`
