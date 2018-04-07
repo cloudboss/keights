@@ -8,7 +8,7 @@
     "k8s-version": "1.9.4",
     "keights-version": "0.2.0",
     "cni-version": "0.6.0",
-    "kube-router-version": "0.0.20",
+    "kube-router-version": "0.1.0",
     "core-dns-version": "1.14.7",
     "etcd-version": "3.0.17",
     "pause-version": "3.0",
