@@ -35,7 +35,7 @@
           SubnetIds: '{{ subnet_ids }}'
           LoadBalancerSubnetIds: '{{ subnet_ids }}'
           ImageId: '{{ image_id }}'
-          InstanceType: '{{ instance_type }}'
+          InstanceType: '{{ master_instance_type }}'
           KeyPair: '{{ keypair }}'
           IamInstanceProfile: '{{ common_stack.stack_outputs.MasterInstanceProfile }}'
           LoadBalancerScheme: '{{ load_balancer_scheme }}'
@@ -56,26 +56,25 @@
           KubernetesCluster: '{{ cluster_name }}'
       register: master_stack
 
-    # Additional node groups may be added by repeating this stack with different parameters,
-    # making sure to pass unique stack_name and node_labels to each.
     - name: build node stack
       cloudformation:
-        stack_name: '{{ cluster_name }}-node'
+        stack_name: '{{ cluster_name }}-node-{{ item.name }}'
         template: '{{ cf_base }}/node.yml'
         template_parameters:
           ClusterName: '{{ cluster_name }}'
-          NumInstances: '{{ num_nodes }}'
-          VpcId: '{{ vpc_id }}'
-          SubnetIds: '{{ subnet_ids }}'
-          ImageId: '{{ image_id }}'
-          InstanceType: '{{ instance_type }}'
-          KeyPair: '{{ keypair }}'
+          NumInstances: '{{ item.num_nodes }}'
+          VpcId: '{{ item.vpc_id }}'
+          SubnetIds: '{{ item.subnet_ids }}'
+          ImageId: '{{ item.image_id }}'
+          InstanceType: '{{ item.instance_type }}'
+          KeyPair: '{{ item.keypair }}'
           IamInstanceProfile: '{{ common_stack.stack_outputs.NodeInstanceProfile }}'
           ApiServerSecurityGroup: '{{ common_stack.stack_outputs.ApiServerSecurityGroup }}'
           KubeletSecurityGroup: '{{ common_stack.stack_outputs.KubeletSecurityGroup }}'
-          SshAccessCidr: '{{ ssh_access_cidr }}'
+          SshAccessCidr: '{{ item.ssh_access_cidr }}'
           ClusterDns: '{{ cluster_dns }}'
-          NodeLabels: '{{ node_labels | default("") }}'
+          NodeLabels: '{{ item.node_labels | default("") }}'
           K8sApiServer: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
         tags:
           KubernetesCluster: '{{ cluster_name }}'
+      with_items: '{{ node_groups }}'
