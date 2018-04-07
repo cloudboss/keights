@@ -1,0 +1,29 @@
+#!/bin/sh -e
+
+: ${ENV:?ENV must be set}
+
+if [ ! -f "./vars/${ENV}.yml" ]; then
+    echo "Missing ./vars/${ENV}.yml"
+    exit 1
+fi
+
+searchvirt()
+{
+    # Nowadays prefer Python 3
+    if which python3 1>/dev/null; then
+	echo 'python3 -m venv'
+	return
+    fi
+    which virtualenv
+}
+
+PYTHON_BASE="${PYTHON_BASE:-./.virtualenv}"
+
+if [ ! -d ${PYTHON_BASE} ]; then
+    venv=`searchvirt`
+    [ -n "${venv}" ] && ${venv} ${PYTHON_BASE}
+fi
+
+${PYTHON_BASE}/bin/pip install -r requirements.txt
+
+${PYTHON_BASE}/bin/ansible-playbook playbook.yml -e env=${ENV} ${@}
