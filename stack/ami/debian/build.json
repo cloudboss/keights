@@ -28,6 +28,9 @@
     "ssh_timeout": "5m",
     "ami_groups": "all",
 
+    "ena_support": true,
+    "sriov_support": true,
+
     "source_ami_filter": {
       "filters": {
         "virtualization-type": "hvm",
