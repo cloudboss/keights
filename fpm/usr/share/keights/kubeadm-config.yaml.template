@@ -4,6 +4,7 @@ kind: MasterConfiguration
 nodeName: {{ .NodeName }}
 api:
   advertiseAddress: {{ .MyIP }}
+  controlPlaneEndpoint: {{ .APIServer }}
 etcd:
   endpoints: [{{ range $i, $k := keys .HostMap }}{{ if $i }},{{end}}'https://{{ $.Prefix }}-{{ $k }}.{{ $.Domain }}:2379'{{ end }}]
   caFile: /etc/kubernetes/pki/etcd-ca.crt
