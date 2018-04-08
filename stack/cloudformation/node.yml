@@ -43,7 +43,7 @@ Parameters:
     Description: >-
       IP addres of cluster DNS server; should be
       the value of ServiceCidr + 10
-    Default: 10.96.0.10
+    Default: 10.1.0.10
     Type: String
   NodeLabels:
     Description: >-
@@ -126,6 +126,7 @@ Resources:
                 content: |
                   [Service]
                   Environment=KEIGHTS_APISERVER=${K8sApiServer}
+                  Environment=KEIGHTS_APISERVER_PORT=6443
 
               - path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
                 owner: root:root

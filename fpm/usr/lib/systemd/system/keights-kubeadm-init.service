@@ -5,14 +5,17 @@ After=var-lib-etcd.mount keights-whisper-controller.service keights-templates.ta
 ConditionPathExists=!/var/lib/kubeadm/initialized
 
 [Service]
-Type=oneshot
+Type=simple
 ExecStart=/bin/sh -c ' \
     /usr/bin/kubeadm init \
       --config=/var/lib/kubeadm/config.yaml \
-      --ignore-preflight-errors=all && \
-    touch /var/lib/kubeadm/initialized \
+      --ignore-preflight-errors=all \
+      --skip-token-print && \
+    touch /var/lib/kubeadm/initialized && \
+    rm /var/lib/kubeadm/config.yaml \
 '
-ExecStartPost=/bin/rm /var/lib/kubeadm/config.yaml
+Restart=on-failure
+RestartSec=10s
 
 [Install]
 WantedBy=multi-user.target

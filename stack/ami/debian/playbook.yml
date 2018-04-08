@@ -176,6 +176,10 @@
           mode: '0644'
         - path: etc/apt/sources.list.d/kubernetes.list
           mode: '0644'
+        - path: etc/sysctl.d/kubernetes.conf
+          mode: '0644'
+        - path: etc/modules-load.d/modules.conf
+          mode: '0644'
 
     - name: expand staging templates into chroot
       template:
@@ -248,14 +252,15 @@
         while [ ! -S /var/run/docker.sock ]; do
             sleep 0.5
         done
-        docker pull gcr.io/google_containers/hyperkube-amd64:v{{ k8s_version }}
-        docker pull gcr.io/google_containers/etcd-amd64:{{ etcd_version }}
-        docker pull gcr.io/google_containers/pause-amd64:{{ pause_version }}
-        docker pull gcr.io/google_containers/kube-addon-manager-amd64:v{{ addon_manager_version }}
-        docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:{{ kube_dns_version }}
-        docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64:{{ kube_dns_version }}
-        docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64:{{ kube_dns_version }}
-        docker pull gcr.io/google_containers/kubernetes-dashboard-amd64:v{{ dashboard_version }}
+        docker pull k8s.gcr.io/kube-apiserver-amd64:v{{ k8s_version }}
+        docker pull k8s.gcr.io/kube-controller-manager-amd64:v{{ k8s_version }}
+        docker pull k8s.gcr.io/kube-proxy-amd64:v{{ k8s_version }}
+        docker pull k8s.gcr.io/kube-scheduler-amd64:v{{ k8s_version }}
+        docker pull k8s.gcr.io/etcd-amd64:{{ etcd_version }}
+        docker pull k8s.gcr.io/pause-amd64:{{ pause_version }}
+        docker pull k8s.gcr.io/kube-addon-manager-amd64:v{{ addon_manager_version }}
+        docker pull k8s.gcr.io/kubernetes-dashboard-amd64:v{{ dashboard_version }}
+        docker pull coredns/coredns:{{ core_dns_version }}
         docker pull cloudnativelabs/kube-router:v{{ kube_router_version }}
         docker pull busybox:{{ busybox_version }}
         kill ${pid}

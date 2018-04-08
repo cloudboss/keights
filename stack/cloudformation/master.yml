@@ -84,18 +84,18 @@ Parameters:
     Description: Size of etcd volume in GB
     Default: 10
     Type: Number
-  HyperkubeImage:
-    Description: Docker image containing kube-apiserver
+  ImageRepository:
+    Description: Repository for core Kubernetes Docker images
     Type: String
-    Default: gcr.io/google_containers/hyperkube-amd64:v1.9.4
+    Default: k8s.gcr.io
   EtcdImage:
     Description: Docker image containing etcd
     Type: String
-    Default: gcr.io/google_containers/etcd-amd64:3.0.17
+    Default: k8s.gcr.io/etcd-amd64:3.1.12
   KubernetesVersion:
     Description: Version of Kubernetes
     Type: String
-    Default: 1.9.4
+    Default: 1.10.0
 
 Mappings:
   LambdaUrls:
@@ -215,6 +215,15 @@ Resources:
       IpProtocol: tcp
       ToPort: 443
 
+  LoadBalancerSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref LoadBalancerSecurityGroup
+      CidrIp: !Ref ApiAccessCidr
+      FromPort: 6443
+      IpProtocol: tcp
+      ToPort: 6443
+
   LoadBalancerSecurityGroupEgress:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
@@ -240,6 +249,10 @@ Resources:
           InstanceProtocol: TCP
           Protocol: TCP
           LoadBalancerPort: 443
+        - InstancePort: 6443
+          InstanceProtocol: TCP
+          Protocol: TCP
+          LoadBalancerPort: 6443
       Scheme: !Ref LoadBalancerScheme
       SecurityGroups:
         - !Ref LoadBalancerSecurityGroup
@@ -407,7 +420,7 @@ Resources:
                   Environment=KEIGHTS_APISERVER=${LoadBalancer.DNSName}
                   Environment=KEIGHTS_POD_SUBNET=${PodCidr}
                   Environment=KEIGHTS_SERVICE_SUBNET=${ServiceCidr}
-                  Environment=KEIGHTS_HYPERKUBE_IMAGE=${HyperkubeImage}
+                  Environment=KEIGHTS_IMAGE_REPOSITORY=${ImageRepository}
                   Environment=KEIGHTS_KUBERNETES_VERSION=v${KubernetesVersion}
 
               - path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
