@@ -95,7 +95,7 @@ Parameters:
   KubernetesVersion:
     Description: Version of Kubernetes
     Type: String
-    Default: 1.9.4
+    Default: 1.10.0
 
 Mappings:
   LambdaUrls:
