@@ -11,7 +11,7 @@
     "kube-router-version": "0.1.0",
     "core-dns-version": "1.0.6",
     "etcd-version": "3.1.12",
-    "pause-version": "3.0",
+    "pause-version": "3.1",
     "addon-manager-version": "8.6",
     "dashboard-version": "1.8.3",
     "busybox-version": "1.28.1"
