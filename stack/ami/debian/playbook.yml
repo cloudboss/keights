@@ -176,6 +176,8 @@
           mode: '0644'
         - path: etc/apt/sources.list.d/kubernetes.list
           mode: '0644'
+        - path: etc/sysctl.d/kubernetes.conf
+          mode: '0644'
 
     - name: expand staging templates into chroot
       template:
