@@ -11,9 +11,9 @@ ExecStart=/bin/sh -c ' \
       --config=/var/lib/kubeadm/config.yaml \
       --ignore-preflight-errors=all \
       --skip-token-print && \
-    touch /var/lib/kubeadm/initialized \
+    touch /var/lib/kubeadm/initialized && \
+    rm /var/lib/kubeadm/config.yaml \
 '
-ExecStartPost=/bin/rm /var/lib/kubeadm/config.yaml
 Restart=on-failure
 RestartSec=10s
 
