@@ -1,6 +1,7 @@
 #!/bin/sh
 
 cluster=${1}
+listen_port=${listen_port:-6443}
 
 if [ -z "${cluster}" ]; then
     echo "Usage: ${0} <cluster-name>"
@@ -43,7 +44,7 @@ aws ssm get-parameters \
 
 kubectl config set-cluster ${cluster} \
     --certificate-authority=${ca_cert} \
-    --server=https://${server} \
+    --server=https://${server}:${listen_port} \
     --embed-certs=true
 
 kubectl config set-context admin@${cluster} \

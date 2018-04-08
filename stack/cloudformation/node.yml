@@ -126,6 +126,7 @@ Resources:
                 content: |
                   [Service]
                   Environment=KEIGHTS_APISERVER=${K8sApiServer}
+                  Environment=KEIGHTS_APISERVER_PORT=6443
 
               - path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
                 owner: root:root

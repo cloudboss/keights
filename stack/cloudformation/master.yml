@@ -215,6 +215,15 @@ Resources:
       IpProtocol: tcp
       ToPort: 443
 
+  LoadBalancerSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref LoadBalancerSecurityGroup
+      CidrIp: !Ref ApiAccessCidr
+      FromPort: 6443
+      IpProtocol: tcp
+      ToPort: 6443
+
   LoadBalancerSecurityGroupEgress:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
@@ -240,6 +249,10 @@ Resources:
           InstanceProtocol: TCP
           Protocol: TCP
           LoadBalancerPort: 443
+        - InstancePort: 6443
+          InstanceProtocol: TCP
+          Protocol: TCP
+          LoadBalancerPort: 6443
       Scheme: !Ref LoadBalancerScheme
       SecurityGroups:
         - !Ref LoadBalancerSecurityGroup
