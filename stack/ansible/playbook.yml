@@ -50,7 +50,7 @@
           ClusterDns: '{{ cluster_dns }}'
           EtcdVolumeSize: '{{ etcd_volume_size }}'
           ImageRepository: 'k8s.gcr.io'
-          EtcdImage: 'gcr.io/google_containers/etcd-amd64:{{ etcd_version }}'
+          EtcdImage: '{{ etcd_image }}'
           KubernetesVersion: '{{ k8s_version }}'
         tags:
           KubernetesCluster: '{{ cluster_name }}'
