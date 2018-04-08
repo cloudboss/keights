@@ -13,6 +13,8 @@ ExecStart=/bin/sh -c ' \
     touch /var/lib/kubeadm/initialized \
 '
 ExecStartPost=/bin/rm /var/lib/kubeadm/config.yaml
+Restart=on-failure
+RestartSec=10s
 
 [Install]
 WantedBy=multi-user.target
