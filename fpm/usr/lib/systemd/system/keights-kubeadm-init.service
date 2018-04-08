@@ -9,7 +9,8 @@ Type=oneshot
 ExecStart=/bin/sh -c ' \
     /usr/bin/kubeadm init \
       --config=/var/lib/kubeadm/config.yaml \
-      --ignore-preflight-errors=all && \
+      --ignore-preflight-errors=all \
+      --skip-token-print && \
     touch /var/lib/kubeadm/initialized \
 '
 ExecStartPost=/bin/rm /var/lib/kubeadm/config.yaml
