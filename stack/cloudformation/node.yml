@@ -43,7 +43,7 @@ Parameters:
     Description: >-
       IP addres of cluster DNS server; should be
       the value of ServiceCidr + 10
-    Default: 10.96.0.10
+    Default: 10.1.0.10
     Type: String
   NodeLabels:
     Description: >-
