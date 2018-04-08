@@ -24,11 +24,6 @@ selfHosted: true
 apiServerCertSANs:
   - {{ .APIServer }}
 certificatesDir: /etc/kubernetes/pki
-kubeProxy:
-  config:
-    mode: ipvs
-    featureGates:
-      SupportIPVSProxyMode: true
 featureGates:
   HighAvailability: true
   CoreDNS: true
