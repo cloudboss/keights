@@ -252,11 +252,11 @@
         while [ ! -S /var/run/docker.sock ]; do
             sleep 0.5
         done
-        docker pull gcr.io/google_containers/hyperkube-amd64:v{{ k8s_version }}
-        docker pull gcr.io/google_containers/etcd-amd64:{{ etcd_version }}
-        docker pull gcr.io/google_containers/pause-amd64:{{ pause_version }}
-        docker pull gcr.io/google_containers/kube-addon-manager-amd64:v{{ addon_manager_version }}
-        docker pull gcr.io/google_containers/kubernetes-dashboard-amd64:v{{ dashboard_version }}
+        docker pull k8s.gcr.io/hyperkube-amd64:v{{ k8s_version }}
+        docker pull k8s.gcr.io/etcd-amd64:{{ etcd_version }}
+        docker pull k8s.gcr.io/pause-amd64:{{ pause_version }}
+        docker pull k8s.gcr.io/kube-addon-manager-amd64:v{{ addon_manager_version }}
+        docker pull k8s.gcr.io/kubernetes-dashboard-amd64:v{{ dashboard_version }}
         docker pull coredns/coredns:{{ core_dns_version }}
         docker pull cloudnativelabs/kube-router:v{{ kube_router_version }}
         docker pull busybox:{{ busybox_version }}
