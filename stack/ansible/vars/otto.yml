@@ -10,7 +10,7 @@ kms_key_id: d4baff42-9ea6-4f7d-a866-136587c77815
 kms_key_alias: alias/cloudboss
 k8s_version: 1.9.6
 kube_router_version: 0.1.0
-etcd_version: 3.0.17
+etcd_image: k8s.gcr.io/etcd-amd64:3.0.17
 pod_cidr: 10.0.0.0/16
 service_cidr: 10.1.0.0/16
 ssh_access_cidr: 0.0.0.0/0
