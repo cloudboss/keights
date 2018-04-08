@@ -49,7 +49,7 @@
           ApiAccessCidr: '{{ api_access_cidr }}'
           ClusterDns: '{{ cluster_dns }}'
           EtcdVolumeSize: '{{ etcd_volume_size }}'
-          HyperkubeImage: 'gcr.io/google_containers/hyperkube-amd64:v{{ k8s_version }}'
+          ImageRepository: 'k8s.gcr.io'
           EtcdImage: 'gcr.io/google_containers/etcd-amd64:{{ etcd_version }}'
           KubernetesVersion: '{{ k8s_version }}'
         tags:
