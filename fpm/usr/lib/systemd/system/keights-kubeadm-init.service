@@ -5,7 +5,7 @@ After=var-lib-etcd.mount keights-whisper-controller.service keights-templates.ta
 ConditionPathExists=!/var/lib/kubeadm/initialized
 
 [Service]
-Type=oneshot
+Type=simple
 ExecStart=/bin/sh -c ' \
     /usr/bin/kubeadm init \
       --config=/var/lib/kubeadm/config.yaml \
