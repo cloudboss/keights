@@ -12,91 +12,176 @@ Parameters:
   KmsKeyId:
     Description: KMS key used to manage secrets
     Type: String
+  ApiAccessCidr:
+    Description: CIDR block given API access to cluster
+    Default: 0.0.0.0/0
+    Type: String
+  SshAccessCidr:
+    Description: CIDR block given ssh access to cluster
+    Default: 0.0.0.0/0
+    Type: String
 
 Resources:
-  ApiServerSecurityGroup:
+  LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Security group for kube-apiserver
+      GroupDescription: !Sub ${ClusterName} load balancer
       VpcId: !Ref VpcId
 
-  ApiServerSecurityGroupHttpIngress:
+  LoadBalancerSecurityGroupApiserverPublicIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId: !Ref ApiServerSecurityGroup
-      SourceSecurityGroupId: !Ref ApiServerSecurityGroup
-      FromPort: 8080
-      ToPort: 8080
+      GroupId: !Ref LoadBalancerSecurityGroup
+      CidrIp: !Ref ApiAccessCidr
+      FromPort: 6443
       IpProtocol: tcp
+      ToPort: 6443
 
-  ApiServerSecurityGroupHttpEgress:
+  LoadBalancerSecurityGroupApiserverMasterIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref LoadBalancerSecurityGroup
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      FromPort: 6443
+      IpProtocol: tcp
+      ToPort: 6443
+
+  LoadBalancerSecurityGroupApiserverNodeIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref LoadBalancerSecurityGroup
+      SourceSecurityGroupId: !Ref NodeSecurityGroup
+      FromPort: 6443
+      IpProtocol: tcp
+      ToPort: 6443
+
+  LoadBalancerSecurityGroupApiserverEgress:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId: !Ref ApiServerSecurityGroup
-      DestinationSecurityGroupId: !Ref ApiServerSecurityGroup
-      FromPort: 8080
-      ToPort: 8080
-      IpProtocol: tcp
-
-  ApiServerSecurityGroupHttpsIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref ApiServerSecurityGroup
-      SourceSecurityGroupId: !Ref ApiServerSecurityGroup
+      GroupId: !Ref LoadBalancerSecurityGroup
+      DestinationSecurityGroupId: !Ref MasterSecurityGroup
       FromPort: 6443
       ToPort: 6443
       IpProtocol: tcp
 
-  ApiServerSecurityGroupHttpsEgress:
+  MasterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub ${ClusterName} masters
+      VpcId: !Ref VpcId
+
+  MasterSecurityGroupAllEgress:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId: !Ref ApiServerSecurityGroup
-      DestinationSecurityGroupId: !Ref ApiServerSecurityGroup
+      GroupId: !Ref MasterSecurityGroup
+      CidrIp: 0.0.0.0/0
+      IpProtocol: '-1'
+
+  MasterSecurityGroupSshIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      CidrIp: !Ref SshAccessCidr
+      FromPort: 22
+      IpProtocol: tcp
+      ToPort: 22
+
+  MasterSecurityGroupLoadBalancerIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
       FromPort: 6443
       ToPort: 6443
       IpProtocol: tcp
 
-  KubeletSecurityGroup:
+  MasterSecurityGroupAllMasterIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      IpProtocol: '-1'
+
+  MasterSecurityGroupAllNodeUdpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref NodeSecurityGroup
+      FromPort: 0
+      ToPort: 65535
+      IpProtocol: udp
+
+  MasterSecurityGroupAllNodeIcmpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref NodeSecurityGroup
+      FromPort: -1
+      ToPort: -1
+      IpProtocol: icmp
+
+  MasterSecurityGroupAllNodeIcmp6Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref NodeSecurityGroup
+      FromPort: -1
+      ToPort: -1
+      IpProtocol: 58
+
+  MasterSecurityGroupBelowEtcdNodeTcpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref NodeSecurityGroup
+      FromPort: 0
+      ToPort: 2378
+      IpProtocol: tcp
+
+  MasterSecurityGroupAboveEtcdNodeTcpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref NodeSecurityGroup
+      FromPort: 2381
+      ToPort: 65535
+      IpProtocol: tcp
+
+  NodeSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Security group for kubelet
+      GroupDescription: !Sub ${ClusterName} nodes
       VpcId: !Ref VpcId
 
-  KubeletSecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref KubeletSecurityGroup
-      SourceSecurityGroupId: !Ref KubeletSecurityGroup
-      FromPort: 10250
-      ToPort: 10250
-      IpProtocol: tcp
-
-  KubeletSecurityGroupEgress:
+  NodeSecurityGroupAllEgress:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
-      GroupId: !Ref KubeletSecurityGroup
-      DestinationSecurityGroupId: !Ref KubeletSecurityGroup
-      FromPort: 10250
-      ToPort: 10250
-      IpProtocol: tcp
+      GroupId: !Ref NodeSecurityGroup
+      CidrIp: 0.0.0.0/0
+      IpProtocol: '-1'
 
-  KubeletSecurityGroupServiceIngress:
+  NodeSecurityGroupSshIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId: !Ref KubeletSecurityGroup
-      SourceSecurityGroupId: !Ref KubeletSecurityGroup
-      FromPort: 30000
-      ToPort: 30000
+      GroupId: !Ref NodeSecurityGroup
+      CidrIp: !Ref SshAccessCidr
+      FromPort: 22
       IpProtocol: tcp
+      ToPort: 22
 
-  KubeletSecurityGroupServiceEgress:
-    Type: AWS::EC2::SecurityGroupEgress
+  NodeSecurityGroupAllNodeIngress:
+    Type: AWS::EC2::SecurityGroupIngress
     Properties:
-      GroupId: !Ref KubeletSecurityGroup
-      DestinationSecurityGroupId: !Ref KubeletSecurityGroup
-      FromPort: 32767
-      ToPort: 32767
-      IpProtocol: tcp
+      GroupId: !Ref NodeSecurityGroup
+      SourceSecurityGroupId: !Ref NodeSecurityGroup
+      IpProtocol: '-1'
+
+  NodeSecurityGroupAllMasterIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref NodeSecurityGroup
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      IpProtocol: '-1'
 
   K8sMasterAccess:
     Type: AWS::IAM::ManagedPolicy
@@ -279,12 +364,15 @@ Resources:
         - !Sub ${K8sLambdaAccess}
 
 Outputs:
-  ApiServerSecurityGroup:
-    Description: Security group of kube-apiserver
-    Value: !Ref ApiServerSecurityGroup
-  KubeletSecurityGroup:
-    Description: Security group of kubelet
-    Value: !Ref KubeletSecurityGroup
+  LoadBalancerSecurityGroup:
+    Description: Security group of load balancer
+    Value: !Ref LoadBalancerSecurityGroup
+  MasterSecurityGroup:
+    Description: Security group of masters
+    Value: !Ref MasterSecurityGroup
+  NodeSecurityGroup:
+    Description: Security group of nodes
+    Value: !Ref NodeSecurityGroup
   MasterInstanceProfile:
     Description: Instance profile for master nodes
     Value: !Ref MasterInstanceProfile
