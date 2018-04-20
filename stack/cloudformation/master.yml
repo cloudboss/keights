@@ -88,11 +88,13 @@ Parameters:
     Description: Version of Kubernetes
     Type: String
     Default: 1.10.0
+  ResourceBucket:
+    Description: Bucket used to store Lambda archives
+    Type: String
+    Default: cloudboss-public
 
 Mappings:
   LambdaUrls:
-    AllFunctions:
-      Bucket: cloudboss-public
     SubnetToAzFunction:
       Key: lambda/co/cloudboss/stackhand/subnet_to_az/0.1.0/go1.x/subnet_to_az-0.1.0.zip
     KubeCaFunction:
@@ -106,7 +108,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !FindInMap [LambdaUrls, AllFunctions, Bucket]
+        S3Bucket: !Ref ResourceBucket
         S3Key: !FindInMap [LambdaUrls, SubnetToAzFunction, Key]
       Handler: subnet_to_az
       Runtime: go1.x
@@ -117,7 +119,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !FindInMap [LambdaUrls, AllFunctions, Bucket]
+        S3Bucket: !Ref ResourceBucket
         S3Key: !FindInMap [LambdaUrls, KubeCaFunction, Key]
       Handler: kube_ca
       Runtime: go1.x
