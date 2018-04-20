@@ -1,5 +1,6 @@
 cluster_name: '{{ env }}'
 vpc_id: vpc-ba92ad08
+resource_bucket: cloudboss-public
 subnet_ids: subnet-6c31888d,subnet-f3cdd152,subnet-e245724f
 extra_master_security_groups: [sg-d55a9acdd085d603c, sg-dd75b80d331429d54]
 num_masters: 3

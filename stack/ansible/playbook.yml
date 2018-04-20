@@ -52,6 +52,7 @@
           ImageRepository: 'k8s.gcr.io'
           EtcdImage: '{{ etcd_image }}'
           KubernetesVersion: '{{ k8s_version }}'
+          ResourceBucket: '{{ resource_bucket }}'
         tags:
           KubernetesCluster: '{{ cluster_name }}'
       register: master_stack
