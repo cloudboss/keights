@@ -48,9 +48,9 @@ Parameters:
   LoadBalancerSecurityGroup:
     Description: Security group of load balancer
     Type: String
-  MasterSecurityGroup:
-    Description: Security group of masters
-    Type: String
+  MasterSecurityGroups:
+    Description: Security groups of masters
+    Type: CommaDelimitedList
   LambdaRoleArn:
     Description: Role ARN to assign to helper Lamba functions
     Type: String
@@ -246,8 +246,7 @@ Resources:
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyPair
       PlacementTenancy: default
-      SecurityGroups:
-        - !Ref MasterSecurityGroup
+      SecurityGroups: !Ref MasterSecurityGroups
       UserData:
         Fn::Base64:
           !Sub |
