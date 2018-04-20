@@ -1,6 +1,7 @@
 cluster_name: '{{ env }}'
 vpc_id: vpc-ba92ad08
 subnet_ids: subnet-6c31888d,subnet-f3cdd152,subnet-e245724f
+extra_master_security_groups: [sg-d55a9acdd085d603c, sg-dd75b80d331429d54]
 num_masters: 3
 image_id: ami-03d0b653e1a63db94
 master_instance_type: m4.large
@@ -26,3 +27,4 @@ node_groups:
     keypair: '{{ keypair }}'
     ssh_access_cidr: '{{ ssh_access_cidr }}'
     node_labels: size=standard,env=dev
+    extra_security_groups: [sg-ba2b334299d1e9a9e]

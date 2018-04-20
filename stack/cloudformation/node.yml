@@ -29,9 +29,9 @@ Parameters:
   IamInstanceProfile:
     Description: IAM Instance profile to assign to instances
     Type: String
-  NodeSecurityGroup:
-    Description: Security group of nodes
-    Type: String
+  NodeSecurityGroups:
+    Description: Security groups of nodes
+    Type: CommaDelimitedList
   ClusterDns:
     Description: >-
       IP addres of cluster DNS server; should be
@@ -73,8 +73,7 @@ Resources:
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyPair
       PlacementTenancy: default
-      SecurityGroups:
-        - !Ref NodeSecurityGroup
+      SecurityGroups: !Ref NodeSecurityGroups
       UserData:
         Fn::Base64:
           !Sub |
