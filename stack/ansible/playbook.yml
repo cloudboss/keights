@@ -25,6 +25,8 @@
         tags:
           KubernetesCluster: '{{ cluster_name }}'
       register: common_stack
+      tags:
+        - common
 
     - name: build master stack
       cloudformation:
@@ -56,6 +58,8 @@
         tags:
           KubernetesCluster: '{{ cluster_name }}'
       register: master_stack
+      tags:
+        - master
 
     - name: build node stack
       cloudformation:
@@ -77,3 +81,5 @@
         tags:
           KubernetesCluster: '{{ cluster_name }}'
       with_items: '{{ node_groups }}'
+      tags:
+        - nodes
