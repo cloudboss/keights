@@ -45,12 +45,12 @@ Parameters:
     AllowedValues:
       - internal
       - internet-facing
-  ApiServerSecurityGroup:
-    Description: Security group for kube-apiserver
+  LoadBalancerSecurityGroup:
+    Description: Security group of load balancer
     Type: String
-  KubeletSecurityGroup:
-    Description: Security group for kubelet
-    Type: String
+  MasterSecurityGroups:
+    Description: Security groups of masters
+    Type: CommaDelimitedList
   LambdaRoleArn:
     Description: Role ARN to assign to helper Lamba functions
     Type: String
@@ -65,14 +65,6 @@ Parameters:
   ServiceCidr:
     Description: CIDR block of addresses for services
     Default: 10.1.0.0/16
-    Type: String
-  SshAccessCidr:
-    Description: CIDR block given ssh access to cluster
-    Default: 0.0.0.0/0
-    Type: String
-  ApiAccessCidr:
-    Description: CIDR block given API access to cluster
-    Default: 0.0.0.0/0
     Type: String
   ClusterDns:
     Description: >-
@@ -96,11 +88,13 @@ Parameters:
     Description: Version of Kubernetes
     Type: String
     Default: 1.10.0
+  ResourceBucket:
+    Description: Bucket used to store Lambda archives
+    Type: String
+    Default: cloudboss-public
 
 Mappings:
   LambdaUrls:
-    AllFunctions:
-      Bucket: cloudboss-public
     SubnetToAzFunction:
       Key: lambda/co/cloudboss/stackhand/subnet_to_az/0.1.0/go1.x/subnet_to_az-0.1.0.zip
     KubeCaFunction:
@@ -114,7 +108,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !FindInMap [LambdaUrls, AllFunctions, Bucket]
+        S3Bucket: !Ref ResourceBucket
         S3Key: !FindInMap [LambdaUrls, SubnetToAzFunction, Key]
       Handler: subnet_to_az
       Runtime: go1.x
@@ -125,7 +119,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !FindInMap [LambdaUrls, AllFunctions, Bucket]
+        S3Bucket: !Ref ResourceBucket
         S3Key: !FindInMap [LambdaUrls, KubeCaFunction, Key]
       Handler: kube_ca
       Runtime: go1.x
@@ -167,72 +161,6 @@ Resources:
       NumInstances: !Ref NumInstances
       KmsKeyId: !Ref KmsKeyId
 
-  EtcdSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for etcd
-      VpcId: !Ref VpcId
-
-  EtcdSecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref EtcdSecurityGroup
-      SourceSecurityGroupId: !Ref EtcdSecurityGroup
-      FromPort: 2379
-      ToPort: 2380
-      IpProtocol: tcp
-
-  EtcdSecurityGroupEgress:
-    Type: AWS::EC2::SecurityGroupEgress
-    Properties:
-      GroupId: !Ref EtcdSecurityGroup
-      DestinationSecurityGroupId: !Ref EtcdSecurityGroup
-      FromPort: 2379
-      ToPort: 2380
-      IpProtocol: tcp
-
-  LoadBalancerSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: !Sub ${ClusterName} load balancer
-      VpcId: !Ref VpcId
-
-  LoadBalancerSecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref EtcdSecurityGroup
-      SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
-      FromPort: 2379
-      ToPort: 2380
-      IpProtocol: tcp
-
-  LoadBalancerSecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref LoadBalancerSecurityGroup
-      CidrIp: !Ref ApiAccessCidr
-      FromPort: 443
-      IpProtocol: tcp
-      ToPort: 443
-
-  LoadBalancerSecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref LoadBalancerSecurityGroup
-      CidrIp: !Ref ApiAccessCidr
-      FromPort: 6443
-      IpProtocol: tcp
-      ToPort: 6443
-
-  LoadBalancerSecurityGroupEgress:
-    Type: AWS::EC2::SecurityGroupEgress
-    Properties:
-      GroupId: !Ref LoadBalancerSecurityGroup
-      DestinationSecurityGroupId: !Ref AutoscalingGroupSecurityGroup
-      FromPort: 6443
-      ToPort: 6443
-      IpProtocol: tcp
-
   LoadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
     Properties:
@@ -257,30 +185,6 @@ Resources:
       SecurityGroups:
         - !Ref LoadBalancerSecurityGroup
       Subnets: !Ref LoadBalancerSubnetIds
-
-  AutoscalingGroupSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for autoscaling group
-      VpcId: !Ref VpcId
-
-  AutoscalingGroupIngressSsh:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref AutoscalingGroupSecurityGroup
-      CidrIp: !Ref SshAccessCidr
-      FromPort: 22
-      IpProtocol: tcp
-      ToPort: 22
-
-  AutoscalingGroupIngressLoadBalancer:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref AutoscalingGroupSecurityGroup
-      SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
-      FromPort: 6443
-      IpProtocol: tcp
-      ToPort: 6443
 
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -348,11 +252,7 @@ Resources:
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyPair
       PlacementTenancy: default
-      SecurityGroups:
-        - !Ref ApiServerSecurityGroup
-        - !Ref KubeletSecurityGroup
-        - !Ref AutoscalingGroupSecurityGroup
-        - !Ref EtcdSecurityGroup
+      SecurityGroups: !Ref MasterSecurityGroups
       UserData:
         Fn::Base64:
           !Sub |
@@ -466,15 +366,6 @@ Outputs:
   LoadBalancerDnsName:
     Description: DNS name of load balancer
     Value: !GetAtt [LoadBalancer, DNSName]
-  AutoscalingGroupSecurityGroup:
-    Description: Security group of autoscaling group
-    Value: !Ref AutoscalingGroupSecurityGroup
-  EtcdSecurityGroup:
-    Description: Security group for etcd
-    Value: !Ref EtcdSecurityGroup
-  LoadBalancerSecurityGroup:
-    Description: Security group of load balancer
-    Value: !Ref LoadBalancerSecurityGroup
   AutoScalingGroup:
     Description: Name of autoscaling group
     Value: !Ref AutoScalingGroup

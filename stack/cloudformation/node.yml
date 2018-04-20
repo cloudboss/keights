@@ -29,16 +29,9 @@ Parameters:
   IamInstanceProfile:
     Description: IAM Instance profile to assign to instances
     Type: String
-  ApiServerSecurityGroup:
-    Description: Security group of apiserver
-    Type: String
-  KubeletSecurityGroup:
-    Description: Security group for kubelet
-    Type: String
-  SshAccessCidr:
-    Description: CIDR block given ssh access to cluster
-    Default: 0.0.0.0/0
-    Type: String
+  NodeSecurityGroups:
+    Description: Security groups of nodes
+    Type: CommaDelimitedList
   ClusterDns:
     Description: >-
       IP addres of cluster DNS server; should be
@@ -56,21 +49,6 @@ Parameters:
     Type: String
 
 Resources:
-  AutoscalingGroupSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for autoscaling group
-      VpcId: !Ref VpcId
-
-  AutoscalingGroupIngressSsh:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref AutoscalingGroupSecurityGroup
-      CidrIp: !Ref SshAccessCidr
-      FromPort: 22
-      IpProtocol: tcp
-      ToPort: 22
-
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
@@ -95,10 +73,7 @@ Resources:
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyPair
       PlacementTenancy: default
-      SecurityGroups:
-        - !Ref AutoscalingGroupSecurityGroup
-        - !Ref ApiServerSecurityGroup
-        - !Ref KubeletSecurityGroup
+      SecurityGroups: !Ref NodeSecurityGroups
       UserData:
         Fn::Base64:
           !Sub |
@@ -160,9 +135,6 @@ Resources:
               - systemctl start keights-kubeadm-join.service
 
 Outputs:
-  AutoscalingGroupSecurityGroup:
-    Description: Security group of autoscaling group
-    Value: !Ref AutoscalingGroupSecurityGroup
   AutoScalingGroup:
     Description: Name of autoscaling group
     Value: !Ref AutoScalingGroup
