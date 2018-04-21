@@ -83,11 +83,11 @@ Parameters:
   EtcdImage:
     Description: Docker image containing etcd
     Type: String
-    Default: k8s.gcr.io/etcd-amd64:3.1.12
+    Default: k8s.gcr.io/etcd-amd64:3.0.17
   KubernetesVersion:
     Description: Version of Kubernetes
     Type: String
-    Default: 1.9.4
+    Default: 1.9.7
   ResourceBucket:
     Description: Bucket used to store Lambda archives
     Type: String
