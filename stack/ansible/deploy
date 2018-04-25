@@ -1,9 +1,9 @@
 #!/bin/sh -e
 
-: ${ENV:?ENV must be set}
+: ${CLUSTER:?CLUSTER must be set}
 
-if [ ! -f "./vars/${ENV}.yml" ]; then
-    echo "Missing ./vars/${ENV}.yml"
+if [ ! -f "./vars/${CLUSTER}.yml" ]; then
+    echo "Missing ./vars/${CLUSTER}.yml"
     exit 1
 fi
 
@@ -26,4 +26,4 @@ fi
 
 ${PYTHON_BASE}/bin/pip install -r requirements.txt
 
-${PYTHON_BASE}/bin/ansible-playbook playbook.yml -e env=${ENV} ${@}
+${PYTHON_BASE}/bin/ansible-playbook playbook.yml -e cluster=${CLUSTER} ${@}

@@ -1,4 +1,4 @@
-cluster_name: '{{ env }}'
+cluster_name: '{{ cluster }}'
 vpc_id: vpc-ba92ad08
 resource_bucket: cloudboss-public
 subnet_ids: subnet-6c31888d,subnet-f3cdd152,subnet-e245724f
