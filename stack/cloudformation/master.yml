@@ -35,7 +35,7 @@ Parameters:
   KeyPair:
     Description: SSH keypair assigned to instances
     Type: AWS::EC2::KeyPair::KeyName
-  IamInstanceProfile:
+  MasterInstanceProfile:
     Description: Name of IAM Instance profile to assign to instances
     Type: String
   LoadBalancerScheme:
@@ -243,7 +243,7 @@ Resources:
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      IamInstanceProfile: !Ref IamInstanceProfile
+      IamInstanceProfile: !Ref MasterInstanceProfile
       ImageId: !Ref ImageId
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyPair

@@ -26,7 +26,7 @@ Parameters:
   KeyPair:
     Description: SSH keypair assigned to instances
     Type: AWS::EC2::KeyPair::KeyName
-  IamInstanceProfile:
+  NodeInstanceProfile:
     Description: IAM Instance profile to assign to instances
     Type: String
   NodeSecurityGroups:
@@ -44,8 +44,8 @@ Parameters:
       key=value pairs, for example env=prod,size=large
     Type: String
     Default: ''
-  K8sApiServer:
-    Description: DNS name of kubernetes apiserver
+  LoadBalancerDnsName:
+    Description: DNS name of kubernetes apiserver load balancer
     Type: String
 
 Resources:
@@ -68,7 +68,7 @@ Resources:
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      IamInstanceProfile: !Ref IamInstanceProfile
+      IamInstanceProfile: !Ref NodeInstanceProfile
       ImageId: !Ref ImageId
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyPair
@@ -85,7 +85,7 @@ Resources:
                 content: |
                   [Service]
                   Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
-                  Environment=KEIGHTS_K8S_SERVER=${K8sApiServer}
+                  Environment=KEIGHTS_K8S_SERVER=${LoadBalancerDnsName}
 
               - path: /etc/systemd/system/keights-whisper-node.service.d/environment.conf
                 owner: root:root
@@ -100,7 +100,7 @@ Resources:
                 permissions: '0644'
                 content: |
                   [Service]
-                  Environment=KEIGHTS_APISERVER=${K8sApiServer}
+                  Environment=KEIGHTS_APISERVER=${LoadBalancerDnsName}
 
               - path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
                 owner: root:root
