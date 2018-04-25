@@ -111,23 +111,12 @@ Resources:
       ToPort: 65535
       IpProtocol: udp
 
-  MasterSecurityGroupAllNodeIcmpIngress:
+  MasterSecurityGroupAllNodeIpipIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref MasterSecurityGroup
       SourceSecurityGroupId: !Ref NodeSecurityGroup
-      FromPort: -1
-      ToPort: -1
-      IpProtocol: icmp
-
-  MasterSecurityGroupAllNodeIcmp6Ingress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref MasterSecurityGroup
-      SourceSecurityGroupId: !Ref NodeSecurityGroup
-      FromPort: -1
-      ToPort: -1
-      IpProtocol: 58
+      IpProtocol: 4
 
   MasterSecurityGroupBelowEtcdNodeTcpIngress:
     Type: AWS::EC2::SecurityGroupIngress
