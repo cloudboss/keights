@@ -1,8 +1,8 @@
 cluster_name: '{{ cluster }}'
 vpc_id: vpc-ba92ad08
-resource_bucket: cloudboss-public
 subnet_ids: subnet-6c31888d,subnet-f3cdd152,subnet-e245724f
 extra_master_security_groups: [sg-d55a9acdd085d603c, sg-dd75b80d331429d54]
+resource_bucket: cloudboss-public
 num_masters: 3
 image_id: ami-0b7b4fd758464052d
 master_instance_type: m4.large
@@ -11,13 +11,12 @@ load_balancer_scheme: internet-facing
 kms_key_id: d4baff42-9ea6-4f7d-a866-136587c77815
 kms_key_alias: alias/cloudboss
 k8s_version: 1.9.6
-kube_router_version: 0.1.0
 etcd_image: k8s.gcr.io/etcd-amd64:3.0.17
 pod_cidr: 10.0.0.0/16
 service_cidr: 10.1.0.0/16
 ssh_access_cidr: 0.0.0.0/0
 api_access_cidr: 0.0.0.0/0
-etcd_volume_size: 1
+etcd_volume_size: 10
 node_groups:
   - name: standard
     num_nodes: 3
