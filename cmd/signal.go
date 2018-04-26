@@ -18,48 +18,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package prekubelet
+package cmd
 
 import (
 	"fmt"
-	"net/http"
-	"os/exec"
-	"time"
+	"os"
 
-	"github.com/cloudboss/keights/pkg/helpers"
+	"github.com/cloudboss/keights/pkg/signal"
+	"github.com/spf13/cobra"
 )
 
-const (
-	healthz = "http://localhost:8080/healthz"
+var (
+	stackName string
+	status    string
+	resource  string
+	signalCmd = &cobra.Command{
+		Use:   "signal",
+		Short: "Signal success or failure to CloudFormation stack",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			region := os.Getenv("AWS_REGION")
+			if region == "" {
+				return fmt.Errorf("AWS_REGION must be set")
+			}
+			if status != "SUCCESS" && status != "FAILURE" {
+				return fmt.Errorf("status must be one of SUCCESS or FAILURE")
+			}
+			return signal.DoIt(stackName, status, resource)
+		},
+	}
 )
 
-func start(command string, args ...string) (*exec.Cmd, error) {
-	cmd := exec.Command(command, args...)
-	err := cmd.Start()
-	if err != nil {
-		return nil, err
-	}
-	return cmd, nil
-}
-
-func waitAndKill(cmd *exec.Cmd) error {
-	defer cmd.Process.Kill()
-	return helpers.WaitFor(30*time.Minute, func() error {
-		response, err := http.Get(healthz)
-		if err != nil {
-			return err
-		}
-		if response.StatusCode != http.StatusOK {
-			return fmt.Errorf("health check returned %s", response.Status)
-		}
-		return nil
-	})
-}
-
-func DoIt(manifestsPath string) error {
-	cmd, err := start("kubelet", "--pod-manifest-path", manifestsPath)
-	if err != nil {
-		return err
-	}
-	return waitAndKill(cmd)
+func init() {
+	RootCmd.AddCommand(signalCmd)
+	signalCmd.Flags().StringVarP(&stackName, "stack-name", "n",
+		"", "Name of CloudFormation stack to signal")
+	signalCmd.Flags().StringVarP(&status, "status", "s",
+		"", `Status to send, either "SUCCESS" or "FAILURE"`)
+	signalCmd.Flags().StringVarP(&resource, "resource", "r",
+		"AutoScalingGroup", "Resource in CloudFormation stack to signal")
 }

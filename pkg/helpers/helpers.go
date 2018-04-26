@@ -176,6 +176,15 @@ func MyIP(sess *session.Session) (string, error) {
 	return identity.PrivateIP, nil
 }
 
+func MyID(sess *session.Session) (string, error) {
+	metadata := ec2metadata.New(sess)
+	identity, err := metadata.GetInstanceIdentityDocument()
+	if err != nil {
+		return "", err
+	}
+	return identity.InstanceID, nil
+}
+
 func MyIndex(mapping map[string]string, ip string) string {
 	for k, v := range mapping {
 		if v == ip {

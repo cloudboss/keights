@@ -1,0 +1,23 @@
+[Unit]
+Description=keights-signal service
+Requires=keights-kubeadm-init.service
+After=keights-kubeadm-init.service
+
+[Service]
+# Environment=AWS_REGION=
+# Environment=KEIGHTS_STACK_NAME=
+Environment=KEIGHTS_RESOURCE=AutoScalingGroup
+Type=oneshot
+ExecStart=/bin/sh -c ' \
+    cacert=/etc/kubernetes/pki/ca.crt; \
+    myip=`curl -s http://169.254.169.254/latest/meta-data/local-ipv4` && \
+    while true; do \
+        health=`curl -s --cacert $${cacert} https://$${myip}:6443/healthz`; \
+	[ "$${health}" = "ok" ] && break; \
+	sleep 5; \
+    done && \
+    /usr/bin/keights signal \
+        -n ${KEIGHTS_STACK_NAME} \
+        -r ${KEIGHTS_RESOURCE} \
+        -s SUCCESS \
+'
