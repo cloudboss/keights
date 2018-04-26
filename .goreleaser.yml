@@ -38,6 +38,8 @@ nfpm:
       /usr/lib/systemd/system/keights-share.path
     fpm/usr/lib/systemd/system/keights-share.service:
       /usr/lib/systemd/system/keights-share.service
+    fpm/usr/lib/systemd/system/keights-signal.service:
+      /usr/lib/systemd/system/keights-signal.service
     fpm/usr/lib/systemd/system/keights-templatize-etcd.service:
       /usr/lib/systemd/system/keights-templatize-etcd.service
     fpm/usr/lib/systemd/system/keights-templatize-kubeadm-config.service:

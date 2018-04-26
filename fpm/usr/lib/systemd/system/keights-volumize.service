@@ -4,10 +4,12 @@ Before=var-lib-etcd.mount
 
 [Service]
 # Environment=AWS_REGION=
+# Environment=KEIGHTS_CLUSTER_NAME=
 # Environment=KEIGHTS_VOLUME_TAG=
 # Environment=KEIGHTS_VOLUME_DEVICE=
 Type=oneshot
 ExecStart=/usr/bin/keights volumize \
+            -c ${KEIGHTS_CLUSTER_NAME} \
             -d ${KEIGHTS_VOLUME_DEVICE} \
             -v ${KEIGHTS_VOLUME_TAG}
 

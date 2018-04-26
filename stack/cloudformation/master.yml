@@ -185,6 +185,10 @@ Resources:
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     DependsOn: KubeCa
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref NumInstances
+        Timeout: PT15M
     Properties:
       DesiredCapacity: !Ref NumInstances
       LaunchConfigurationName: !Ref LaunchConfiguration
@@ -199,6 +203,8 @@ Resources:
     UpdatePolicy:
       AutoScalingRollingUpdate:
         MaxBatchSize: 1
+        PauseTime: PT15M
+        WaitOnResourceSignals: true
         SuspendProcesses:
           - HealthCheck
 
@@ -210,7 +216,7 @@ Resources:
       VolumeType: gp2
       Tags:
         - Key: Name
-          Value: !Ref AutoScalingGroup
+          Value: !Ref ClusterName
         - Key: etcd:instance
           Value: 1
 
@@ -223,7 +229,7 @@ Resources:
       VolumeType: gp2
       Tags:
         - Key: Name
-          Value: !Ref AutoScalingGroup
+          Value: !Ref ClusterName
         - Key: etcd:instance
           Value: 2
 
@@ -236,7 +242,7 @@ Resources:
       VolumeType: gp2
       Tags:
         - Key: Name
-          Value: !Ref AutoScalingGroup
+          Value: !Ref ClusterName
         - Key: etcd:instance
           Value: 3
 
@@ -260,6 +266,7 @@ Resources:
                 content: |
                   [Service]
                   Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
                   Environment=KEIGHTS_VOLUME_TAG=etcd:instance
 
               - path: /etc/systemd/system/keights-share.service.d/environment.conf
@@ -287,6 +294,7 @@ Resources:
                 content: |
                   [Service]
                   Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
                   Environment=KEIGHTS_VOLUME_TAG=etcd:instance
                   Environment=KEIGHTS_VOLUME_DEVICE=xvdg
 
@@ -318,6 +326,14 @@ Resources:
                   Environment=KEIGHTS_SERVICE_SUBNET=${ServiceCidr}
                   Environment=KEIGHTS_IMAGE_REPOSITORY=${ImageRepository}
                   Environment=KEIGHTS_KUBERNETES_VERSION=v${KubernetesVersion}
+
+              - path: /etc/systemd/system/keights-signal.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_STACK_NAME=${AWS::StackName}
 
               - path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
                 owner: root:root
@@ -357,6 +373,7 @@ Resources:
               - systemctl start --no-block keights-collector.timer
               - systemctl start --no-block keights-share.path
               - systemctl start --no-block keights-kubeadm-init.service
+              - systemctl start --no-block keights-signal.service
 
 Outputs:
   LoadBalancerDnsName:
