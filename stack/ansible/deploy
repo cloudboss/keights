@@ -2,8 +2,10 @@
 
 : ${CLUSTER:?CLUSTER must be set}
 
-if [ ! -f "./vars/${CLUSTER}.yml" ]; then
-    echo "Missing ./vars/${CLUSTER}.yml"
+VARS=${VARS:-vars/${CLUSTER}.yml}
+
+if [ ! -f "${VARS}" ]; then
+    echo "Missing vars file ${VARS}"
     exit 1
 fi
 
@@ -26,4 +28,4 @@ fi
 
 ${PYTHON_BASE}/bin/pip install -r requirements.txt
 
-${PYTHON_BASE}/bin/ansible-playbook playbook.yml -e cluster=${CLUSTER} ${@}
+${PYTHON_BASE}/bin/ansible-playbook playbook.yml -e cluster=${CLUSTER} -e @${VARS} ${@}
