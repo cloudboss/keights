@@ -86,7 +86,11 @@ In `stack/ansible/vars`, there is an example file, `otto.yml`, containing the va
 
 Choose a name for the cluster. For our purpose, it is `legbegbe`.
 
-Make a copy of `otto.yml` and name it according to the cluster name, i.e. `legbegbe.yml`. All of the identifiers in `otto.yml` except for the AMI ID are fake, so edit the file to include a real VPC ID, subnet IDs, and so on. The AMI ID is the ID of the build for that branch in `us-east-1`. It is a public AMI, so you can copy it to your own account and region if needed.
+Make a copy of `otto.yml` and name it according to the cluster name, i.e. `legbegbe.yml`.
+
+> Note: you can override this file by setting the `VARS` environment variable and providing the path as the value, so it can be located outside of the `vars` directory and named anything you want.
+
+All of the identifiers in `otto.yml` except for the AMI ID are fake, so edit the file to include a real VPC ID, subnet IDs, and so on. The AMI ID is the ID of the build for that branch in `us-east-1`. It is a public AMI, so you can copy it to your own account and region if needed.
 
 You need either Python 3, or Python 2 with the `virtualenv` command, installed and on your `PATH`. Python 3 now includes virtual environments using the `venv` standard library module.
 
