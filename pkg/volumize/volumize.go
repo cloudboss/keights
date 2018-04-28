@@ -56,12 +56,12 @@ func NewVolumizer(sess *session.Session, availabilityZone, instanceID string) *V
 	}
 }
 
-func (v *Volumizer) WaitForVolume(asgName, volumeTag *string, minutes time.Duration) (*ec2.Volume, error) {
+func (v *Volumizer) WaitForVolume(clusterName, volumeTag *string, minutes time.Duration) (*ec2.Volume, error) {
 	var output *ec2.DescribeVolumesOutput
 	filters := []*ec2.Filter{
 		&ec2.Filter{
 			Name:   aws.String("tag:Name"),
-			Values: []*string{asgName},
+			Values: []*string{clusterName},
 		},
 		&ec2.Filter{
 			Name:   aws.String("tag-key"),
@@ -146,7 +146,7 @@ func (v *Volumizer) MakeFilesystem(device, fstype string) error {
 	return nil
 }
 
-func DoIt(device, volumeTag, fsType string, minutes int) error {
+func DoIt(device, volumeTag, fsType, clusterName string, minutes int) error {
 	sess := session.New()
 	metadata := ec2metadata.New(sess)
 	identity, err := metadata.GetInstanceIdentityDocument()
@@ -154,11 +154,7 @@ func DoIt(device, volumeTag, fsType string, minutes int) error {
 		return err
 	}
 	volumizer := NewVolumizer(sess, identity.AvailabilityZone, identity.InstanceID)
-	asgName, err := helpers.AsgName(sess)
-	if err != nil {
-		return err
-	}
-	volume, err := volumizer.WaitForVolume(asgName, &volumeTag, time.Duration(minutes))
+	volume, err := volumizer.WaitForVolume(&clusterName, &volumeTag, time.Duration(minutes))
 	if err != nil {
 		return err
 	}
