@@ -27,7 +27,7 @@ resource_bucket: cloudboss-public
 num_masters: 3
 
 # AMI ID.
-image_id: ami-05d0a1d4548c65003
+image_id: ami-00ef6c2eb0dc29da1
 
 # Size of master EC2 instances.
 master_instance_type: m4.large
