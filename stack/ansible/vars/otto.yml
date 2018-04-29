@@ -46,7 +46,7 @@ kms_key_id: d4baff42-9ea6-4f7d-a866-136587c77815
 kms_key_alias: alias/cloudboss
 
 # Version of Kubernetes, must match what is in the AMI.
-k8s_version: 1.9.6
+k8s_version: 1.9.7
 
 # Image used for etcd.
 etcd_image: k8s.gcr.io/etcd-amd64:3.0.17
