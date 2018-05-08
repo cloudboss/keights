@@ -4,7 +4,7 @@ language: go
 go: '1.10'
 script:
   - make test
-after_success:
+after_script:
   - test -n "${TRAVIS_TAG}" && make clean
   - test -n "${TRAVIS_TAG}" && make VERSION="${TRAVIS_TAG}" github-release
 env:
