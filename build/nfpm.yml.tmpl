@@ -1,0 +1,15 @@
+name: keights
+vendor: Cloudboss Corporation
+homepage: https://github.com/cloudboss/keights
+maintainer: Joseph Wright <joseph@cloudboss.co>
+description: Utilities for boostrapping Kubernetes
+license: MIT
+arch: amd64
+version: __VERSION__
+bindir: /usr/bin
+files:
+  _output/keights/keights: /usr/bin/keights
+  keights/resources/etc/kubernetes/addons/*: /etc/kubernetes/addons
+  keights/resources/usr/lib/systemd/system/*: /usr/lib/systemd/system
+  keights/resources/usr/lib/tmpfiles.d/keights.conf: /usr/lib/tmpfiles.d/keights.conf
+  keights/resources/usr/share/keights/*: /usr/share/keights

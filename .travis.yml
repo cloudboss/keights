@@ -2,16 +2,11 @@ dist: trusty
 sudo: false
 language: go
 go: '1.10'
-install:
-  - curl -L -o /tmp/goreleaser.tar.gz https://github.com/goreleaser/goreleaser/releases/download/v0.64.0/goreleaser_Linux_x86_64.tar.gz
-  - tar -C /tmp -zxf /tmp/goreleaser.tar.gz goreleaser
-  - export PATH=${GOPATH}/bin:${PATH}
 script:
-  - go test -v ./...
-  - test -n "${TRAVIS_TAG}" || /tmp/goreleaser --skip-validate --skip-publish
+  - make test
 after_success:
-  - test -n "${TRAVIS_TAG}" && go clean
-  - test -n "${TRAVIS_TAG}" && /tmp/goreleaser
+  - test -n "${TRAVIS_TAG}" && make clean
+  - test -n "${TRAVIS_TAG}" && make release
 env:
   global:
     secure: TgNZ24PI7xZ/30ekiJUkBzlRFxRgXh+TnoWdzEZAkAw+/uWOxtz6nQVXg7Zed6snuu2Yj9r01uGusFDLLBaacvOpJpm4wySBmccwMmC+IUigdIYnb5Vycr8ECalZqCXkwF78nvc5knqXIi77bkgnr8jiBfkKZ2oGq1vMURezUsDkTSAXYIDndrmbylrLum6es0QL8+V7R3otGMTB2UdGJHmeta5/FBHxNQ7TSO7v7brWdYXFo8waDiI2X+mY1qW566c2FqD7UyGmoX5UH4+Pdq+V2uMEHxhfuW38xiVA2M6KrFiZ27zZ2yG3ucj1Gb7qcz63aEcjOvubLor3zwvkrT1CEK+dGX5NoXHwzIzuYe9qkIW1bCJ+dP4TaToPH7GRX9macMYKZQqYuhUJQchu6ovZ5+HueNgv0KQ5QVr7oPqWZ7JT5X07fBOITpOE5lwkG3dXc1AVmSKVtht4kkw6ckdWOIsXjdwv6925jNRVDNVslnEwtJao7fsv/a/zg4+TnMDkISROxvcZpjTEqRRrONRMxgof6r0/nFXl4V1E5OzrDgFdHBP2Ws3i2AaG6jFjJ2AwFmjiebLWUDk5G+vaoX7UD+DcnU27s74mwfuFckho5B9zbFvTqPID8acyFszagsHiMMQlCwisTt8DQlVOiLg6mneBHmVvPo8TnIXPCpQ=

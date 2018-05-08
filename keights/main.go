@@ -20,7 +20,7 @@
 
 package main
 
-import "github.com/cloudboss/keights/cmd"
+import "github.com/cloudboss/keights/keights/cmd"
 
 func main() {
 	cmd.Execute()
