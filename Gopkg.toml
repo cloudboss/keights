@@ -36,8 +36,3 @@
 [[constraint]]
   name = "github.com/stretchr/testify"
   version = "1.2.1"
-
-# Transitive dependency of k8s.io/client-go
-[[constraint]]
-  name = "k8s.io/apimachinery"
-  revision = "019ae5ada31de202164b118aee88ee2d14075c31"
