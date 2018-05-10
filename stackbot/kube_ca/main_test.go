@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/cloudboss/stackhand/mocks"
+	"github.com/cloudboss/keights/mocks"
 	"github.com/stretchr/testify/mock"
 )
 

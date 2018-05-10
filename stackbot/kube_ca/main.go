@@ -28,8 +28,8 @@ import (
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/cloudboss/stackhand/response"
-	"github.com/cloudboss/stackhand/whisperer"
+	"github.com/cloudboss/keights/stackbot/response"
+	"github.com/cloudboss/keights/stackbot/whisperer"
 	cf "github.com/eawsy/aws-lambda-go-event/service/lambda/runtime/event/cloudformationevt"
 	certutil "k8s.io/client-go/util/cert"
 	kubeadmconstants "k8s.io/kubernetes/cmd/kubeadm/app/constants"
