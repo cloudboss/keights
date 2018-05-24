@@ -1,0 +1,64 @@
+#!/bin/sh -e
+
+GITHUB_TOKEN=${GITHUB_TOKEN:?required environment variable}
+VERSION=${VERSION:?required environment variable}
+REPO_SLUG=${REPO_SLUG:?required environment variable}
+
+api_endpoint=https://api.github.com
+uploads_endpoint=https://uploads.github.com
+
+out_file=`mktemp`
+trap "rm -f ${out_file}" 0
+
+fail()
+{
+    echo "${1}"
+    exit 1
+}
+
+release()
+{
+    http_code=`curl -s \
+        -w '%{http_code}' \
+        -o ${out_file} \
+        -H 'Content-type: application/json' \
+        -H 'Accept: application/vnd.github.v3+json' \
+        -H "Authorization: token ${GITHUB_TOKEN}" \
+        "${api_endpoint}/repos/${REPO_SLUG}/releases" \
+        -d "{\"tag_name\":\"${VERSION}\"}"`
+    [ "${http_code}" = "201" ] || return 1
+    jq '.id' ${out_file}
+}
+
+upload()
+{
+    local artifact=${1}
+    local artifact_path=${2}
+    local release_id=${3}
+
+    http_code=`curl -s \
+        -w '%{http_code}' \
+        -o ${out_file} \
+        -H 'Content-type: application/json' \
+        -H 'Accept: application/vnd.github.v3+json' \
+        -H "Authorization: token ${GITHUB_TOKEN}" \
+        "${uploads_endpoint}/repos/${REPO_SLUG}/releases/${release_id}/assets?name=${artifact}" \
+        --data-binary @${artifact_path}`
+    [ "${http_code}" = "201" ]
+    return ${?}
+}
+
+release_id=`release` || fail "`cat ${out_file}`"
+
+deb_artifact="keights_${VERSION}_linux_amd64.deb"
+deb_artifact_path="_output/keights-deb/${deb_artifact}"
+[ -f ${deb_artifact_path} ] || fail "${deb_artifact_path} not found"
+upload "${deb_artifact}" "${deb_artifact_path}" "${release_id}" || fail "`cat ${out_file}`"
+
+bots="kube_ca subnet_to_az"
+for bot in ${bots}; do
+    bot_artifact="${bot}-${VERSION}.zip"
+    bot_artifact_path="_output/stackbot/${bot}/${bot_artifact}"
+    [ -f ${bot_artifact_path} ] || fail "${bot_artifact_path} not found"
+    upload "${bot_artifact}" "${bot_artifact_path}" "${release_id}" || fail "`cat ${out_file}`"
+done
