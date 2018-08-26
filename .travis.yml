@@ -1,7 +1,7 @@
 dist: trusty
 sudo: false
 language: go
-go: '1.10'
+go: '1.11'
 script:
   - make test
 after_script:
