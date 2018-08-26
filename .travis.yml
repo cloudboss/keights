@@ -3,6 +3,7 @@ sudo: false
 language: go
 go: '1.11'
 script:
+  - unset GOPATH
   - make test
 after_script:
   - test -n "${TRAVIS_TAG}" && make clean
