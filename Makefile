@@ -14,7 +14,7 @@ keights:
 keights-deb: setup keights
 	mkdir -p _output/keights-deb
 	sed "s|__VERSION__|$(VERSION)|g" build/nfpm.yml.tmpl > _output/keights-deb/nfpm.yml
-	$(GOPATH)/bin/nfpm pkg \
+	$(HOME)/go/bin/nfpm pkg \
 		-f _output/keights-deb/nfpm.yml \
 		-t _output/keights-deb/keights_$(VERSION)_$(GOOS)_$(GOARCH).deb
 
