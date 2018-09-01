@@ -21,47 +21,50 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 
+	"github.com/aws/aws-lambda-go/cfn"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/cloudboss/keights/stackbot/response"
-	cf "github.com/eawsy/aws-lambda-go-event/service/lambda/runtime/event/cloudformationevt"
+	"github.com/mitchellh/mapstructure"
 )
 
-func Handle(event *cf.Event) error {
-	responder := response.NewResponder(event)
+func Handle(_ctx context.Context, event cfn.Event) (string, map[string]interface{}, error) {
+	physicalResourceID := ""
+	data := make(map[string]interface{})
 
-	if event.RequestType != "Create" {
-		return responder.FireSuccess()
+	if event.RequestType == "Delete" {
+		return physicalResourceID, data, nil
 	}
 
 	var props resourceProperties
-	err := json.Unmarshal(event.ResourceProperties, &props)
+	err := mapstructure.Decode(event.ResourceProperties, &props)
 	if err != nil {
-		return responder.FireFailed(err.Error())
+		return physicalResourceID, data, err
 	}
 
 	sess, err := session.NewSession()
 	if err != nil {
-		return responder.FireFailed(err.Error())
+		return physicalResourceID, data, err
 	}
+
 	client := ec2.New(sess)
 	az, err := subnetToAZ(client, *props.SubnetID)
 	if err != nil {
-		return responder.FireFailed(err.Error())
+		return physicalResourceID, data, err
 	}
 
-	data := map[string]string{"AvailabilityZone": az}
-	return responder.SendData(data)
+	data["AvailabilityZone"] = az
+
+	return physicalResourceID, data, err
 }
 
 type resourceProperties struct {
 	ServiceToken *string
-	SubnetID     *string `json:"SubnetId"`
+	SubnetID     *string `mapstructure:"SubnetId"`
 }
 
 func subnetToAZ(client *ec2.EC2, subnetID string) (string, error) {
@@ -82,5 +85,5 @@ func subnetToAZ(client *ec2.EC2, subnetID string) (string, error) {
 }
 
 func main() {
-	lambda.Start(Handle)
+	lambda.Start(cfn.LambdaWrap(Handle))
 }
