@@ -127,28 +127,12 @@ Resources:
       Timeout: 30
       Role: !Ref LambdaRoleArn
 
-  SubnetToAz1:
+  SubnetToAz:
     Type: Custom::SubnetToAz
     DependsOn: SubnetToAzFunction
     Properties:
       ServiceToken: !GetAtt [SubnetToAzFunction, Arn]
-      SubnetId: !Select [0, !Ref SubnetIds]
-
-  SubnetToAz2:
-    Type: Custom::SubnetToAz
-    DependsOn: SubnetToAzFunction
-    Condition: HasThreeMasters
-    Properties:
-      ServiceToken: !GetAtt [SubnetToAzFunction, Arn]
-      SubnetId: !Select [1, !Ref SubnetIds]
-
-  SubnetToAz3:
-    Type: Custom::SubnetToAz
-    DependsOn: SubnetToAzFunction
-    Condition: HasThreeMasters
-    Properties:
-      ServiceToken: !GetAtt [SubnetToAzFunction, Arn]
-      SubnetId: !Select [2, !Ref SubnetIds]
+      SubnetIds: !Ref SubnetIds
 
   KubeCa:
     Type: Custom::KubeCa
@@ -215,7 +199,7 @@ Resources:
   Volume1:
     Type: AWS::EC2::Volume
     Properties:
-      AvailabilityZone: !GetAtt [SubnetToAz1, AvailabilityZone]
+      AvailabilityZone: !Select [0, !Split [",", !GetAtt SubnetToAz.AvailabilityZones]]
       Size: !Ref EtcdVolumeSize
       VolumeType: gp2
       Tags:
@@ -228,7 +212,7 @@ Resources:
     Type: AWS::EC2::Volume
     Condition: HasThreeMasters
     Properties:
-      AvailabilityZone: !GetAtt [SubnetToAz2, AvailabilityZone]
+      AvailabilityZone: !Select [1, !Split [",", !GetAtt SubnetToAz.AvailabilityZones]]
       Size: !Ref EtcdVolumeSize
       VolumeType: gp2
       Tags:
@@ -241,7 +225,7 @@ Resources:
     Type: AWS::EC2::Volume
     Condition: HasThreeMasters
     Properties:
-      AvailabilityZone: !GetAtt [SubnetToAz3, AvailabilityZone]
+      AvailabilityZone: !Select [2, !Split [",", !GetAtt SubnetToAz.AvailabilityZones]]
       Size: !Ref EtcdVolumeSize
       VolumeType: gp2
       Tags:
