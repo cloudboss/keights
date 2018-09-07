@@ -25,41 +25,35 @@ import (
 	"testing"
 
 	"github.com/cloudboss/keights/mocks"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 func TestHandleCreateSuccess(t *testing.T) {
 	var tests = []struct {
-		setResponse       func(r *mocks.Responder)
 		setStoreParameter func(s *mocks.Whisperer)
+		err               error
 	}{
 		{
-			func(r *mocks.Responder) {
-				r.On("FireSuccess").Return(nil)
-			},
 			func(w *mocks.Whisperer) {
 				w.On("StoreParameter", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 			},
+			nil,
 		},
 		{
-			func(r *mocks.Responder) {
-				err := fmt.Errorf("oops")
-				r.On("FireFailed", mock.Anything).Return(err)
-			},
 			func(w *mocks.Whisperer) {
 				err := fmt.Errorf("oops")
 				w.On("StoreParameter", mock.Anything, mock.Anything, mock.Anything).Return(err)
 			},
+			fmt.Errorf("oops"),
 		},
 	}
 	for _, test := range tests {
-		responder := &mocks.Responder{}
 		whisp := &mocks.Whisperer{}
-		props := resourceProperties{}
-		test.setResponse(responder)
+		props := resourceProperties{NumInstances: "3"}
 		test.setStoreParameter(whisp)
-		_ = handleCreate(props, whisp, responder)
+		err := handleCreate(props, whisp)
+		assert.Equal(t, err, test.err)
 		whisp.AssertExpectations(t)
-		responder.AssertExpectations(t)
 	}
 }

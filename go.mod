@@ -6,12 +6,11 @@ require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible // indirect
 	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
-	github.com/aws/aws-lambda-go v1.1.0
+	github.com/aws/aws-lambda-go v1.6.0
 	github.com/aws/aws-sdk-go v1.13.11
 	github.com/blakesmith/ar v0.0.0-20150311145944-8bd4349a67f2 // indirect
 	github.com/davecgh/go-spew v1.1.0 // indirect
 	github.com/docker/distribution v2.6.2+incompatible // indirect
-	github.com/eawsy/aws-lambda-go-event v0.0.0-20171129201522-e888a5ec6428
 	github.com/emicklei/go-restful v2.6.0+incompatible // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-ini/ini v1.33.0 // indirect
@@ -32,6 +31,7 @@ require (
 	github.com/jtolds/gls v4.2.1+incompatible // indirect
 	github.com/mailru/easyjson v0.0.0-20180311161919-f594efddfa17 // indirect
 	github.com/mattn/go-zglob v0.0.0-20180803001819-2ea3427bfa53 // indirect
+	github.com/mitchellh/mapstructure v1.0.0
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v0.0.0-20180228065516-1df9eeb2bb81 // indirect
 	github.com/pkg/errors v0.8.0 // indirect

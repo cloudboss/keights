@@ -21,66 +21,77 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
+	"strings"
 
+	"github.com/aws/aws-lambda-go/cfn"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/cloudboss/keights/stackbot/response"
-	cf "github.com/eawsy/aws-lambda-go-event/service/lambda/runtime/event/cloudformationevt"
+	"github.com/mitchellh/mapstructure"
 )
 
-func Handle(event *cf.Event) error {
-	responder := response.NewResponder(event)
+func Handle(_ctx context.Context, event cfn.Event) (string, map[string]interface{}, error) {
+	fmt.Printf("Event: %v\n", event)
 
-	if event.RequestType != "Create" {
-		return responder.FireSuccess()
+	physicalResourceID := ""
+	data := make(map[string]interface{})
+
+	if event.RequestType == "Delete" {
+		return physicalResourceID, data, nil
 	}
 
 	var props resourceProperties
-	err := json.Unmarshal(event.ResourceProperties, &props)
+	err := mapstructure.Decode(event.ResourceProperties, &props)
 	if err != nil {
-		return responder.FireFailed(err.Error())
+		return physicalResourceID, data, err
 	}
 
 	sess, err := session.NewSession()
 	if err != nil {
-		return responder.FireFailed(err.Error())
-	}
-	client := ec2.New(sess)
-	az, err := subnetToAZ(client, *props.SubnetID)
-	if err != nil {
-		return responder.FireFailed(err.Error())
+		return physicalResourceID, data, err
 	}
 
-	data := map[string]string{"AvailabilityZone": az}
-	return responder.SendData(data)
+	client := ec2.New(sess)
+	azs, err := subnetsToAZs(client, props.SubnetIDs)
+	if err != nil {
+		return physicalResourceID, data, err
+	}
+
+	data["AvailabilityZones"] = azs
+
+	fmt.Printf("Data: %v\n", data)
+
+	return physicalResourceID, data, err
 }
 
 type resourceProperties struct {
 	ServiceToken *string
-	SubnetID     *string `json:"SubnetId"`
+	SubnetIDs    []*string `mapstructure:"SubnetIds"`
 }
 
-func subnetToAZ(client *ec2.EC2, subnetID string) (string, error) {
-	subnetsOutput, err := client.DescribeSubnets(
-		&ec2.DescribeSubnetsInput{
-			SubnetIds: []*string{aws.String(subnetID)},
-		},
-	)
-	if err != nil {
-		return "", err
+func subnetsToAZs(client *ec2.EC2, subnetIDs []*string) (string, error) {
+	azs := make([]string, len(subnetIDs))
+	for i, subnetID := range subnetIDs {
+		subnetsOutput, err := client.DescribeSubnets(
+			&ec2.DescribeSubnetsInput{
+				SubnetIds: []*string{subnetID},
+			},
+		)
+		if err != nil {
+			return "", fmt.Errorf("error describing subnets: %v", err.Error())
+		}
+		subnets := subnetsOutput.Subnets
+		numSubnets := len(subnets)
+		if numSubnets != 1 {
+			return "", fmt.Errorf("expected 1 subnet, found %d", numSubnets)
+		}
+		azs[i] = *subnets[0].AvailabilityZone
 	}
-	numSubnets := len(subnetsOutput.Subnets)
-	if numSubnets != 1 {
-		return "", fmt.Errorf("Expected 1 subnet, found %d", numSubnets)
-	}
-	subnet := subnetsOutput.Subnets[0]
-	return *subnet.AvailabilityZone, nil
+	return strings.Join(azs, ","), nil
 }
 
 func main() {
-	lambda.Start(Handle)
+	lambda.Start(cfn.LambdaWrap(Handle))
 }

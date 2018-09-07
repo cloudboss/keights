@@ -21,16 +21,17 @@
 package main
 
 import (
+	"context"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/json"
 	"fmt"
+	"strconv"
 
+	"github.com/aws/aws-lambda-go/cfn"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/cloudboss/keights/stackbot/response"
 	"github.com/cloudboss/keights/stackbot/whisperer"
-	cf "github.com/eawsy/aws-lambda-go-event/service/lambda/runtime/event/cloudformationevt"
+	"github.com/mitchellh/mapstructure"
 	certutil "k8s.io/client-go/util/cert"
 	kubeadmconstants "k8s.io/kubernetes/cmd/kubeadm/app/constants"
 	"k8s.io/kubernetes/cmd/kubeadm/app/phases/certs"
@@ -58,8 +59,8 @@ type resourceProperties struct {
 	ServiceToken     string
 	ClusterName      string
 	LoadBalancerName string
-	NumInstances     int    `json:"NumInstances,string"`
-	KMSKeyID         string `json:"KmsKeyId"`
+	NumInstances     string
+	KMSKeyID         string `mapstructure:"KmsKeyId"`
 }
 
 func newServerKeyPair(caCert *x509.Certificate, caKey *rsa.PrivateKey, cn string, dnsNames []string) (*x509.Certificate, *rsa.PrivateKey, error) {
@@ -267,16 +268,16 @@ func controllerNames(clusterName string, numInstances int) []string {
 	return names
 }
 
-func handleCreate(props resourceProperties, whisp whisperer.Whisperer, responder response.Responder) error {
-	names := controllerNames(props.ClusterName, props.NumInstances)
-	err := newCerts(whisp, props.ClusterName, props.KMSKeyID, props.LoadBalancerName, names)
+func handleCreate(props resourceProperties, whisp whisperer.Whisperer) error {
+	numInstances, err := strconv.Atoi(props.NumInstances)
 	if err != nil {
-		return responder.FireFailed(err.Error())
+		return err
 	}
-	return responder.FireSuccess()
+	names := controllerNames(props.ClusterName, numInstances)
+	return newCerts(whisp, props.ClusterName, props.KMSKeyID, props.LoadBalancerName, names)
 }
 
-func handleDelete(props resourceProperties, whisp whisperer.Whisperer, responder response.Responder) error {
+func handleDelete(props resourceProperties, whisp whisperer.Whisperer) error {
 	clusterName := props.ClusterName
 	parameters := []string{
 		fmt.Sprintf(clusterSecretPath, clusterName, kubeadmconstants.CACertName),
@@ -299,41 +300,48 @@ func handleDelete(props resourceProperties, whisp whisperer.Whisperer, responder
 	}
 	for _, parameter := range parameters {
 		if err := whisp.DeleteParameter(&parameter); err != nil {
-			return responder.FireFailed(err.Error())
+			return err
 		}
-	}
-	return responder.FireSuccess()
-}
-
-func Handle(event *cf.Event) error {
-	responder := response.NewResponder(event)
-
-	if event.RequestType == "Update" {
-		return responder.FireSuccess()
-	}
-
-	var props resourceProperties
-	err := json.Unmarshal(event.ResourceProperties, &props)
-	if err != nil {
-		return responder.FireFailed(err.Error())
-	}
-
-	sess, err := session.NewSession()
-	if err != nil {
-		return responder.FireFailed(err.Error())
-	}
-	whisp := whisperer.NewSSMWhisperer(sess)
-
-	if event.RequestType == "Create" {
-		return handleCreate(props, whisp, responder)
-	}
-
-	if event.RequestType == "Delete" {
-		return handleDelete(props, whisp, responder)
 	}
 	return nil
 }
 
+func Handle(_ctx context.Context, event cfn.Event) (string, map[string]interface{}, error) {
+	physicalResourceID := ""
+	data := make(map[string]interface{})
+
+	if event.RequestType == "Update" {
+		return physicalResourceID, data, nil
+	}
+
+	var props resourceProperties
+	err := mapstructure.Decode(event.ResourceProperties, &props)
+	if err != nil {
+		return physicalResourceID, data, err
+	}
+
+	sess, err := session.NewSession()
+	if err != nil {
+		return physicalResourceID, data, err
+	}
+	whisp := whisperer.NewSSMWhisperer(sess)
+
+	if event.RequestType == "Create" {
+		err = handleCreate(props, whisp)
+		if err != nil {
+			return physicalResourceID, data, err
+		}
+	}
+
+	if event.RequestType == "Delete" {
+		err = handleDelete(props, whisp)
+		if err != nil {
+			return physicalResourceID, data, err
+		}
+	}
+	return physicalResourceID, data, nil
+}
+
 func main() {
-	lambda.Start(Handle)
+	lambda.Start(cfn.LambdaWrap(Handle))
 }
