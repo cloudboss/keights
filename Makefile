@@ -18,6 +18,12 @@ keights-deb: setup keights
 		-f _output/keights-deb/nfpm.yml \
 		-t _output/keights-deb/keights_$(VERSION)_$(GOOS)_$(GOARCH).deb
 
+keights-stack:
+	echo $(VERSION) > stack/ansible/keights-stack/version
+	cp stack/cloudformation/*.yml stack/ansible/keights-stack/files
+	mkdir -p _output/keights-stack
+	tar czf _output/keights-stack/keights-stack-$(VERSION).tar.gz -C stack/ansible keights-stack
+
 stackbot:
 	go build -o _output/stackbot/kube_ca/kube_ca ./stackbot/kube_ca
 	(cd _output/stackbot/kube_ca && zip kube_ca-$(VERSION).zip kube_ca)
@@ -25,7 +31,7 @@ stackbot:
 	go build -o _output/stackbot/subnet_to_az/subnet_to_az ./stackbot/subnet_to_az
 	(cd _output/stackbot/subnet_to_az && zip subnet_to_az-$(VERSION).zip subnet_to_az)
 
-dist: keights-deb stackbot
+dist: keights-deb keights-stack stackbot
 
 github-release: dist
 	VERSION=$(VERSION) REPO_SLUG=$(REPO_SLUG) ./build/github-release

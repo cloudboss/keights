@@ -2,7 +2,7 @@
 
 : ${CLUSTER:?CLUSTER must be set}
 
-VARS=${VARS:-vars/${CLUSTER}.yml}
+VARS=${VARS:-vars.yml}
 
 if [ ! -f "${VARS}" ]; then
     echo "Missing vars file ${VARS}"
@@ -13,13 +13,13 @@ searchvirt()
 {
     # Nowadays prefer Python 3
     if which python3 1>/dev/null; then
-	echo 'python3 -m venv'
-	return
+       echo 'python3 -m venv'
+       return
     fi
     which virtualenv
 }
 
-PYTHON_BASE="${PYTHON_BASE:-./.virtualenv}"
+PYTHON_BASE="${PYTHON_BASE:-./.cache/virtualenv}"
 
 if [ ! -d ${PYTHON_BASE} ]; then
     venv=`searchvirt`
@@ -27,5 +27,7 @@ if [ ! -d ${PYTHON_BASE} ]; then
 fi
 
 ${PYTHON_BASE}/bin/pip install -r requirements.txt
+
+[ -f requirements.yml ] && ${PYTHON_BASE}/bin/ansible-galaxy install -r requirements.yml
 
 ${PYTHON_BASE}/bin/ansible-playbook playbook.yml -e cluster=${CLUSTER} -e @${VARS} ${@}

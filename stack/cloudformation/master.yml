@@ -88,17 +88,13 @@ Parameters:
     Description: Version of Kubernetes
     Type: String
     Default: 1.10.0
+  KeightsVersion:
+    Description: Version of Keights
+    Type: String
   ResourceBucket:
     Description: Bucket used to store Lambda archives
     Type: String
     Default: cloudboss-public
-
-Mappings:
-  LambdaUrls:
-    SubnetToAzFunction:
-      Key: lambda/co/cloudboss/stackhand/subnet_to_az/0.1.0/go1.x/subnet_to_az-0.1.0.zip
-    KubeCaFunction:
-      Key: lambda/co/cloudboss/stackhand/kube_ca/0.1.0/go1.x/kube_ca-0.1.0.zip
 
 Conditions:
   HasThreeMasters: !Equals [!Ref NumInstances, 3]
@@ -109,7 +105,7 @@ Resources:
     Properties:
       Code:
         S3Bucket: !Ref ResourceBucket
-        S3Key: !FindInMap [LambdaUrls, SubnetToAzFunction, Key]
+        S3Key: !Sub stackbot/subnet_to_az/${KeightsVersion}/go1.x/subnet_to_az-${KeightsVersion}.zip
       Handler: subnet_to_az
       Runtime: go1.x
       Timeout: 30
@@ -120,7 +116,7 @@ Resources:
     Properties:
       Code:
         S3Bucket: !Ref ResourceBucket
-        S3Key: !FindInMap [LambdaUrls, KubeCaFunction, Key]
+        S3Key: !Sub stackbot/kube_ca/${KeightsVersion}/go1.x/kube_ca-${KeightsVersion}.zip
       Handler: kube_ca
       Runtime: go1.x
       MemorySize: 512
@@ -186,7 +182,7 @@ Resources:
       LoadBalancerNames: [!Ref LoadBalancer]
       Tags:
         - Key: Name
-          Value: !Sub ${ClusterName}-master
+          Value: !Sub ${AWS::StackName}
           PropagateAtLaunch: true
     UpdatePolicy:
       AutoScalingRollingUpdate:

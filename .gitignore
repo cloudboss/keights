@@ -1,3 +1,5 @@
 .DS_STORE
 *.retry
 dist/
+stack/ansible/keights-stack/version
+stack/ansible/keights-stack/files/*.yml
