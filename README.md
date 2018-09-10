@@ -12,7 +12,7 @@ Keights has the following features:
 
 You don't need anything except CloudFormation to get started. The only things to download are three CloudFormation templates.
 
-Though not required, an Ansible playbook is offered to deploy everything in one shot. An additional script is provided which automatically configures your kubeconfig.
+Though not required, an Ansible role is offered to deploy everything in one shot. An additional script is provided which automatically configures your kubeconfig.
 
 One caveat is that if you are not deploying in `us-east-1`, you will have to copy some CloudFormation custom Lambdas from the `cloudboss-public` S3 bucket to a bucket in your region, as Lambdas won't deploy from a bucket outside of their region.
 
@@ -78,38 +78,38 @@ The `NodeSecurityGroup` output from `common.yml` should go into the `NodeSecurit
 
 ## Deploy with Ansible
 
-The `stack/ansible` directory contains an Ansible playbook which deploys all CloudFormation stacks together, passing the outputs of one stack as inputs to another as needed.
+The `stack/ansible` directory contains an Ansible role `keights-stack` which deploys all CloudFormation stacks together, passing the outputs of one stack as inputs to another as needed. The role is published to GitHub on each `keights` release.
 
-It should be called with the `deploy` script in the same directory, which installs Ansible in a virtualenv and does a bit of sanity checking before running the playbook.
+A `deploy` script is included in `stack/ansible` which creates a Python virtualenv, installs Ansible into it, uses `ansible-galaxy` to download the Ansible role, and then runs `ansible-playbook`. You need either Python 3, or Python 2 with the `virtualenv` command, installed and on your `PATH`. Python 3 now includes virtual environments using the `venv` standard library module.
 
-In `stack/ansible/vars`, there is an example file, `otto.yml`, containing the variables for one cluster. Each cluster deployed by Ansible will require such a file. The file is documented with all of the available options. If it isn't flexible enough, you can modify `stack/ansible/playbook.yml`.
+The directory `stack/ansible/example` contains the recommended layout, structured according to the expectations of the `deploy` script.
+
+To build a cluster, create a directory with the same layout as the `example` directory. All of the identifiers in `example/vars.yml` are fake, so edit the file to include a real VPC ID, subnet IDs, and so on. In `requirements.yml`, the version of the Ansible role should match the `keights` version.
 
 Choose a name for the cluster. For our purpose, it is `legbegbe`.
-
-Make a copy of `otto.yml` and name it according to the cluster name, i.e. `legbegbe.yml`.
-
-> Note: you can override this file by setting the `VARS` environment variable and providing the path as the value, so it can be located outside of the `vars` directory and named anything you want.
-
-All of the identifiers in `otto.yml` except for the AMI ID are fake, so edit the file to include a real VPC ID, subnet IDs, and so on. The AMI ID is the ID of the build for that branch in `us-east-1`. It is a public AMI, so you can copy it to your own account and region if needed.
-
-You need either Python 3, or Python 2 with the `virtualenv` command, installed and on your `PATH`. Python 3 now includes virtual environments using the `venv` standard library module.
 
 You also need AWS credentials and region to be in scope. You can do this with environment variables or a credentials file.
 
 The cluster name must be set as an environment variable called `CLUSTER`.
 
-Now run `deploy`:
+Now run `deploy` from the directory you created:
 
 ```
 > export AWS_DEFAULT_REGION=us-east-1
 > export AWS_PROFILE=keights
 > export CLUSTER=legbegbe
-> ./deploy
+> /path/to/deploy
 ```
 
 The `deploy` scripts passes any additional arguments on to `ansible-playbook`, so for example you can increase the logging by passing `-vvv` to `deploy`.
 
 In a few minutes, your cluster should be ready.
+
+### Keeping up to date
+
+Keep your cluster up to date by modifying any of the files in your directory and rerunning `deploy`. For example, you may update the Kubernetes version by modifying the version of the `keights-stack` role in `requirements.yml` when there is a new `keights` release. `keights` strives to be able to make this transition smoothly, however always run such updates on a test cluster before running on a live system.
+
+It is highly recommended to check your cluster's Ansible directory into source control, and let a CI/CD tool run `deploy` when the source changes. The Ansible role is idempotent, and there should be no changes unless the source changes. It is important to keep all versions pinned in `requirements.txt` and `requirements.yml`, to avoid unforeseen side effects.
 
 ## Connecting to the cluster
 
@@ -130,12 +130,8 @@ Now you can use kubectl to connect to the cluster.
 > kubectl get no
 ```
 
-It is normal to get connection errors at first, give it a few minutes to come up.
-
 # AMI
 
 A Debian AMI is created for each release containing the installed keights package and all dependencies, including required docker images.
 
 The software should in theory run on any systemd based Linux distribution, such as RHEL, though it is currently only tested on Debian.
-
-Keights may be deployed using plain CloudFormation templates located in `stack/cloudformation`.

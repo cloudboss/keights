@@ -6,8 +6,12 @@ Parameters:
   ClusterName:
     Description: Name of Kubernetes cluster
     Type: String
-  NumInstances:
-    Description: Number of node instances
+  MinInstances:
+    Description: Minimum number of instances
+    Type: Number
+    Default: 1
+  MaxInstances:
+    Description: Maximum number of instances
     Type: Number
     Default: 1
   VpcId:
@@ -52,14 +56,13 @@ Resources:
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      DesiredCapacity: !Ref NumInstances
       LaunchConfigurationName: !Ref LaunchConfiguration
-      MaxSize: !Ref NumInstances
-      MinSize: !Ref NumInstances
+      MinSize: !Ref MinInstances
+      MaxSize: !Ref MaxInstances
       VPCZoneIdentifier: !Ref SubnetIds
       Tags:
         - Key: Name
-          Value: !Sub ${ClusterName}-node
+          Value: !Sub ${AWS::StackName}
           PropagateAtLaunch: true
     UpdatePolicy:
       AutoScalingRollingUpdate:

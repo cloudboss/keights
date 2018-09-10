@@ -1,0 +1,29 @@
+- hosts: localhost
+  connection: local
+  roles:
+  - role: keights-stack
+    keights_stack:
+      cluster_name: '{{ cluster }}'
+      vpc_id: '{{ vpc_id }}'
+      kms_key_id: '{{ kms_key_id }}'
+      kms_key_alias: '{{ kms_key_alias }}'
+      api_access_cidr: 0.0.0.0/0
+      ssh_access_cidr: 0.0.0.0/0
+      resource_bucket: '{{ resource_bucket }}'
+      masters:
+        instance_type: t2.large
+        pod_cidr: 10.0.0.0/16
+        service_cidr: 10.1.0.0/16
+        subnet_ids: '{{ master_subnet_ids }}'
+        keypair: '{{ keypair }}'
+        load_balancer_scheme: internet-facing
+        etcd_volume_size: 10
+      node_groups:
+      - name: app
+        min_instances: '{{ node_min_instances }}'
+        max_instances: '{{ node_max_instances }}'
+        subnet_ids: '{{ node_subnet_ids }}'
+        instance_type: t2.large
+        keypair: '{{ keypair }}'
+        node_labels:
+          class: app
