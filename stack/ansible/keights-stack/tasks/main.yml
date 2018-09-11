@@ -9,7 +9,7 @@
   set_fact:
     cluster_dns: '{{ keights_stack.masters.service_cidr.split(".")[:-1] | join(".") }}.10'
     k8s_version: '{{ keights_stack.k8s_version | default(keights_version.split("-")[0]) }}'
-    default_image: 'debian-stretch-k8s-hvm-amd64-v{{ keights_version }}'
+    default_image: 'debian-stretch-k8s-hvm-amd64-{{ keights_version }}'
     cache_dir: '{{ playbook_dir }}/.cache'
 
 - name: ensure cache directory
