@@ -87,7 +87,6 @@ Parameters:
   KubernetesVersion:
     Description: Version of Kubernetes
     Type: String
-    Default: 1.10.7
   KeightsVersion:
     Description: Version of Keights
     Type: String
