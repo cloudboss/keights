@@ -318,6 +318,7 @@ Resources:
                   [Service]
                   Environment=AWS_REGION=${AWS::Region}
                   Environment=KEIGHTS_STACK_NAME=${AWS::StackName}
+                  Environment=KEIGHTS_MASTER=true
 
               - path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
                 owner: root:root
