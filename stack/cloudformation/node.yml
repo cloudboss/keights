@@ -71,6 +71,10 @@ Resources:
         WaitOnResourceSignals: true
         SuspendProcesses:
           - HealthCheck
+          - ReplaceUnhealthy
+          - AZRebalance
+          - AlarmNotification
+          - ScheduledActions
 
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
