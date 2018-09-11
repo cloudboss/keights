@@ -312,7 +312,7 @@ Resources:
                   Environment=KEIGHTS_POD_SUBNET=${PodCidr}
                   Environment=KEIGHTS_SERVICE_SUBNET=${ServiceCidr}
                   Environment=KEIGHTS_IMAGE_REPOSITORY=${ImageRepository}
-                  Environment=KEIGHTS_KUBERNETES_VERSION=v${KubernetesVersion}
+                  Environment=KEIGHTS_KUBERNETES_VERSION=${KubernetesVersion}
 
               - path: /etc/systemd/system/keights-signal.service.d/environment.conf
                 owner: root:root
