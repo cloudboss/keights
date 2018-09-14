@@ -52,6 +52,8 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `load_balancer_scheme`: (Required, choice of `internal` or `internet-facing`) - Scheme assigned to Kubernetes API load balancer.
 
+`load_balancer_idle_timeout`: (Optional, type int, default `600`) - Idle timeout on Kubernetes API load balancer.
+
 `image_id`: (Optional, type *string*) - EC2 AMI ID, will override `keights_stack.image`.
 
 `extra_security_groups`: (Optional, type *list* of *string*, default `[]`) - Additional security groups that may be assigned to masters.
@@ -69,6 +71,8 @@ All role variables go under a top level dictionary `keights_stack`.
 `min_instances`: (Required, type *int*) - Minimum number of EC2 instances in group.
 
 `max_instances`: (Required, type *int*) - Maximum number of EC2 instances in group.
+
+`update_max_batch_size`: (Optional, type *int*, default `1`) - On a stack update, the maximum number of EC2 instances to update at a time.
 
 `subnet_ids`: (Required, type *list* of *string*) - Subnet IDs in which nodes will live.
 

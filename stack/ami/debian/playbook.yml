@@ -155,7 +155,7 @@
         url: '{{ item.src }}'
         dest: '{{ item.dest }}'
       with_items:
-        - src: https://github.com/cloudboss/keights/releases/download/v{{ keights_version }}/keights_{{ keights_version }}_linux_amd64.deb
+        - src: https://github.com/cloudboss/keights/releases/download/{{ keights_version }}/keights_{{ keights_version }}_linux_amd64.deb
           dest: /mnt/tmp/keights.deb
 
     - name: download apt gpg keys into chroot
@@ -238,7 +238,7 @@
       # Retry due to occasional network issues
       retries: 3
       register: chrooted_installation
-      until: chrooted_installation | succeeded
+      until: chrooted_installation is succeeded
 
     - name: load overlay kernel module
       modprobe:

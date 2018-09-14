@@ -41,7 +41,7 @@ spec:
       serviceAccountName: kube-router
       containers:
       - name: kube-router
-        image: cloudnativelabs/kube-router:v0.0.20
+        image: cloudnativelabs/kube-router:v0.2.0
         args:
         - "--run-router=true"
         - "--run-firewall=true"
@@ -97,6 +97,8 @@ spec:
       - name: kube-router-cfg
         configMap:
           name: kube-router-cfg
+  updateStrategy:
+    type: RollingUpdate
 
 ---
 apiVersion: v1

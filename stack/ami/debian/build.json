@@ -1,19 +1,18 @@
 {
   "variables": {
-    "ami-version": "",
+    "keights-version": "",
     "debian-release": "stretch",
     "root-vol": "xvde",
     "docker-vol": "xvdf",
     "docker-version": "1.12.6-0~debian-stretch",
-    "k8s-version": "1.10.0",
-    "keights-version": "1.10.0-1",
+    "k8s-version": "1.10.6",
     "cni-version": "0.6.0",
-    "kube-router-version": "0.0.20",
+    "kube-router-version": "0.2.0",
     "core-dns-version": "1.0.6",
     "etcd-version": "3.1.12",
     "pause-version": "3.1",
     "addon-manager-version": "8.6",
-    "dashboard-version": "1.8.3",
+    "dashboard-version": "1.10.0",
     "busybox-version": "1.28.1"
   },
 
@@ -86,7 +85,7 @@
       "Name": "ami-volume-{{ user `debian-release` }}"
     },
 
-    "ami_name": "debian-{{ user `debian-release` }}-k8s-hvm-amd64-{{ user `ami-version` }}",
+    "ami_name": "debian-{{ user `debian-release` }}-k8s-hvm-amd64-{{ user `keights-version` }}",
     "ami_description": "Cloudboss Kube Debian {{ user `debian-release` }}",
     "ami_virtualization_type": "hvm"
   }],

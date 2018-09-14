@@ -14,6 +14,10 @@ Parameters:
     Description: Maximum number of instances
     Type: Number
     Default: 1
+  UpdateMaxBatchSize:
+    Description: Maximum number of instances to update at a time
+    Type: Number
+    Default: 1
   VpcId:
     Description: ID of VPC where cluster will be placed
     Type: AWS::EC2::VPC::Id
@@ -66,7 +70,15 @@ Resources:
           PropagateAtLaunch: true
     UpdatePolicy:
       AutoScalingRollingUpdate:
-        MaxBatchSize: 1
+        MaxBatchSize: !Ref UpdateMaxBatchSize
+        PauseTime: PT15M
+        WaitOnResourceSignals: true
+        SuspendProcesses:
+          - HealthCheck
+          - ReplaceUnhealthy
+          - AZRebalance
+          - AlarmNotification
+          - ScheduledActions
 
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -106,6 +118,15 @@ Resources:
                   Environment=KEIGHTS_APISERVER=${LoadBalancerDnsName}
                   Environment=KEIGHTS_APISERVER_PORT=6443
 
+              - path: /etc/systemd/system/keights-signal.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_STACK_NAME=${AWS::StackName}
+                  Environment=KEIGHTS_MASTER=false
+
               - path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
                 owner: root:root
                 permissions: '0644'
@@ -135,7 +156,8 @@ Resources:
             runcmd:
               - systemctl daemon-reload
               - systemctl enable kubelet.service
-              - systemctl start keights-kubeadm-join.service
+              - systemctl start --no-block keights-kubeadm-join.service
+              - systemctl start --no-block keights-signal.service
 
 Outputs:
   AutoScalingGroup:

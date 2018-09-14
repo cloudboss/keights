@@ -9,7 +9,7 @@
   set_fact:
     cluster_dns: '{{ keights_stack.masters.service_cidr.split(".")[:-1] | join(".") }}.10'
     k8s_version: '{{ keights_stack.k8s_version | default(keights_version.split("-")[0]) }}'
-    default_image: 'debian-stretch-k8s-hvm-amd64-v{{ keights_version }}'
+    default_image: 'debian-stretch-k8s-hvm-amd64-{{ keights_version }}'
     cache_dir: '{{ playbook_dir }}/.cache'
 
 - name: ensure cache directory
@@ -25,7 +25,7 @@
   register: ami
   when: keights_stack.lookup_image | default(lookup_image)
 
-- name: assert that one ami is found
+- name: assert that at least one ami is found
   assert:
     that: ami.images | length > 0
     msg: 'expected to find at least one ami with name {{ keights_stack.image | default(default_image) }}'
@@ -110,6 +110,7 @@
       MasterInstanceProfile: '{{ common_stack.stack_outputs.MasterInstanceProfile }}'
       LoadBalancerScheme: '{{ keights_stack.masters.load_balancer_scheme }}'
       LoadBalancerSecurityGroup: '{{ common_stack.stack_outputs.LoadBalancerSecurityGroup }}'
+      LoadBalancerIdleTimeout: '{{ keights_stack.masters.load_balancer_idle_timeout | default(600) }}'
       MasterSecurityGroups: '{{ ([common_stack.stack_outputs.MasterSecurityGroup] + keights_stack.masters.extra_security_groups | default([])) | join(",") }}'
       LambdaRoleArn: '{{ common_stack.stack_outputs.LambdaRoleArn }}'
       KmsKeyId: '{{ keights_stack.kms_key_alias }}'
@@ -138,6 +139,7 @@
       ClusterName: '{{ keights_stack.cluster_name }}'
       MinInstances: '{{ item.min_instances }}'
       MaxInstances: '{{ item.max_instances }}'
+      UpdateMaxBatchSize: '{{ item.update_max_batch_size | default(1) }}'
       VpcId: '{{ keights_stack.vpc_id }}'
       SubnetIds: '{{ item.subnet_ids | join(",") }}'
       ImageId: '{{ item.image_id if item.image_id is defined else image_id }}'

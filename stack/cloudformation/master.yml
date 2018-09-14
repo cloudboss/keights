@@ -48,6 +48,10 @@ Parameters:
   LoadBalancerSecurityGroup:
     Description: Security group of load balancer
     Type: String
+  LoadBalancerIdleTimeout:
+    Description: Idle timeout on load balancer
+    Type: Number
+    Default: 600
   MasterSecurityGroups:
     Description: Security groups of masters
     Type: CommaDelimitedList
@@ -87,7 +91,6 @@ Parameters:
   KubernetesVersion:
     Description: Version of Kubernetes
     Type: String
-    Default: 1.10.0
   KeightsVersion:
     Description: Version of Keights
     Type: String
@@ -145,6 +148,8 @@ Resources:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
     Properties:
       CrossZone: true
+      ConnectionSettings:
+        IdleTimeout: !Ref LoadBalancerIdleTimeout
       HealthCheck:
         HealthyThreshold: 3
         Interval: 30
@@ -191,6 +196,10 @@ Resources:
         WaitOnResourceSignals: true
         SuspendProcesses:
           - HealthCheck
+          - ReplaceUnhealthy
+          - AZRebalance
+          - AlarmNotification
+          - ScheduledActions
 
   Volume1:
     Type: AWS::EC2::Volume
@@ -309,7 +318,7 @@ Resources:
                   Environment=KEIGHTS_POD_SUBNET=${PodCidr}
                   Environment=KEIGHTS_SERVICE_SUBNET=${ServiceCidr}
                   Environment=KEIGHTS_IMAGE_REPOSITORY=${ImageRepository}
-                  Environment=KEIGHTS_KUBERNETES_VERSION=v${KubernetesVersion}
+                  Environment=KEIGHTS_KUBERNETES_VERSION=${KubernetesVersion}
 
               - path: /etc/systemd/system/keights-signal.service.d/environment.conf
                 owner: root:root
@@ -318,6 +327,7 @@ Resources:
                   [Service]
                   Environment=AWS_REGION=${AWS::Region}
                   Environment=KEIGHTS_STACK_NAME=${AWS::StackName}
+                  Environment=KEIGHTS_MASTER=true
 
               - path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
                 owner: root:root
