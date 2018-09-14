@@ -138,6 +138,7 @@
       ClusterName: '{{ keights_stack.cluster_name }}'
       MinInstances: '{{ item.min_instances }}'
       MaxInstances: '{{ item.max_instances }}'
+      UpdateMaxBatchSize: '{{ item.update_max_batch_size | default(1) }}'
       VpcId: '{{ keights_stack.vpc_id }}'
       SubnetIds: '{{ item.subnet_ids | join(",") }}'
       ImageId: '{{ item.image_id if item.image_id is defined else image_id }}'

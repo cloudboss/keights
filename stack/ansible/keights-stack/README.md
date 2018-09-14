@@ -70,6 +70,8 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `max_instances`: (Required, type *int*) - Maximum number of EC2 instances in group.
 
+`update_max_batch_size`: (Optional, type *int*, default `1`) - On a stack update, the maximum number of EC2 instances to update at a time.
+
 `subnet_ids`: (Required, type *list* of *string*) - Subnet IDs in which nodes will live.
 
 `instance_type`: (Required, type *string*) - Type of EC2 instance, e.g. `m4.large`.
