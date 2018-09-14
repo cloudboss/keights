@@ -48,6 +48,10 @@ Parameters:
   LoadBalancerSecurityGroup:
     Description: Security group of load balancer
     Type: String
+  LoadBalancerIdleTimeout:
+    Description: Idle timeout on load balancer
+    Type: Number
+    Default: 600
   MasterSecurityGroups:
     Description: Security groups of masters
     Type: CommaDelimitedList
@@ -144,6 +148,8 @@ Resources:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
     Properties:
       CrossZone: true
+      ConnectionSettings:
+        IdleTimeout: !Ref LoadBalancerIdleTimeout
       HealthCheck:
         HealthyThreshold: 3
         Interval: 30

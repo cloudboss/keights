@@ -25,7 +25,7 @@
   register: ami
   when: keights_stack.lookup_image | default(lookup_image)
 
-- name: assert that one ami is found
+- name: assert that at least one ami is found
   assert:
     that: ami.images | length > 0
     msg: 'expected to find at least one ami with name {{ keights_stack.image | default(default_image) }}'
@@ -110,6 +110,7 @@
       MasterInstanceProfile: '{{ common_stack.stack_outputs.MasterInstanceProfile }}'
       LoadBalancerScheme: '{{ keights_stack.masters.load_balancer_scheme }}'
       LoadBalancerSecurityGroup: '{{ common_stack.stack_outputs.LoadBalancerSecurityGroup }}'
+      LoadBalancerIdleTimeout: '{{ keights_stack.masters.load_balancer_idle_timeout | default(600) }}'
       MasterSecurityGroups: '{{ ([common_stack.stack_outputs.MasterSecurityGroup] + keights_stack.masters.extra_security_groups | default([])) | join(",") }}'
       LambdaRoleArn: '{{ common_stack.stack_outputs.LambdaRoleArn }}'
       KmsKeyId: '{{ keights_stack.kms_key_alias }}'
