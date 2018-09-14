@@ -238,7 +238,7 @@
       # Retry due to occasional network issues
       retries: 3
       register: chrooted_installation
-      until: chrooted_installation | succeeded
+      until: chrooted_installation is succeeded
 
     - name: load overlay kernel module
       modprobe:
