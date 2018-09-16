@@ -43,14 +43,31 @@ func MergeMaps(first, second map[string]interface{}) map[string]interface{} {
 	return dest
 }
 
+func StringToList(commaSeparatedList string) []string {
+	list := []string{}
+	for _, part := range strings.Split(commaSeparatedList, ",") {
+		item := strings.TrimSpace(part)
+		if len(item) > 0 {
+			list = append(list, item)
+		}
+	}
+	return list
+}
+
 func VarsToMap(vars []string) (map[string]interface{}, error) {
 	mapping := make(map[string]interface{})
 	for _, v := range vars {
 		parts := strings.Split(v, "=")
-		if len(parts) != 2 {
+		if len(parts) < 2 {
 			return nil, fmt.Errorf("Malformed variable %v", v)
 		}
-		mapping[parts[0]] = parts[1]
+		leftSide := parts[0]
+		rightSide := strings.Join(parts[1:], "=")
+		if strings.Contains(rightSide, ",") {
+			mapping[leftSide] = StringToList(rightSide)
+		} else {
+			mapping[leftSide] = rightSide
+		}
 	}
 	return mapping, nil
 }

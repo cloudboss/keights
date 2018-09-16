@@ -58,6 +58,6 @@ func init() {
 		"root", "Group of destination file")
 	templatizeCmd.Flags().IntVarP(&mode, "mode", "m",
 		00644, "Mode of destination file")
-	templatizeCmd.Flags().StringSliceVarP(&vars, "var", "v",
+	templatizeCmd.Flags().StringArrayVarP(&vars, "var", "v",
 		[]string{}, "Variable to pass to template")
 }
