@@ -43,7 +43,7 @@ func TestGetSecret(t *testing.T) {
 				typ := "*ssm.GetParametersInput"
 				output := &ssm.GetParametersOutput{
 					Parameters: []*ssm.Parameter{
-						&ssm.Parameter{
+						{
 							Value: aws.String("secretkey"),
 						},
 					},
@@ -141,7 +141,7 @@ func TestParsePaths(t *testing.T) {
 				"/otto-kube/cluster/ca.crt:/run/keights/ca.crt",
 			},
 			[]map[string]string{
-				map[string]string{
+				{
 					"path": "/otto-kube/cluster/ca.crt",
 					"dest": "/run/keights/ca.crt",
 				},
@@ -154,11 +154,11 @@ func TestParsePaths(t *testing.T) {
 				"/otto-kube/controller/ca.key:/run/keights/ca.key",
 			},
 			[]map[string]string{
-				map[string]string{
+				{
 					"path": "/otto-kube/cluster/ca.crt",
 					"dest": "/run/keights/ca.crt",
 				},
-				map[string]string{
+				{
 					"path": "/otto-kube/controller/ca.key",
 					"dest": "/run/keights/ca.key",
 				},

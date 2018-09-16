@@ -59,15 +59,15 @@ func NewVolumizer(sess *session.Session, availabilityZone, instanceID string) *V
 func (v *Volumizer) WaitForVolume(clusterName, volumeTag *string, minutes time.Duration) (*ec2.Volume, error) {
 	var output *ec2.DescribeVolumesOutput
 	filters := []*ec2.Filter{
-		&ec2.Filter{
+		{
 			Name:   aws.String("tag:Name"),
 			Values: []*string{clusterName},
 		},
-		&ec2.Filter{
+		{
 			Name:   aws.String("tag-key"),
 			Values: []*string{volumeTag},
 		},
-		&ec2.Filter{
+		{
 			Name:   aws.String("availability-zone"),
 			Values: []*string{aws.String(v.availabilityZone)},
 		},

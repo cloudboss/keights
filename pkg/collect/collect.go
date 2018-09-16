@@ -85,7 +85,7 @@ func (c *Collector) Instances() ([]*ec2.Instance, error) {
 	desc, err := c.ec2.DescribeInstances(&ec2.DescribeInstancesInput{
 		InstanceIds: InstanceIds(c.asg.Instances),
 		Filters: []*ec2.Filter{
-			&ec2.Filter{
+			{
 				Name:   aws.String("instance-state-name"),
 				Values: []*string{aws.String("running")},
 			},
@@ -121,15 +121,15 @@ func (c *Collector) Volumes() ([]*ec2.Volume, error) {
 	}
 	desc, err := c.ec2.DescribeVolumes(&ec2.DescribeVolumesInput{
 		Filters: []*ec2.Filter{
-			&ec2.Filter{
+			{
 				Name:   aws.String("attachment.instance-id"),
 				Values: InstanceIds(c.asg.Instances),
 			},
-			&ec2.Filter{
+			{
 				Name:   aws.String("attachment.status"),
 				Values: []*string{aws.String("attached")},
 			},
-			&ec2.Filter{
+			{
 				Name:   aws.String("tag-key"),
 				Values: []*string{c.volumeTag},
 			},

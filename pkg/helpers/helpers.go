@@ -94,7 +94,7 @@ func WriteIfChanged(path string, contents []byte, mode os.FileMode) error {
 
 func MapKeys(mapping map[string]string) []string {
 	keys := []string{}
-	for key, _ := range mapping {
+	for key := range mapping {
 		keys = append(keys, key)
 	}
 	return keys
