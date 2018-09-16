@@ -48,6 +48,7 @@
     mode: geturl
   register: stackbots
   loop:
+    - auto_namer
     - kube_ca
     - subnet_to_az
   changed_when: false
@@ -123,6 +124,7 @@
       KubernetesVersion: '{{ k8s_version }}'
       KeightsVersion: '{{ keights_version }}'
       ResourceBucket: '{{ keights_stack.resource_bucket | default(resource_bucket) }}'
+      HostedZoneId: '{{ common_stack.stack_outputs.HostedZoneId }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'

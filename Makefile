@@ -25,7 +25,7 @@ keights-stack:
 	tar czf _output/keights-stack/keights-stack-$(VERSION).tar.gz -C stack/ansible keights-stack
 
 stackbot:
-	for bot in kube_ca subnet_to_az; do \
+	for bot in auto_namer kube_ca subnet_to_az; do \
 		go build -o _output/stackbot/$${bot}/$${bot} ./stackbot/$${bot}; \
 		(cd _output/stackbot/$${bot} && zip $${bot}-$(VERSION).zip $${bot}); \
 	done

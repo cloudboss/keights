@@ -217,3 +217,26 @@ func IdempotentDo(checker func() (bool, error), doer func() error) error {
 	}
 	return nil
 }
+
+func EnsureEnvironment(environment []string) (map[string]string, error) {
+	ensured := make(map[string]string)
+	missing := []string{}
+	for _, envVar := range environment {
+		value := os.Getenv(envVar)
+		if value == "" {
+			missing = append(missing, envVar)
+		} else {
+			ensured[envVar] = value
+		}
+	}
+	lenMissing := len(missing)
+	if lenMissing > 0 {
+		var s string
+		if lenMissing > 1 {
+			s = "s"
+		}
+		err := fmt.Errorf("missing environment variable%s: %s", s, strings.Join(missing, ", "))
+		return nil, err
+	}
+	return ensured, nil
+}
