@@ -171,17 +171,17 @@ Resources:
     Type: Custom::SubnetToAz
     DependsOn: SubnetToAzFunction
     Properties:
-      ServiceToken: !GetAtt [SubnetToAzFunction, Arn]
+      ServiceToken: !GetAtt SubnetToAzFunction.Arn
       SubnetIds: !Ref SubnetIds
 
   KubeCa:
     Type: Custom::KubeCa
     DependsOn: KubeCaFunction
     Properties:
-      ServiceToken: !GetAtt [KubeCaFunction, Arn]
+      ServiceToken: !GetAtt KubeCaFunction.Arn
       ClusterName: !Ref ClusterName
       ServiceCidr: !Ref ServiceCidr
-      LoadBalancerName: !GetAtt [LoadBalancer, DNSName]
+      LoadBalancerName: !GetAtt LoadBalancer.DNSName
       NumInstances: !Ref NumInstances
       KmsKeyId: !Ref KmsKeyId
 
@@ -229,7 +229,7 @@ Resources:
       LoadBalancerNames: [!Ref LoadBalancer]
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}
+          Value: !Ref AWS::StackName
           PropagateAtLaunch: true
     UpdatePolicy:
       AutoScalingRollingUpdate:
@@ -414,7 +414,7 @@ Resources:
 Outputs:
   LoadBalancerDnsName:
     Description: DNS name of load balancer
-    Value: !GetAtt [LoadBalancer, DNSName]
+    Value: !GetAtt LoadBalancer.DNSName
   AutoScalingGroup:
     Description: Name of autoscaling group
     Value: !Ref AutoScalingGroup
