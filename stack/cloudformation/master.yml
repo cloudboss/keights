@@ -284,6 +284,7 @@ Resources:
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
+      LaunchConfigurationName: !Ref AWS::StackName
       IamInstanceProfile: !Ref MasterInstanceProfile
       ImageId: !Ref ImageId
       InstanceType: !Ref InstanceType
@@ -292,36 +293,21 @@ Resources:
       SecurityGroups: !Ref MasterSecurityGroups
       UserData:
         Fn::Base64:
-          !Sub |
+          !Sub
+          - |
             #cloud-config
             write_files:
-              - path: /etc/systemd/system/keights-collector.service.d/environment.conf
-                owner: root:root
-                permissions: '0644'
-                content: |
-                  [Service]
-                  Environment=AWS_REGION=${AWS::Region}
-                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
-                  Environment=KEIGHTS_VOLUME_TAG=etcd:instance
-
-              - path: /etc/systemd/system/keights-share.service.d/environment.conf
-                owner: root:root
-                permissions: '0644'
-                content: |
-                  [Service]
-                  Environment=KEIGHTS_DOMAIN=k8s.local
-                  Environment=KEIGHTS_PREFIX=${ClusterName}
-
               - path: /etc/systemd/system/keights-templatize-etcd.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
                 content: |
                   [Service]
                   Environment=AWS_REGION=${AWS::Region}
-                  Environment=KEIGHTS_DOMAIN=k8s.local
+                  Environment=KEIGHTS_ETCD_DOMAIN=${ClusterName}.local
                   Environment=KEIGHTS_ETCD_CLUSTER_TOKEN=etcd-${ClusterName}
                   Environment=KEIGHTS_ETCD_IMAGE=${EtcdImage}
-                  Environment=KEIGHTS_PREFIX=${ClusterName}
+                  Environment=KEIGHTS_PREFIX=etcd
+                  Environment=KEIGHTS_AZS=${AvailabilityZones},
 
               - path: /etc/systemd/system/keights-volumize.service.d/environment.conf
                 owner: root:root
@@ -355,12 +341,14 @@ Resources:
                   [Service]
                   Environment=AWS_REGION=${AWS::Region}
                   Environment=KEIGHTS_DOMAIN=k8s.local
-                  Environment=KEIGHTS_PREFIX=${ClusterName}
+                  Environment=KEIGHTS_ETCD_DOMAIN=${ClusterName}.local
+                  Environment=KEIGHTS_PREFIX=etcd
                   Environment=KEIGHTS_APISERVER=${LoadBalancer.DNSName}
                   Environment=KEIGHTS_POD_SUBNET=${PodCidr}
                   Environment=KEIGHTS_SERVICE_SUBNET=${ServiceCidr}
                   Environment=KEIGHTS_IMAGE_REPOSITORY=${ImageRepository}
                   Environment=KEIGHTS_KUBERNETES_VERSION=${KubernetesVersion}
+                  Environment=KEIGHTS_AZS=${AvailabilityZones},
 
               - path: /etc/systemd/system/keights-signal.service.d/environment.conf
                 owner: root:root
@@ -399,17 +387,13 @@ Resources:
               - systemctl daemon-reload
               - systemctl enable var-lib-etcd.mount
               - systemctl enable kubelet.service
-              - systemctl enable keights-collector.timer
-              - systemctl enable keights-share.path
-              - systemctl enable keights-templatize-etcd.service
-              - systemctl enable keights-templatize-kubeadm-config.service
-              - systemctl enable keights-whisper-controller.service
-              - systemctl start --no-block kubelet.service
+              - systemctl start --no-block keights-templatize-etcd.service
+              - systemctl start --no-block keights-templatize-kubeadm-config.service
               - systemctl start --no-block keights-add-addon.service
-              - systemctl start --no-block keights-collector.timer
-              - systemctl start --no-block keights-share.path
               - systemctl start --no-block keights-kubeadm-init.service
               - systemctl start --no-block keights-signal.service
+
+          - { AvailabilityZones: !GetAtt SubnetToAz.AvailabilityZones }
 
 Outputs:
   LoadBalancerDnsName:

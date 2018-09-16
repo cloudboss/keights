@@ -1,7 +1,5 @@
 [Unit]
 Description=keights-templates target
-Requires=keights-collector.service
-After=keights-collector.service
 
 [Install]
 RequiredBy=keights-kubeadm-init.service

@@ -27,7 +27,6 @@ import (
 
 var (
 	templateFile  string
-	ip            string
 	dest          string
 	owner         string
 	group         string
@@ -37,7 +36,7 @@ var (
 		Use:   "template",
 		Short: "Process file templates",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return templatize.DoIt(templateFile, inputFile, ip, dest, owner, group, mode, vars)
+			return templatize.DoIt(templateFile, dest, owner, group, mode, vars)
 		},
 	}
 )
@@ -46,10 +45,6 @@ func init() {
 	RootCmd.AddCommand(templatizeCmd)
 	templatizeCmd.Flags().StringVarP(&templateFile, "template-file", "t",
 		"", "Template file to be expanded")
-	templatizeCmd.Flags().StringVarP(&inputFile, "input-file", "i",
-		"", "Input file containing host IPs and indexes")
-	templatizeCmd.Flags().StringVarP(&ip, "ip", "I",
-		"", "IP address of host; if not given, EC2 metadata will be searched")
 	templatizeCmd.Flags().StringVarP(&dest, "dest", "D",
 		"", "Destination path for expanded file")
 	templatizeCmd.Flags().StringVarP(&owner, "owner", "o",
