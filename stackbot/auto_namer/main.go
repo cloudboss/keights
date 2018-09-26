@@ -173,7 +173,7 @@ func handle(_ctx context.Context, event events.CloudWatchEvent) error {
 	}
 	fmt.Printf("event.detail: %+v\n", detail)
 
-	if asgName, ok := env[asgNameEnv]; !ok {
+	if asgName, ok := env[asgNameEnv]; ok {
 		if detail.AutoScalingGroupName != asgName {
 			fmt.Printf("Event does not match ASG %s, nothing to do\n", asgName)
 			return nil
