@@ -60,13 +60,14 @@ Resources:
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
+      AutoScalingGroupName: !Ref AWS::StackName
       LaunchConfigurationName: !Ref LaunchConfiguration
       MinSize: !Ref MinInstances
       MaxSize: !Ref MaxInstances
       VPCZoneIdentifier: !Ref SubnetIds
       Tags:
         - Key: Name
-          Value: !Sub ${AWS::StackName}
+          Value: !Ref AWS::StackName
           PropagateAtLaunch: true
     UpdatePolicy:
       AutoScalingRollingUpdate:
@@ -83,6 +84,7 @@ Resources:
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
+      LaunchConfigurationName: !Ref AWS::StackName
       IamInstanceProfile: !Ref NodeInstanceProfile
       ImageId: !Ref ImageId
       InstanceType: !Ref InstanceType

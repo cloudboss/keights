@@ -23,7 +23,7 @@ require (
 	github.com/golang/protobuf v1.2.0 // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20180820052304-89baedc74dd7 // indirect
-	github.com/goreleaser/nfpm v0.9.3 // indirect
+	github.com/goreleaser/nfpm v0.9.5 // indirect
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8 // indirect

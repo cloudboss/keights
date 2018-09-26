@@ -28,6 +28,6 @@ fi
 
 ${PYTHON_BASE}/bin/pip install -r requirements.txt
 
-[ -f requirements.yml ] && ${PYTHON_BASE}/bin/ansible-galaxy install -r requirements.yml
+[ -f requirements.yml ] && ${PYTHON_BASE}/bin/ansible-galaxy install -f -r requirements.yml
 
 ${PYTHON_BASE}/bin/ansible-playbook playbook.yml -e cluster=${CLUSTER} -e @${VARS} ${@}

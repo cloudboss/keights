@@ -6,10 +6,16 @@ api:
   advertiseAddress: {{ .MyIP }}
   controlPlaneEndpoint: {{ .APIServer }}
 etcd:
-  endpoints: [{{ range $i, $k := keys .HostMap }}{{ if $i }},{{end}}'https://{{ $.Prefix }}-{{ $k }}.{{ $.Domain }}:2379'{{ end }}]
-  caFile: /etc/kubernetes/pki/etcd-ca.crt
-  certFile: /etc/kubernetes/pki/etcd-client.crt
-  keyFile: /etc/kubernetes/pki/etcd-client.key
+  endpoints: [{{ range $i, $az := .AZs }}{{ if $i }},{{end}}'https://{{ $.Prefix }}-{{ $az }}.{{ $.EtcdDomain }}:2379'{{ end }}]
+  caFile: /etc/kubernetes/pki/etcd/ca.crt
+  certFile: /etc/kubernetes/pki/apiserver-etcd-client.crt
+  keyFile: /etc/kubernetes/pki/apiserver-etcd-client.key
+  peerCertSANs:
+  - {{ .MyIP }}
+  - {{ .Prefix }}-{{ .MyAZ }}.{{ .EtcdDomain }}
+  serverCertSANs:
+  - {{ .MyIP }}
+  - {{ .Prefix }}-{{ .MyAZ }}.{{ .EtcdDomain }}
 networking:
   dnsDomain: {{ .Domain }}
   podSubnet: {{ .PodSubnet }}

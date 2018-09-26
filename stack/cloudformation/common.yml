@@ -172,6 +172,14 @@ Resources:
       SourceSecurityGroupId: !Ref MasterSecurityGroup
       IpProtocol: '-1'
 
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Sub ${ClusterName}.local
+      VPCs:
+        - VPCId: !Ref VpcId
+          VPCRegion: !Ref AWS::Region
+
   K8sMasterAccess:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -302,6 +310,11 @@ Resources:
               - kms:Encrypt
             Resource:
               - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${KmsKeyId}'
+          - Effect: Allow
+            Action:
+              - route53:ChangeResourceRecordSets
+            Resource:
+              - !Sub 'arn:aws:route53:::hostedzone/${HostedZone}'
 
   MasterRole:
     Type: AWS::IAM::Role
@@ -314,7 +327,7 @@ Resources:
               Service: ec2.amazonaws.com
             Action: sts:AssumeRole
       ManagedPolicyArns:
-        - !Sub ${K8sMasterAccess}
+        - !Ref K8sMasterAccess
 
   MasterInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -332,7 +345,7 @@ Resources:
               Service: ec2.amazonaws.com
             Action: sts:AssumeRole
       ManagedPolicyArns:
-        - !Sub ${K8sNodeAccess}
+        - !Ref K8sNodeAccess
 
   NodeInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -350,7 +363,7 @@ Resources:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
       ManagedPolicyArns:
-        - !Sub ${K8sLambdaAccess}
+        - !Ref K8sLambdaAccess
 
 Outputs:
   LoadBalancerSecurityGroup:
@@ -367,28 +380,31 @@ Outputs:
     Value: !Ref MasterInstanceProfile
   MasterInstanceProfileArn:
     Description: Instance profile ARN for master nodes
-    Value: !Sub ${MasterInstanceProfile.Arn}
+    Value: !GetAtt MasterInstanceProfile.Arn
   MasterRole:
     Description: IAM role for master nodes
     Value: !Ref MasterRole
   MasterRoleArn:
     Description: IAM role ARN for master nodes
-    Value: !Sub ${MasterRole.Arn}
+    Value: !GetAtt MasterRole.Arn
   NodeInstanceProfile:
     Description: Instance profile for nodes
     Value: !Ref NodeInstanceProfile
   NodeInstanceProfileArn:
     Description: Instance profile ARN for nodes
-    Value: !Sub ${NodeInstanceProfile.Arn}
+    Value: !GetAtt NodeInstanceProfile.Arn
   NodeRole:
     Description: IAM role for nodes
     Value: !Ref NodeRole
   NodeRoleArn:
     Description: IAM role ARN for nodes
-    Value: !Sub ${NodeRole.Arn}
+    Value: !GetAtt NodeRole.Arn
   LambdaRole:
     Description: IAM role for custom CloudFormation Lambdas
     Value: !Ref LambdaRole
   LambdaRoleArn:
     Description: IAM role ARN for custom CloudFormation Lambdas
-    Value: !Sub ${LambdaRole.Arn}
+    Value: !GetAtt LambdaRole.Arn
+  HostedZoneId:
+    Description: ID of Route53 DNS hosted zone
+    Value: !Ref HostedZone

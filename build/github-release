@@ -57,7 +57,7 @@ deb_artifact_path="_output/keights-deb/${deb_artifact}"
 upload "${deb_artifact}" "${deb_artifact_path}" "${release_id}" || fail "`cat ${out_file}`"
 
 # AWS Lambdas
-bots="kube_ca subnet_to_az"
+bots="auto_namer kube_ca subnet_to_az"
 for bot in ${bots}; do
     bot_artifact="${bot}-${VERSION}.zip"
     bot_artifact_path="_output/stackbot/${bot}/${bot_artifact}"

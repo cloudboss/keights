@@ -15,35 +15,35 @@ spec:
     - /usr/local/bin/etcd
     env:
     - name: ETCD_NAME
-      value: {{ .Prefix }}-{{ .MyIndex }}
+      value: {{ .Prefix }}-{{ .MyAZ }}
     - name: ETCD_DATA_DIR
       value: /var/lib/etcd
     - name: ETCD_LISTEN_CLIENT_URLS
-      value: https://{{ .Prefix }}-{{ .MyIndex }}.{{ .Domain }}:2379
+      value: https://{{ .Prefix }}-{{ .MyAZ }}.{{ .EtcdDomain }}:2379
     - name: ETCD_LISTEN_PEER_URLS
-      value: https://{{ .Prefix }}-{{ .MyIndex }}.{{ .Domain }}:2380
+      value: https://{{ .Prefix }}-{{ .MyAZ }}.{{ .EtcdDomain }}:2380
     - name: ETCD_ADVERTISE_CLIENT_URLS
-      value: https://{{ .Prefix }}-{{ .MyIndex }}.{{ .Domain }}:2379
+      value: https://{{ .Prefix }}-{{ .MyAZ }}.{{ .EtcdDomain }}:2379
     - name: ETCD_INITIAL_ADVERTISE_PEER_URLS
-      value: https://{{ .Prefix }}-{{ .MyIndex }}.{{ .Domain }}:2380
+      value: https://{{ .Prefix }}-{{ .MyAZ }}.{{ .EtcdDomain }}:2380
     - name: ETCD_INITIAL_CLUSTER_STATE
       value: new
     - name: ETCD_INITIAL_CLUSTER_TOKEN
       value: {{ .EtcdClusterToken }}
     - name: ETCD_INITIAL_CLUSTER
-      value: {{ range $i, $k := keys .HostMap }}{{ if $i }},{{end}}{{ $.Prefix }}-{{ $k }}=https://{{ $.Prefix }}-{{ $k }}.{{ $.Domain }}:2380{{ end }}
+      value: {{ range $i, $az := .AZs }}{{ if $i }},{{end}}{{ $.Prefix }}-{{ $az }}=https://{{ $.Prefix }}-{{ $az }}.{{ $.EtcdDomain }}:2380{{ end }}
     - name: ETCD_CERT_FILE
-      value: /etc/kubernetes/pki/etcd.crt
+      value: /etc/kubernetes/pki/etcd/server.crt
     - name: ETCD_KEY_FILE
-      value: /etc/kubernetes/pki/etcd.key
+      value: /etc/kubernetes/pki/etcd/server.key
     - name: ETCD_PEER_CERT_FILE
-      value: /etc/kubernetes/pki/etcd-peer.crt
+      value: /etc/kubernetes/pki/etcd/peer.crt
     - name: ETCD_PEER_KEY_FILE
-      value: /etc/kubernetes/pki/etcd-peer.key
+      value: /etc/kubernetes/pki/etcd/peer.key
     - name: ETCD_TRUSTED_CA_FILE
-      value: /etc/kubernetes/pki/etcd-ca.crt
+      value: /etc/kubernetes/pki/etcd/ca.crt
     - name: ETCD_PEER_TRUSTED_CA_FILE
-      value: /etc/kubernetes/pki/etcd-ca.crt
+      value: /etc/kubernetes/pki/etcd/ca.crt
     - name: ETCD_CLIENT_CERT_AUTH
       value: '1'
     - name: ETCD_PEER_CLIENT_CERT_AUTH
@@ -52,7 +52,7 @@ spec:
     livenessProbe:
       failureThreshold: 8
       tcpSocket:
-        host: {{ .Prefix }}-{{ .MyIndex }}.{{ .Domain }}
+        host: {{ .MyIP }}
         port: 2379
       initialDelaySeconds: 15
       timeoutSeconds: 15
@@ -71,23 +71,8 @@ spec:
     - mountPath: /var/lib/etcd
       name: var-lib-etcd
       readOnly: false
-    - mountPath: /etc/hosts
-      name: etc-hosts
-      readOnly: true
-    - mountPath: /etc/kubernetes/pki/etcd-ca.crt
-      name: etc-kubernetes-pki-etcd-ca
-      readOnly: true
-    - mountPath: /etc/kubernetes/pki/etcd.crt
+    - mountPath: /etc/kubernetes/pki/etcd
       name: etc-kubernetes-pki-etcd
-      readOnly: true
-    - mountPath: /etc/kubernetes/pki/etcd.key
-      name: etc-kubernetes-pki-etcd-key
-      readOnly: true
-    - mountPath: /etc/kubernetes/pki/etcd-peer.crt
-      name: etc-kubernetes-pki-etcd-peer
-      readOnly: true
-    - mountPath: /etc/kubernetes/pki/etcd-peer.key
-      name: etc-kubernetes-pki-etcd-peer-key
       readOnly: true
   hostNetwork: true
   volumes:
@@ -95,21 +80,6 @@ spec:
       path: /var/lib/etcd
     name: var-lib-etcd
   - hostPath:
-      path: /etc/hosts
-    name: etc-hosts
-  - hostPath:
-      path: /etc/kubernetes/pki/etcd-ca.crt
-    name: etc-kubernetes-pki-etcd-ca
-  - hostPath:
-      path: /etc/kubernetes/pki/etcd.crt
+      path: /etc/kubernetes/pki/etcd
     name: etc-kubernetes-pki-etcd
-  - hostPath:
-      path: /etc/kubernetes/pki/etcd.key
-    name: etc-kubernetes-pki-etcd-key
-  - hostPath:
-      path: /etc/kubernetes/pki/etcd-peer.crt
-    name: etc-kubernetes-pki-etcd-peer
-  - hostPath:
-      path: /etc/kubernetes/pki/etcd-peer.key
-    name: etc-kubernetes-pki-etcd-peer-key
 status: {}
