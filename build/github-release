@@ -67,6 +67,6 @@ done
 
 # Ansible role
 role_artifact="keights-stack-${VERSION}.tar.gz"
-role_artifact_path="_output/keights-stack/${role_artifact}"
+role_artifact_path="_output/${role_artifact}"
 [ -f ${role_artifact_path} ] || fail "${role_artifact_path} not found"
 upload "${role_artifact}" "${role_artifact_path}" "${release_id}" || fail "`cat ${out_file}`"
