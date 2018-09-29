@@ -25,7 +25,7 @@ keights-stack:
 	tar czf _output/keights-stack-$(VERSION).tar.gz -C _output keights-stack
 
 stackbot:
-	for bot in auto_namer kube_ca subnet_to_az; do \
+	for bot in auto_namer instattr kube_ca subnet_to_az; do \
 		go build -o _output/stackbot/$${bot}/$${bot} ./stackbot/$${bot}; \
 		(cd _output/stackbot/$${bot} && zip $${bot}-$(VERSION).zip $${bot}); \
 	done

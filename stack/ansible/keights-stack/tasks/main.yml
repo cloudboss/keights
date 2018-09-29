@@ -49,6 +49,7 @@
   register: stackbots
   loop:
     - auto_namer
+    - instattr
     - kube_ca
     - subnet_to_az
   changed_when: false
