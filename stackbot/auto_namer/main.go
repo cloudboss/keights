@@ -22,7 +22,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -34,7 +33,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/route53/route53iface"
-	"github.com/cloudboss/keights/pkg/helpers"
+	"github.com/cloudboss/keights/stackbot/asgevent"
 )
 
 const (
@@ -55,21 +54,8 @@ var requiredEnvironment = []string{
 	hostedZoneIDEnv,
 }
 
-type autoscalingDetailDetails struct {
-	AvailabilityZone string `json:"Availability Zone,omitempty"`
-	SubnetID         string `json:"Subnet ID,omitempty"`
-}
-
-type autoscalingDetail struct {
-	StatusCode           string                    `json:"StatusCode,omitempty"`
-	AutoScalingGroupName string                    `json:"AutoScalingGroupName,omitempty"`
-	ActivityID           string                    `json:"ActivityId,omitempty"`
-	Details              *autoscalingDetailDetails `json:",omitempty"`
-	RequestID            string                    `json:"RequestId,omitempty"`
-	StartTime            string                    `json:"StartTime,omitempty"`
-	EndTime              string                    `json:"EndTime,omitempty"`
-	EC2InstanceID        string                    `json:"EC2InstanceId,omitempty"`
-	Cause                string                    `json:"Cause,omitempty"`
+var validEvents = []string{
+	ec2InstanceLaunchSuccessful,
 }
 
 func privateIP(ec2Client ec2iface.EC2API, instanceID string) (string, error) {
@@ -113,23 +99,6 @@ func newARecordSet(hostBaseName, az, hostedZoneName, ip string, ttl int64) *rout
 	}
 }
 
-func modifyRecord(r53Client route53iface.Route53API, record *route53.ResourceRecordSet, hostedZoneID string) error {
-	action := aws.String(actionUpsert)
-	_, err := r53Client.ChangeResourceRecordSets(
-		&route53.ChangeResourceRecordSetsInput{
-			HostedZoneId: &hostedZoneID,
-			ChangeBatch: &route53.ChangeBatch{
-				Changes: []*route53.Change{
-					{
-						Action:            action,
-						ResourceRecordSet: record,
-					},
-				},
-			},
-		},
-	)
-	return err
-}
 
 func handleRecord(ec2Client ec2iface.EC2API, r53Client route53iface.Route53API,
 	instanceID, az string, env map[string]string) error {
@@ -138,7 +107,7 @@ func handleRecord(ec2Client ec2iface.EC2API, r53Client route53iface.Route53API,
 		return err
 	}
 
-	// helpers.EnsureEnvironment() has already validated map values
+	// asgevent.Handle() has already validated map values
 	dnsTTL, _ := env[dnsTTLEnv]
 	hostBaseName, _ := env[hostBaseNameEnv]
 	hostedZoneName, _ := env[hostedZoneNameEnv]
@@ -150,36 +119,25 @@ func handleRecord(ec2Client ec2iface.EC2API, r53Client route53iface.Route53API,
 	}
 
 	recordSet := newARecordSet(hostBaseName, az, hostedZoneName, ip, ttl)
-	return modifyRecord(r53Client, recordSet, hostedZoneID)
+
+	action := aws.String(actionUpsert)
+	_, err = r53Client.ChangeResourceRecordSets(
+		&route53.ChangeResourceRecordSetsInput{
+			HostedZoneId: &hostedZoneID,
+			ChangeBatch: &route53.ChangeBatch{
+				Changes: []*route53.Change{
+					{
+						Action:            action,
+						ResourceRecordSet: recordSet,
+					},
+				},
+			},
+		},
+	)
+	return err
 }
 
-func handle(_ctx context.Context, event events.CloudWatchEvent) error {
-	fmt.Printf("event: %+v\n", event)
-
-	if event.DetailType != ec2InstanceLaunchSuccessful {
-		fmt.Printf("Received event %s, nothing to do\n", event.DetailType)
-		return nil
-	}
-
-	env, err := helpers.EnsureEnvironment(requiredEnvironment)
-	if err != nil {
-		return err
-	}
-
-	var detail autoscalingDetail
-	err = json.Unmarshal(event.Detail, &detail)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("event.detail: %+v\n", detail)
-
-	if asgName, ok := env[asgNameEnv]; ok {
-		if detail.AutoScalingGroupName != asgName {
-			fmt.Printf("Event does not match ASG %s, nothing to do\n", asgName)
-			return nil
-		}
-	}
-
+func realHandler(detail asgevent.AutoScalingDetail, env map[string]string) error {
 	sess, err := session.NewSession()
 	if err != nil {
 		return err
@@ -192,5 +150,7 @@ func handle(_ctx context.Context, event events.CloudWatchEvent) error {
 }
 
 func main() {
-	lambda.Start(handle)
+	lambda.Start(func(ctx context.Context, event events.CloudWatchEvent) error {
+		return asgevent.Handle(event, validEvents, requiredEnvironment, realHandler)
+	})
 }
