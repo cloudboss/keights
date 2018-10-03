@@ -80,6 +80,13 @@ Parameters:
     Description: Size of etcd volume in GB
     Default: 10
     Type: Number
+  EtcdDevice:
+    Description: >-
+      Name of the etcd volume device within a machine. The EBS volume
+      is always xvdg, but depending on the instance type, this may
+      not show up as /dev/xvdg, but rather /dev/nvme1n1, for example.
+    Default: /dev/xvdg
+    Type: String
   ImageRepository:
     Description: Repository for core Kubernetes Docker images
     Type: String
@@ -324,7 +331,7 @@ Resources:
                 permissions: '0644'
                 content: |
                   [Mount]
-                  What=/dev/xvdg
+                  What=/dev/${EtcdDevice}
 
               - path: /etc/systemd/system/keights-whisper-controller.service.d/environment.conf
                 owner: root:root

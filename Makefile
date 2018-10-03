@@ -19,13 +19,13 @@ keights-deb: setup keights
 		-t _output/keights-deb/keights_$(VERSION)_$(GOOS)_$(GOARCH).deb
 
 keights-stack:
-	echo $(VERSION) > stack/ansible/keights-stack/version
-	cp stack/cloudformation/*.yml stack/ansible/keights-stack/files
-	mkdir -p _output/keights-stack
-	tar czf _output/keights-stack/keights-stack-$(VERSION).tar.gz -C stack/ansible keights-stack
+	cp -R stack/ansible/keights-stack _output
+	cp stack/cloudformation/*.yml _output/keights-stack/files
+	echo $(VERSION) > _output/keights-stack/version
+	tar czf _output/keights-stack-$(VERSION).tar.gz -C _output keights-stack
 
 stackbot:
-	for bot in auto_namer kube_ca subnet_to_az; do \
+	for bot in auto_namer instattr kube_ca subnet_to_az; do \
 		go build -o _output/stackbot/$${bot}/$${bot} ./stackbot/$${bot}; \
 		(cd _output/stackbot/$${bot} && zip $${bot}-$(VERSION).zip $${bot}); \
 	done
