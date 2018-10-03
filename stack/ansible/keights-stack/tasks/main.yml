@@ -120,6 +120,7 @@
       ServiceCidr: '{{ keights_stack.masters.service_cidr }}'
       ClusterDns: '{{ cluster_dns }}'
       EtcdVolumeSize: '{{ keights_stack.masters.etcd_volume_size | default(10) }}'
+      EtcdDevice: '{{ keights_stack.masters.etcd_device | default("/dev/xvdg") }}'
       ImageRepository: '{{ keights_stack.masters.image_repository | default("k8s.gcr.io") }}'
       EtcdImage: '{{ keights_stack.masters.etcd_image | default("k8s.gcr.io/etcd-amd64:3.1.12") }}'
       KubernetesVersion: '{{ k8s_version }}'
