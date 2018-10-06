@@ -110,21 +110,19 @@ func (v *Volumizer) AttachVolume(volume *ec2.Volume, device string) error {
 
 func (v *Volumizer) WaitForDevice(device string) error {
 	return helpers.WaitFor(5*time.Minute, func() error {
-		devicePath := fmt.Sprintf("/dev/%s", device)
-		_, err := os.Stat(devicePath)
+		_, err := os.Stat(device)
 		if err != nil {
-			return fmt.Errorf("No device %s found", devicePath)
+			return fmt.Errorf("No device %s found", device)
 		}
 		return nil
 	})
 }
 
 func (v *Volumizer) HasFilesystem(device, fstype string) (bool, error) {
-	devicePath := fmt.Sprintf("/dev/%s", device)
-	blkid := helpers.RunCommand(Blkid, "-p", "-s", "TYPE", "-o", "udev", devicePath)
+	blkid := helpers.RunCommand(Blkid, "-p", "-s", "TYPE", "-o", "udev", device)
 	if blkid.ExitStatus == 0 {
 		if !strings.HasPrefix(blkid.Stdout, fmt.Sprintf("ID_FS_TYPE=%v", fstype)) {
-			return false, fmt.Errorf("Unexpected error reading %s", devicePath)
+			return false, fmt.Errorf("Unexpected error reading %s", device)
 		}
 		return true, nil
 	}
@@ -138,15 +136,14 @@ func (v *Volumizer) HasFilesystem(device, fstype string) (bool, error) {
 }
 
 func (v *Volumizer) MakeFilesystem(device, fstype string) error {
-	devicePath := fmt.Sprintf("/dev/%s", device)
-	mkfs := helpers.RunCommand(Mkfs, "-t", fstype, devicePath)
+	mkfs := helpers.RunCommand(Mkfs, "-t", fstype, device)
 	if mkfs.ExitStatus != 0 {
 		return fmt.Errorf(mkfs.Stderr)
 	}
 	return nil
 }
 
-func DoIt(device, volumeTag, fsType, clusterName string, minutes int) error {
+func DoIt(device, internalDevice, volumeTag, fsType, clusterName string, minutes int) error {
 	sess := session.New()
 	metadata := ec2metadata.New(sess)
 	identity, err := metadata.GetInstanceIdentityDocument()
@@ -161,15 +158,15 @@ func DoIt(device, volumeTag, fsType, clusterName string, minutes int) error {
 	if err = volumizer.AttachVolume(volume, device); err != nil {
 		return err
 	}
-	if err = volumizer.WaitForDevice(device); err != nil {
+	if err = volumizer.WaitForDevice(internalDevice); err != nil {
 		return err
 	}
-	hasFs, err := volumizer.HasFilesystem(device, fsType)
+	hasFs, err := volumizer.HasFilesystem(internalDevice, fsType)
 	if err != nil {
 		return err
 	}
 	if !hasFs {
-		if err = volumizer.MakeFilesystem(device, fsType); err != nil {
+		if err = volumizer.MakeFilesystem(internalDevice, fsType); err != nil {
 			return err
 		}
 	}

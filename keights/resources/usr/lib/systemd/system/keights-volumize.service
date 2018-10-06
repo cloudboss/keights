@@ -7,12 +7,14 @@ Before=var-lib-etcd.mount
 # Environment=KEIGHTS_CLUSTER_NAME=
 # Environment=KEIGHTS_VOLUME_TAG=
 # Environment=KEIGHTS_VOLUME_DEVICE=
+# Environment=KEIGHTS_VOLUME_INTERNAL_DEVICE=
 Type=oneshot
 ExecStart=/bin/sh -c ' \
     while true; do \
         /usr/bin/keights volumize \
             -c ${KEIGHTS_CLUSTER_NAME} \
             -d ${KEIGHTS_VOLUME_DEVICE} \
+            -D ${KEIGHTS_VOLUME_INTERNAL_DEVICE} \
             -v ${KEIGHTS_VOLUME_TAG} && break; \
 	sleep 10; \
     done \
