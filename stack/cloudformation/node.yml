@@ -59,6 +59,10 @@ Parameters:
 Resources:
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref MinInstances
+        Timeout: PT15M
     Properties:
       AutoScalingGroupName: !Ref AWS::StackName
       LaunchConfigurationName: !Ref LaunchConfiguration
@@ -96,14 +100,6 @@ Resources:
           !Sub |
             #cloud-config
             write_files:
-              - path: /etc/systemd/system/keights-bootstrap-kubeconfig.service.d/environment.conf
-                owner: root:root
-                permissions: '0644'
-                content: |
-                  [Service]
-                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
-                  Environment=KEIGHTS_K8S_SERVER=${LoadBalancerDnsName}
-
               - path: /etc/systemd/system/keights-whisper-node.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
@@ -118,7 +114,7 @@ Resources:
                 content: |
                   [Service]
                   Environment=KEIGHTS_APISERVER=${LoadBalancerDnsName}
-                  Environment=KEIGHTS_APISERVER_PORT=6443
+                  Environment=KEIGHTS_APISERVER_PORT=443
 
               - path: /etc/systemd/system/keights-signal.service.d/environment.conf
                 owner: root:root
@@ -129,31 +125,11 @@ Resources:
                   Environment=KEIGHTS_STACK_NAME=${AWS::StackName}
                   Environment=KEIGHTS_MASTER=false
 
-              - path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+              - path: /etc/default/kubelet
                 owner: root:root
                 permissions: '0644'
                 content: |
-                  [Service]
-                  Environment=KEIGHTS_CLUSTER_DOMAIN=k8s.local
-                  Environment=KEIGHTS_NODE_LABELS=kubernetes.io/role=node,node-role.kubernetes.io/node=,${NodeLabels}
-                  ExecStart=
-                  ExecStart=/usr/bin/kubelet \
-                              --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf \
-                              --kubeconfig=/etc/kubernetes/kubelet.conf \
-                              --pod-manifest-path=/etc/kubernetes/manifests \
-                              --allow-privileged=true \
-                              --network-plugin=cni \
-                              --cni-conf-dir=/etc/cni/net.d \
-                              --cni-bin-dir=/opt/cni/bin \
-                              --cluster-dns=${ClusterDns} \
-                              --cluster-domain=${!KEIGHTS_CLUSTER_DOMAIN} \
-                              --authorization-mode=Webhook \
-                              --client-ca-file=/etc/kubernetes/pki/ca.crt \
-                              --cadvisor-port=0 \
-                              --rotate-certificates=true \
-                              --cert-dir=/var/lib/kubelet/pki \
-                              --cloud-provider=aws \
-                              --node-labels=${!KEIGHTS_NODE_LABELS}
+                  KUBELET_EXTRA_ARGS=--node-labels=kubernetes.io/role=node,node-role.kubernetes.io/node=,${NodeLabels}
 
             runcmd:
               - systemctl daemon-reload

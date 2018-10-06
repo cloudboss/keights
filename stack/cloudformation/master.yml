@@ -95,10 +95,6 @@ Parameters:
     Description: Repository for core Kubernetes Docker images
     Type: String
     Default: k8s.gcr.io
-  EtcdImage:
-    Description: Docker image containing etcd
-    Type: String
-    Default: k8s.gcr.io/etcd-amd64:3.1.12
   KubernetesVersion:
     Description: Version of Kubernetes
     Type: String
@@ -211,10 +207,6 @@ Resources:
           InstanceProtocol: TCP
           Protocol: TCP
           LoadBalancerPort: 443
-        - InstancePort: 6443
-          InstanceProtocol: TCP
-          Protocol: TCP
-          LoadBalancerPort: 6443
       Scheme: !Ref LoadBalancerScheme
       SecurityGroups:
         - !Ref LoadBalancerSecurityGroup
@@ -305,18 +297,6 @@ Resources:
           - |
             #cloud-config
             write_files:
-              - path: /etc/systemd/system/keights-templatize-etcd.service.d/environment.conf
-                owner: root:root
-                permissions: '0644'
-                content: |
-                  [Service]
-                  Environment=AWS_REGION=${AWS::Region}
-                  Environment=KEIGHTS_ETCD_DOMAIN=${ClusterName}.local
-                  Environment=KEIGHTS_ETCD_CLUSTER_TOKEN=etcd-${ClusterName}
-                  Environment=KEIGHTS_ETCD_IMAGE=${EtcdImage}
-                  Environment=KEIGHTS_PREFIX=etcd
-                  Environment=KEIGHTS_AZS=${AvailabilityZones},
-
               - path: /etc/systemd/system/keights-volumize.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
@@ -353,8 +333,10 @@ Resources:
                   Environment=KEIGHTS_ETCD_DOMAIN=${ClusterName}.local
                   Environment=KEIGHTS_PREFIX=etcd
                   Environment=KEIGHTS_APISERVER=${LoadBalancer.DNSName}
+                  Environment=KEIGHTS_API_PORT=443
                   Environment=KEIGHTS_POD_SUBNET=${PodCidr}
                   Environment=KEIGHTS_SERVICE_SUBNET=${ServiceCidr}
+                  Environment=KEIGHTS_CLUSTER_DNS=${ClusterDns}
                   Environment=KEIGHTS_IMAGE_REPOSITORY=${ImageRepository}
                   Environment=KEIGHTS_KUBERNETES_VERSION=${KubernetesVersion}
                   Environment=KEIGHTS_AZS=${AvailabilityZones},
@@ -368,35 +350,10 @@ Resources:
                   Environment=KEIGHTS_STACK_NAME=${AWS::StackName}
                   Environment=KEIGHTS_MASTER=true
 
-              - path: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
-                owner: root:root
-                permissions: '0644'
-                content: |
-                  [Service]
-                  Environment=KEIGHTS_CLUSTER_DOMAIN=k8s.local
-                  ExecStart=
-                  ExecStart=/usr/bin/kubelet \
-                              --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf \
-                              --kubeconfig=/etc/kubernetes/kubelet.conf \
-                              --pod-manifest-path=/etc/kubernetes/manifests \
-                              --allow-privileged=true \
-                              --network-plugin=cni \
-                              --cni-conf-dir=/etc/cni/net.d \
-                              --cni-bin-dir=/opt/cni/bin \
-                              --cluster-dns=${ClusterDns} \
-                              --cluster-domain=${!KEIGHTS_CLUSTER_DOMAIN} \
-                              --authorization-mode=Webhook \
-                              --client-ca-file=/etc/kubernetes/pki/ca.crt \
-                              --cadvisor-port=0 \
-                              --rotate-certificates=true \
-                              --cert-dir=/var/lib/kubelet/pki \
-                              --cloud-provider=aws
-
             runcmd:
               - systemctl daemon-reload
               - systemctl enable var-lib-etcd.mount
               - systemctl enable kubelet.service
-              - systemctl start --no-block keights-templatize-etcd.service
               - systemctl start --no-block keights-templatize-kubeadm-config.service
               - systemctl start --no-block keights-add-addon.service
               - systemctl start --no-block keights-kubeadm-init.service

@@ -123,7 +123,6 @@
       EtcdDevice: '{{ keights_stack.masters.etcd_device | default("xvdg") }}'
       EtcdInternalDevice: '{{ keights_stack.masters.etcd_internal_device | default("/dev/xvdg") }}'
       ImageRepository: '{{ keights_stack.masters.image_repository | default("k8s.gcr.io") }}'
-      EtcdImage: '{{ keights_stack.masters.etcd_image | default("k8s.gcr.io/etcd-amd64:3.1.12") }}'
       KubernetesVersion: '{{ k8s_version }}'
       KeightsVersion: '{{ keights_version }}'
       ResourceBucket: '{{ keights_stack.resource_bucket | default(resource_bucket) }}'
