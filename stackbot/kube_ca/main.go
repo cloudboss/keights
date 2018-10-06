@@ -24,6 +24,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -298,12 +299,28 @@ func handleDelete(props resourceProperties, whisp whisperer.Whisperer) error {
 		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.ServiceAccountPrivateKeyName),
 		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.ServiceAccountPublicKeyName),
 	}
+	errs := []error{}
 	for _, parameter := range parameters {
 		if err := whisp.DeleteParameter(&parameter); err != nil {
-			return err
+			errs = append(errs, err)
 		}
 	}
-	return nil
+	return concatErrors(errs)
+}
+
+func concatErrors(errs []error) error {
+	if len(errs) == 0 {
+		return nil
+	}
+	errStr := ""
+	for _, err := range errs {
+		if errStr == "" {
+			errStr = err.Error()
+		} else {
+			errStr += fmt.Sprintf("; %s", err.Error())
+		}
+	}
+	return errors.New(errStr)
 }
 
 func Handle(_ctx context.Context, event cfn.Event) (string, map[string]interface{}, error) {
