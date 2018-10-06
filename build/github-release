@@ -18,6 +18,11 @@ fail()
 
 release()
 {
+    if echo "${VERSION}" | grep -q snap; then
+        data="{\"tag_name\":\"${VERSION}\",\"prerelease\":true}"
+    else
+        data="{\"tag_name\":\"${VERSION}\"}"
+    fi
     http_code=`curl -s \
         -w '%{http_code}' \
         -o ${out_file} \
@@ -25,7 +30,7 @@ release()
         -H 'Accept: application/vnd.github.v3+json' \
         -H "Authorization: token ${GITHUB_TOKEN}" \
         "${api_endpoint}/repos/${REPO_SLUG}/releases" \
-        -d "{\"tag_name\":\"${VERSION}\"}"`
+        -d "${data}"`
     [ "${http_code}" = "201" ] || return 1
     jq '.id' ${out_file}
 }
