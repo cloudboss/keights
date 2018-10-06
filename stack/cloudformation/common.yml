@@ -33,9 +33,9 @@ Resources:
     Properties:
       GroupId: !Ref LoadBalancerSecurityGroup
       CidrIp: !Ref ApiAccessCidr
-      FromPort: 6443
+      FromPort: 443
       IpProtocol: tcp
-      ToPort: 6443
+      ToPort: 443
 
   LoadBalancerSecurityGroupApiserverMasterIngress:
     Type: AWS::EC2::SecurityGroupIngress

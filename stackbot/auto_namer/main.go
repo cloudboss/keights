@@ -99,7 +99,6 @@ func newARecordSet(hostBaseName, az, hostedZoneName, ip string, ttl int64) *rout
 	}
 }
 
-
 func handleRecord(ec2Client ec2iface.EC2API, r53Client route53iface.Route53API,
 	instanceID, az string, env map[string]string) error {
 	ip, err := privateIP(ec2Client, instanceID)

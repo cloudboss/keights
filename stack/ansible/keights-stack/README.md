@@ -66,8 +66,6 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which Kubernetes component docker images are pulled.
 
-`etcd_image`: (Optional, type *string*, default `k8s.gcr.io/etcd-amd64:3.1.12`) - Docker image used for etcd.
-
 ### node_groups
 
 `name`: (Required, type *string*) - Unique name given to node group.
@@ -132,7 +130,6 @@ A list of other roles hosted on Galaxy should go here, plus any details in regar
         instance_type: t2.large
         keypair: '{{ keypair }}'
         load_balancer_scheme: internet-facing
-        etcd_image: k8s.gcr.io/etcd-amd64:3.1.12
         etcd_volume_size: 10
       node_groups:
       - name: app
