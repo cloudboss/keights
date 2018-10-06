@@ -50,7 +50,7 @@ func TestHandleCreateSuccess(t *testing.T) {
 	}
 	for _, test := range tests {
 		whisp := &mocks.Whisperer{}
-		props := resourceProperties{NumInstances: "3"}
+		props := resourceProperties{}
 		test.setStoreParameter(whisp)
 		err := handleCreate(props, whisp)
 		assert.Equal(t, err, test.err)

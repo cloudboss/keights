@@ -187,9 +187,6 @@ Resources:
     Properties:
       ServiceToken: !GetAtt KubeCaFunction.Arn
       ClusterName: !Ref ClusterName
-      ServiceCidr: !Ref ServiceCidr
-      LoadBalancerName: !GetAtt LoadBalancer.DNSName
-      NumInstances: !Ref NumInstances
       KmsKeyId: !Ref KmsKeyId
 
   LoadBalancer:
