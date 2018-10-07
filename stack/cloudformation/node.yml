@@ -88,7 +88,6 @@ Resources:
   LaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
-      LaunchConfigurationName: !Ref AWS::StackName
       IamInstanceProfile: !Ref NodeInstanceProfile
       ImageId: !Ref ImageId
       InstanceType: !Ref InstanceType
