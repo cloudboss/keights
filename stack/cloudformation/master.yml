@@ -107,7 +107,6 @@ Parameters:
   ResourceBucket:
     Description: Bucket used to store Lambda archives
     Type: String
-    Default: cloudboss-public
   HostedZoneId:
     Description: ID of Route53 DNS hosted zone
     Type: String

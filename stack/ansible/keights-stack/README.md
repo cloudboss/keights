@@ -24,7 +24,7 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `ssh_access_cidr`: (Required, type *string*) - CIDR block given ssh access to cluster nodes.
 
-`resource_bucket`: (Optional, type *string*, default `cloudboss-public`) - S3 bucket used for retrieving artifacts.
+`resource_bucket`: (Required, type *string*) - S3 bucket used for storing and retrieving artifacts.
 
 `k8s_version`: (Optional, type *string*) - Version of Kubernetes. This defaults to the version corresponding with the `keights-stack` version, for example if the `keights-stack` version is `1.10.7-3`, then `k8s_version` is `1.10.7`. Versions other than the default will not be tested.
 

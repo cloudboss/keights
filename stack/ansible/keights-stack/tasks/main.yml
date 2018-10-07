@@ -43,7 +43,7 @@
 
 - name: find lambda archives in s3
   aws_s3:
-    bucket: '{{ keights_stack.resource_bucket | default(resource_bucket) }}'
+    bucket: '{{ keights_stack.resource_bucket }}'
     object: 'stackbot/{{ item }}/{{ keights_version }}/go1.x/{{ item }}-{{ keights_version }}.zip'
     mode: geturl
   register: stackbots
@@ -68,7 +68,7 @@
 
 - name: upload lambda archives to s3
   aws_s3:
-    bucket: '{{ keights_stack.resource_bucket | default(resource_bucket) }}'
+    bucket: '{{ keights_stack.resource_bucket }}'
     object: 'stackbot/{{ item.item }}/{{ keights_version }}/go1.x/{{ item.item }}-{{ keights_version }}.zip'
     mode: put
     src: '{{ cache_dir }}/{{ item.item }}-{{ keights_version }}.zip'
@@ -126,7 +126,7 @@
       EtcdImage: '{{ keights_stack.masters.etcd_image | default("k8s.gcr.io/etcd-amd64:3.1.12") }}'
       KubernetesVersion: '{{ k8s_version }}'
       KeightsVersion: '{{ keights_version }}'
-      ResourceBucket: '{{ keights_stack.resource_bucket | default(resource_bucket) }}'
+      ResourceBucket: '{{ keights_stack.resource_bucket }}'
       HostedZoneId: '{{ common_stack.stack_outputs.HostedZoneId }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
