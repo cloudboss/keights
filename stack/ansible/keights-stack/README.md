@@ -64,9 +64,9 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `etcd_internal_device`: (Optional, type *string*, default `/dev/xvdg`) - Name of etcd volume device within machine, which may differ between EC2 instance types.
 
-`image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which Kubernetes component docker images are pulled.
+`etcd_internal_device`: (Optional, type *string*, default `/dev/xvdg`) - Name of etcd volume device within machine, which may differ between EC2 instance types.
 
-`etcd_image`: (Optional, type *string*, default `k8s.gcr.io/etcd-amd64:3.1.12`) - Docker image used for etcd.
+`image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which Kubernetes component docker images are pulled.
 
 ### node_groups
 
@@ -132,7 +132,6 @@ A list of other roles hosted on Galaxy should go here, plus any details in regar
         instance_type: t2.large
         keypair: '{{ keypair }}'
         load_balancer_scheme: internet-facing
-        etcd_image: k8s.gcr.io/etcd-amd64:3.1.12
         etcd_volume_size: 10
       node_groups:
       - name: app

@@ -18,7 +18,12 @@ ExecStart=/bin/sh -c ' \
                     openssl rsa -pubin -outform der 2>/dev/null | \
                     openssl dgst -sha256 -hex | \
                     sed "s/^.* //"` && \
+    node_name=`curl -s \
+            --retry 10 \
+            --retry-delay 2 \
+            http://169.254.169.254/latest/meta-data/local-hostname` && \
     /usr/bin/kubeadm join \
+      --node-name=$${node_name} \
       --token=$${token} \
       --discovery-token-ca-cert-hash=sha256:$${ca_cert_hash} \
       --ignore-preflight-errors=all \

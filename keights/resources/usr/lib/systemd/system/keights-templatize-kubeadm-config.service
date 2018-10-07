@@ -10,8 +10,10 @@ Type=simple
 # Environment=KEIGHTS_ETCD_DOMAIN=
 # Environment=KEIGHTS_PREFIX=
 # Environment=KEIGHTS_APISERVER=
+# Environment=KEIGHTS_API_PORT=
 # Environment=KEIGHTS_POD_SUBNET=
 # Environment=KEIGHTS_SERVICE_SUBNET=
+# Environment=KEIGHTS_CLUSTER_DNS=
 # Environment=KEIGHTS_IMAGE_REPOSITORY=
 # Environment=KEIGHTS_KUBERNETES_VERSION=
 # Environment=KEIGHTS_AZS=
@@ -21,8 +23,11 @@ ExecStart=/bin/sh -c ' \
       [ -f /run/kubernetes/bootstrap-token ] && break; \
       sleep 1; \
     done && \
-    node_name=`hostname -f` && \
     token=`cat /run/kubernetes/bootstrap-token` && \
+    node_name=`curl -s \
+            --retry 10 \
+            --retry-delay 2 \
+            http://169.254.169.254/latest/meta-data/local-hostname` && \
     myaz=`curl -s \
             --retry 10 \
             --retry-delay 2 \
@@ -38,8 +43,10 @@ ExecStart=/bin/sh -c ' \
       -v EtcdDomain=${KEIGHTS_ETCD_DOMAIN} \
       -v Prefix=${KEIGHTS_PREFIX} \
       -v APIServer=${KEIGHTS_APISERVER} \
+      -v APIPort=${KEIGHTS_API_PORT} \
       -v PodSubnet=${KEIGHTS_POD_SUBNET} \
       -v ServiceSubnet=${KEIGHTS_SERVICE_SUBNET} \
+      -v ClusterDNS=${KEIGHTS_CLUSTER_DNS} \
       -v NodeName=$${node_name} \
       -v Token=$${token} \
       -v ImageRepository=${KEIGHTS_IMAGE_REPOSITORY} \
