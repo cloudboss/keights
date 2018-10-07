@@ -8,12 +8,6 @@ ConditionPathExists=!/var/lib/kubeadm/initialized
 [Service]
 Type=simple
 ExecStart=/bin/sh -c ' \
-    /usr/bin/kubeadm alpha phase certs etcd-server \
-      --config=/var/lib/kubeadm/config.yaml && \
-    /usr/bin/kubeadm alpha phase certs etcd-peer \
-      --config=/var/lib/kubeadm/config.yaml && \
-    /usr/bin/kubeadm alpha phase certs apiserver-etcd-client \
-      --config=/var/lib/kubeadm/config.yaml && \
     /usr/bin/kubeadm init \
       --config=/var/lib/kubeadm/config.yaml \
       --ignore-preflight-errors=all \
