@@ -1,0 +1,91 @@
+---
+- name: define ssm paths
+  set_fact:
+    ca_cert_ssm_path: '/{{ keights_system.cluster_name }}/cluster/ca.crt'
+    client_cert_ssm_path: '/{{ keights_system.cluster_name }}/controller/apiserver-kubelet-client.crt'
+    client_key_ssm_path: '/{{ keights_system.cluster_name }}/controller/apiserver-kubelet-client.key'
+
+- name: ensure cache directory
+  file:
+    path: '{{ playbook_dir }}/.cache/keights-system'
+    state: directory
+  register: cache_dir
+
+- name: retrieve kubernetes certificates from ssm parameter store
+  set_fact:
+    client_cert: '{{ lookup("aws_ssm", client_cert_ssm_path) }}'
+    client_key: '{{ lookup("aws_ssm", client_key_ssm_path) }}'
+    ca_cert: '{{ lookup("aws_ssm", ca_cert_ssm_path) }}'
+  no_log: true
+
+- name: assert that certificates are found
+  assert:
+    that:
+      - "{{ item }} != ''"
+  loop:
+  - client_cert
+  - client_key
+  - ca_cert
+
+- name: define kubeconfig
+  set_fact:
+    kubeconfig:
+      apiVersion: v1
+      kind: Config
+      clusters:
+      - cluster:
+          certificate-authority-data: '{{ ca_cert | b64encode }}'
+          server: https://{{ keights_system.cluster_apiserver }}:6443
+        name: cb
+      contexts:
+      - context:
+          cluster: cb
+          user: admin
+        name: admin@cb
+      current-context: admin@cb
+      preferences: {}
+      users:
+      - name: admin
+        user:
+          client-certificate-data: '{{ client_cert | b64encode }}'
+          client-key-data: '{{ client_key | b64encode }}'
+  no_log: true
+
+- name: write kubeconfig file
+  copy:
+    dest: '{{ cache_dir.path }}/kubeconfig'
+    content: '{{ kubeconfig | to_nice_yaml }}'
+    mode: 0600
+  no_log: true
+  changed_when: false
+
+- name: expand k8s manifest templates
+  template:
+    src: '{{ item.src }}'
+    dest: '{{ item.dest }}'
+  loop:
+  - src: templates/manifests/{{ keights_system.network.plugin }}.yml.j2
+    dest: '{{ cache_dir.path }}/{{ keights_system.network.plugin }}.yml'
+  - src: templates/manifests/storage.yml.j2
+    dest: '{{ cache_dir.path }}/storage.yml'
+  - src: templates/manifests/kubernetes-dashboard.yml.j2
+    dest: '{{ cache_dir.path }}/kubernetes-dashboard.yml'
+  register: k8s_manifests
+
+- name: apply k8s manifests
+  k8s_raw:
+    # kubeconfig is used instead of other authentication arguments,
+    # to ensure an existing ~/.kube/config does not take precedence.
+    kubeconfig: '{{ cache_dir.path }}/kubeconfig'
+    src: '{{ item.item.dest }}'
+  loop: '{{ k8s_manifests.results }}'
+  register: apply_k8s_manifests
+  until: apply_k8s_manifests is succeeded
+  retries: 12
+  delay: 10
+
+- name: clean up kubeconfig file
+  file:
+    path: '{{ cache_dir.path }}/kubeconfig'
+    state: absent
+  changed_when: false

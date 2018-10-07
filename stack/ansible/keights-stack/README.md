@@ -90,10 +90,6 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `node_labels`: (Optional, type *dict*, default `{}`) - A dictionary of key/value pairs used to assign Kubernetes labels to nodes.
 
-# Dependencies
-
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
-
 # Example Playbook
 
 ```
@@ -112,8 +108,6 @@ A list of other roles hosted on Galaxy should go here, plus any details in regar
     kms_key_alias: alias/cloudboss
     ssh_access_cidr: 0.0.0.0/0
 
-- hosts: localhost
-  connection: local
   roles:
   - role: keights-stack
     keights_stack:

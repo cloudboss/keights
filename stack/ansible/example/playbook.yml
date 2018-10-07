@@ -12,7 +12,7 @@
       resource_bucket: '{{ resource_bucket }}'
       masters:
         instance_type: t2.large
-        pod_cidr: 10.0.0.0/16
+        pod_cidr: '{{ pod_cidr }}'
         service_cidr: 10.1.0.0/16
         subnet_ids: '{{ master_subnet_ids }}'
         keypair: '{{ keypair }}'
@@ -27,3 +27,11 @@
         keypair: '{{ keypair }}'
         node_labels:
           class: app
+  - role: keights-system
+    keights_system:
+      cluster_name: '{{ cluster }}'
+      # master_stack is defined in keights-stack role, used for outputs here
+      cluster_apiserver: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
+      network:
+        plugin: calico
+        pod_cidr: '{{ pod_cidr }}'

@@ -12,8 +12,7 @@
     "etcd-version": "3.1.12",
     "pause-version": "3.1",
     "addon-manager-version": "8.6",
-    "dashboard-version": "1.10.0",
-    "busybox-version": "1.28.1"
+    "dashboard-version": "1.10.0"
   },
 
   "builders": [{
@@ -68,13 +67,11 @@
       "k8s:version": "{{ user `k8s-version` }}",
       "keights:version": "{{ user `keights-version` }}",
       "cni:version": "{{ user `cni-version` }}",
-      "kube-router:version": "{{ user `kube-router-version` }}",
       "core-dns:version": "{{ user `core-dns-version` }}",
       "etcd:version": "{{ user `etcd-version` }}",
       "pause:version": "{{ user `pause-version` }}",
       "addon-manager:version": "{{ user `addon-manager-version` }}",
-      "dashboard:version": "{{ user `dashboard-version` }}",
-      "busybox:version": "{{ user `busybox-version` }}"
+      "dashboard:version": "{{ user `dashboard-version` }}"
     },
 
     "run_tags": {
@@ -101,13 +98,11 @@
 	"-e", "k8s_version={{ user `k8s-version` }}",
 	"-e", "keights_version={{ user `keights-version` }}",
 	"-e", "cni_version={{ user `cni-version` }}",
-	"-e", "kube_router_version={{ user `kube-router-version` }}",
 	"-e", "core_dns_version={{ user `core-dns-version` }}",
 	"-e", "etcd_version={{ user `etcd-version` }}",
 	"-e", "pause_version={{ user `pause-version` }}",
 	"-e", "addon_manager_version={{ user `addon-manager-version` }}",
-	"-e", "dashboard_version={{ user `dashboard-version` }}",
-	"-e", "busybox_version={{ user `busybox-version` }}"
+	"-e", "dashboard_version={{ user `dashboard-version` }}"
       ]
     }
   ]

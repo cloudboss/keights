@@ -1,0 +1,9 @@
+galaxy_info:
+  author: Joseph Wright
+  description: Kubernetes system
+  company: Cloudboss Corporation
+  issue_tracker_url: https://github.com/cloudboss/keights/issues
+  license: MIT
+  min_ansible_version: 2.5
+  galaxy_tags: []
+dependencies: []

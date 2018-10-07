@@ -70,8 +70,11 @@ for bot in ${bots}; do
     upload "${bot_artifact}" "${bot_artifact_path}" "${release_id}" || fail "`cat ${out_file}`"
 done
 
-# Ansible role
-role_artifact="keights-stack-${VERSION}.tar.gz"
-role_artifact_path="_output/${role_artifact}"
-[ -f ${role_artifact_path} ] || fail "${role_artifact_path} not found"
-upload "${role_artifact}" "${role_artifact_path}" "${release_id}" || fail "`cat ${out_file}`"
+# Ansible roles
+roles="keights-stack keights-system"
+for role in ${roles}; do
+    role_artifact="${role}-${VERSION}.tar.gz"
+    role_artifact_path="_output/${role_artifact}"
+    [ -f ${role_artifact_path} ] || fail "${role_artifact_path} not found"
+    upload "${role_artifact}" "${role_artifact_path}" "${release_id}" || fail "`cat ${out_file}`"
+done
