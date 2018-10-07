@@ -1,2 +1,5 @@
-- src: https://github.com/cloudboss/keights/releases/download/1.10.0-5/keights-stack-1.10.0-5.tar.gz
+# Source URLs for Ansible roles are available from https://github.com/cloudboss/keights/releases
+- src: https://github.com/cloudboss/keights/releases/download/1.11.2-2/keights-stack-1.11.2-2.tar.gz
   name: keights-stack
+- src: https://github.com/cloudboss/keights/releases/download/1.11.2-2/keights-system-1.11.2-2.tar.gz
+  name: keights-system

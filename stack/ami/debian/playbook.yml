@@ -261,8 +261,6 @@
         docker pull k8s.gcr.io/kube-addon-manager-amd64:v{{ addon_manager_version }}
         docker pull k8s.gcr.io/kubernetes-dashboard-amd64:v{{ dashboard_version }}
         docker pull coredns/coredns:{{ core_dns_version }}
-        docker pull cloudnativelabs/kube-router:v{{ kube_router_version }}
-        docker pull busybox:{{ busybox_version }}
         kill ${pid}
         EOF
       args:

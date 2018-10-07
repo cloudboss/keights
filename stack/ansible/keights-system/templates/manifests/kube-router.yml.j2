@@ -6,7 +6,6 @@ metadata:
   labels:
     tier: node
     k8s-app: kube-router
-    addonmanager.kubernetes.io/mode: Reconcile
 data:
   cni-conf.json: |
     {
@@ -26,7 +25,6 @@ metadata:
   labels:
     k8s-app: kube-router
     tier: node
-    addonmanager.kubernetes.io/mode: Reconcile
   name: kube-router
   namespace: kube-system
 spec:
@@ -41,7 +39,7 @@ spec:
       serviceAccountName: kube-router
       containers:
       - name: kube-router
-        image: cloudnativelabs/kube-router:v0.2.0
+        image: {{ keights_system.network.kube_router_image | default('cloudnativelabs/kube-router:v0.2.0') }}
         args:
         - "--run-router=true"
         - "--run-firewall=true"
@@ -65,7 +63,7 @@ spec:
           mountPath: /etc/cni/net.d
       initContainers:
       - name: install-cni
-        image: busybox:1.28.1
+        image: {{ keights_system.network.busybox_image | default('busybox:1.28.1') }}
         command:
         - /bin/sh
         - -c
@@ -104,8 +102,6 @@ spec:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
   name: kube-router
   namespace: kube-system
 
@@ -113,8 +109,6 @@ metadata:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
   name: kube-router
   namespace: kube-system
 rules:
@@ -151,8 +145,6 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
   name: kube-router
 roleRef:
   apiGroup: rbac.authorization.k8s.io
