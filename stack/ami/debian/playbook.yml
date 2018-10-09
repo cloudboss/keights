@@ -257,10 +257,10 @@
         docker pull k8s.gcr.io/kube-proxy-amd64:v{{ k8s_version }}
         docker pull k8s.gcr.io/kube-scheduler-amd64:v{{ k8s_version }}
         docker pull k8s.gcr.io/etcd-amd64:{{ etcd_version }}
-        docker pull k8s.gcr.io/pause-amd64:{{ pause_version }}
+        docker pull k8s.gcr.io/pause:{{ pause_version }}
         docker pull k8s.gcr.io/kube-addon-manager-amd64:v{{ addon_manager_version }}
         docker pull k8s.gcr.io/kubernetes-dashboard-amd64:v{{ dashboard_version }}
-        docker pull coredns/coredns:{{ core_dns_version }}
+        docker pull k8s.gcr.io/coredns:{{ core_dns_version }}
         kill ${pid}
         EOF
       args:
