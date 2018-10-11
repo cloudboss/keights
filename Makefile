@@ -24,13 +24,16 @@ keights-stack:
 	echo $(VERSION) > _output/keights-stack/version
 	tar czf _output/keights-stack-$(VERSION).tar.gz -C _output keights-stack
 
+keights-system:
+	tar czf _output/keights-system-$(VERSION).tar.gz -C stack/ansible keights-system
+
 stackbot:
 	for bot in auto_namer instattr kube_ca subnet_to_az; do \
 		go build -o _output/stackbot/$${bot}/$${bot} ./stackbot/$${bot}; \
 		(cd _output/stackbot/$${bot} && zip $${bot}-$(VERSION).zip $${bot}); \
 	done
 
-dist: keights-deb keights-stack stackbot
+dist: keights-deb keights-stack keights-system stackbot
 
 github-release: dist
 	VERSION=$(VERSION) REPO_SLUG=$(REPO_SLUG) ./build/github-release

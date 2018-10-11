@@ -127,7 +127,7 @@ Resources:
                 owner: root:root
                 permissions: '0644'
                 content: |
-                  KUBELET_EXTRA_ARGS=--node-labels=kubernetes.io/role=node,node-role.kubernetes.io/node=,${NodeLabels}
+                  KUBELET_EXTRA_ARGS=--cloud-provider=aws --node-labels=kubernetes.io/role=node,node-role.kubernetes.io/node=,${NodeLabels}
 
             runcmd:
               - systemctl daemon-reload

@@ -352,7 +352,6 @@ Resources:
               - systemctl enable var-lib-etcd.mount
               - systemctl enable kubelet.service
               - systemctl start --no-block keights-templatize-kubeadm-config.service
-              - systemctl start --no-block keights-add-addon.service
               - systemctl start --no-block keights-kubeadm-init.service
               - systemctl start --no-block keights-signal.service
 
