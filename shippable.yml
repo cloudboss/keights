@@ -1,0 +1,15 @@
+language: go
+
+go:
+- 1.11.1
+
+depth: 10
+
+build:
+  ci:
+  - unset GOPATH
+  - make test
+
+branches:
+  only:
+  - shippy
