@@ -1,5 +1,9 @@
 language: go
 
+env:
+  global:
+    - secure: ENB3Pjg1Fsl5+DGGAWEi2n9mayZrQICWenHgJt4PGIE1i/IHBK/G7j11fpKK6wdaT1r2QMySLmjuzK6QvRXUWWifM9/cOmaU7UE8Ky+zIhzPTQ+DTufmE1446r63ZIh1/foLVKoMbJuJtk+MNvRxUrcJlGvwchEkPCjuDL39d+1r6whK3eoWvB/3VNDkdWGj72vJuqZi3j/1scv3mKUEVxjDmae+bve8XQ7hOCeVL4NoYir0w/02Vjwmmv1mZxrwNn8zDktjUKPC1slABEzQX7sTTpShQPuVna/lvR8mOifuX/nEySU+fshqjF6L5JOOEG4mmbiGcVRp7ZKF0tOljw==
+
 go:
 - 1.11.1
 
