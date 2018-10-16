@@ -1,0 +1,35 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: golang
+    tag: '1.11'
+
+inputs:
+- name: repo
+- name: version
+
+caches:
+- path: /root/go
+
+params:
+  REPO_SLUG: cloudboss/keights
+  GITHUB_TOKEN:
+
+run:
+  dir: repo
+  path: /bin/sh
+  args:
+  - -e
+  - -c
+  - |
+    unset GOPATH
+    version=`cat ../version/version`n
+
+    apt-get update
+    apt-get install -y --no-install-recommends jq zip
+
+    make test
+    make github-release VERSION=v${version} REPO_SLUG=${REPO_SLUG}
