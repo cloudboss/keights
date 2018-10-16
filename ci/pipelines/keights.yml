@@ -1,0 +1,40 @@
+resource_types:
+- name: pull-request
+  type: docker-image
+  source:
+    repository: jtarchie/pr
+
+resources:
+- name: version-snap
+  type: semver
+  source:
+    driver: git
+    uri: git@github.com:cloudboss/cicd.git
+    branch: master
+    private_key: ((github-key-private))
+    file: versions/keights/((git-branch))/snap
+- name: keights-pr
+  type: pull-request
+  source:
+    access_token: ((github-access-token))
+    private_key: ((github-key-private))
+    base: ((git-branch))
+    repo: cloudboss/keights
+
+jobs:
+- name: build-pull-request
+  public: true
+  plan:
+  - aggregate:
+    - get: keights-pr
+      trigger: true
+    - get: version-snap
+      params: { pre: snap }
+  - task: make-keights
+    file: keights-pr/ci/tasks/make-keights.yml
+    input_mapping:
+      repo: keights-pr
+      version: version-snap
+    params:
+      REPO_SLUG: cloudboss/keights
+      GITHUB_TOKEN: ((github-access-token))
