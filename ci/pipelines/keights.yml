@@ -38,3 +38,8 @@ jobs:
     params:
       REPO_SLUG: cloudboss/keights
       GITHUB_TOKEN: ((github-access-token))
+  - task: build-ami
+    file: keights-pr/ci/tasks/build-ami.yml
+    input_mapping:
+      repo: keights-pr
+      version: version-snap
