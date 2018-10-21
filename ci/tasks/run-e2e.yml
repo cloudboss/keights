@@ -1,0 +1,73 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: alpine
+    tag: '3.8'
+
+inputs:
+- name: artifacts
+
+caches:
+- path: ../../../opt/bin
+
+params:
+  SONOBUOY_URL: https://github.com/heptio/sonobuoy/releases/download/v0.12.1/sonobuoy_0.12.1_linux_amd64.tar.gz
+  KUBECONFIG: artifacts/kubeconfig
+
+run:
+  path: /bin/sh
+  args:
+  - -e
+  - -c
+  - |
+    if [ ! -x /opt/bin/sonobuoy ]; then
+        wget -O /tmp/sonobuoy.tar.gz ${SONOBUOY_URL}
+        mkdir -p /opt/bin
+        gunzip -c /tmp/sonobuoy.tar.gz | tar -xf - -C /opt/bin sonobuoy
+    fi
+
+    export PATH=/opt/bin:${PATH}
+
+    sonobuoy run
+
+    echo -n 'Waiting for sonobuoy to come up...'
+    now=`date +%s`
+    end=$((${now}+300))
+    while true; do
+        if [ `date +%s` -gt ${end} ]; then
+            echo ' timeout'
+            sonobuoy status
+            exit 1
+        fi
+        sonobuoy status >/dev/null 2>&1 && break || true
+        sleep 1
+    done
+    echo ' ok'
+
+    echo -n 'Waiting for e2e tests to complete...'
+    now=`date +%s`
+    end=$((${now}+7200))
+    while true; do
+        if [ `date +%s` -gt ${end} ]; then
+            echo ' timeout'
+            sonobuoy status
+            exit 1
+        fi
+        sonobuoy status | grep -q 'Sonobuoy has completed' && break
+        echo -n '.'
+        sleep 15
+    done
+    echo ' ok'
+
+    echo -n 'Checking e2e results...'
+    mkdir results
+    sonobuoy retrieve results
+    if sonobuoy e2e results/*.tar.gz | grep -q 'failed tests'; then
+        echo ' error:'
+        sonobuoy e2e results/*.tar.gz
+        exit 1
+    fi
+    echo ' all tests passed'
