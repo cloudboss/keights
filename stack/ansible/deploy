@@ -21,7 +21,7 @@ searchvirt()
 
 PYTHON_BASE="${PYTHON_BASE:-./.cache/virtualenv}"
 
-if [ ! -d ${PYTHON_BASE} ]; then
+if [ ! -x ${PYTHON_BASE}/bin/pip ]; then
     venv=`searchvirt`
     [ -n "${venv}" ] && ${venv} ${PYTHON_BASE}
 fi

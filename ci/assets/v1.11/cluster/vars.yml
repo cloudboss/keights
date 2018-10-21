@@ -1,0 +1,30 @@
+vpc_id: vpc-c71371be
+resource_bucket: cloudboss-public
+cfn_role_arn: arn:aws:iam::256008164056:role/keights-cloudformation
+subnet_ids:
+  - subnet-674c266b
+  - subnet-10cd9e58
+  - subnet-cb9c70af
+master_instance_type: t3.medium
+keypair: keights
+load_balancer_scheme: internal
+kms_key_id: 714e0cab-0d59-4885-b45b-31d44467fe5c
+kms_key_alias: alias/cloudboss
+etcd_volume_size: 10
+etcd_internal_device: /dev/nvme2n1
+pod_cidr: 10.0.0.0/16
+service_cidr: 10.1.0.0/16
+ssh_access_cidr: 172.31.0.0/16
+api_access_cidr: 172.31.0.0/16
+node_groups:
+- name: app
+  min_instances: 2
+  max_instances: 2
+  vpc_id: '{{ vpc_id }}'
+  subnet_ids: '{{ subnet_ids }}'
+  instance_type: t3.large
+  keypair: '{{ keypair }}'
+  ssh_access_cidr: '{{ ssh_access_cidr }}'
+  node_labels:
+    class: app
+    env: dev

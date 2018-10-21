@@ -1,0 +1,89 @@
+resource_types:
+- name: pull-request
+  type: docker-image
+  source:
+    repository: jtarchie/pr
+
+resources:
+- name: version-snap
+  type: semver
+  source:
+    driver: git
+    uri: git@github.com:cloudboss/cicd.git
+    branch: master
+    private_key: ((github-deploy-key-cicd))
+    file: versions/keights/((git-branch))/snap
+- name: keights-pr
+  type: pull-request
+  source:
+    access_token: ((github-access-token))
+    private_key: ((github-deploy-key-keights))
+    base: ((git-branch))
+    repo: cloudboss/keights
+
+jobs:
+- name: build-pull-request
+  public: true
+  plan:
+  - aggregate:
+    - get: keights-pr
+      trigger: true
+      version: every
+    - get: version-snap
+      params: { pre: snap }
+  - put: keights-pr
+    params:
+      path: keights-pr
+      status: pending
+  - task: make-keights
+    file: keights-pr/ci/tasks/make-keights.yml
+    input_mapping:
+      repo: keights-pr
+      version: version-snap
+    params:
+      REPO_SLUG: cloudboss/keights
+      GITHUB_TOKEN: ((github-access-token))
+  - task: build-ami
+    file: keights-pr/ci/tasks/build-ami.yml
+    input_mapping:
+      repo: keights-pr
+      version: version-snap
+  - put: version-snap
+    params: { pre: snap }
+
+- name: build-cluster
+  public: true
+  plan:
+  - aggregate:
+    - get: keights-pr
+      trigger: true
+      version: every
+      passed: [build-pull-request]
+    - get: version-snap
+      passed: [build-pull-request]
+  - task: build-cluster
+    file: keights-pr/ci/tasks/build-cluster.yml
+    input_mapping:
+      repo: keights-pr
+      version: version-snap
+    params:
+      KEIGHTS_BRANCH: ((git-branch))
+  on_failure:
+    put: keights-pr
+    params:
+      path: keights-pr
+      status: failure
+
+- name: update-pull-request-status
+  public: true
+  plan:
+  - aggregate:
+    - get: keights-pr
+      trigger: true
+      version: every
+      passed:
+      - build-cluster
+  - put: keights-pr
+    params:
+      path: keights-pr
+      status: success
