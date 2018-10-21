@@ -1,0 +1,41 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: python
+    tag: '3.6'
+
+inputs:
+- name: repo
+- name: version
+
+caches:
+- path: ../../../python
+- path: ../../../opt/bin
+
+params:
+  AWS_REGION: us-east-1
+  PACKER_URL: https://releases.hashicorp.com/packer/1.3.1/packer_1.3.1_linux_amd64.zip
+
+run:
+  path: /bin/sh
+  args:
+  - -e
+  - -c
+  - |
+    if [ ! -x /opt/bin/packer ]; then
+        apt-get update && apt-get install --no-install-recommends unzip
+        curl -o /tmp/packer.zip ${PACKER_URL}
+        unzip -d /opt/bin /tmp/packer.zip
+    fi
+
+    python3 -m venv /python
+    /python/bin/pip install -r repo/stack/ami/requirements.txt
+    . /python/bin/activate
+
+    version=`cat version/version`
+
+    cd repo/stack/ami/debian
+    /opt/bin/packer build -var keights-version=v${version} build.json
