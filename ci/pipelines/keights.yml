@@ -68,6 +68,10 @@ jobs:
       version: version-snap
     params:
       KEIGHTS_BRANCH: ((git-branch))
+  - task: run-e2e
+    file: keights-pr/ci/tasks/run-e2e.yml
+    input_mapping:
+      artifacts: build-cluster-artifacts
   on_failure:
     put: keights-pr
     params:
