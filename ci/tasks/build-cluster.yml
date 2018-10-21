@@ -16,7 +16,6 @@ outputs:
 
 caches:
 - path: ../../../python
-- path: ../../../opt/bin
 
 params:
   AWS_REGION: us-east-1
