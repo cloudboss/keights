@@ -75,6 +75,13 @@ Parameters:
       the value of ServiceCidr + 10
     Default: 10.1.0.10
     Type: String
+  ClusterDomain:
+    Description: Domain name used for cluster network.
+    Default: cluster.local
+    Type: String
+  EtcdDomain:
+    Description: Domain name given to etcd Route53 zone.
+    Type: String
   EtcdVolumeSize:
     Description: Size of etcd volume in GB
     Default: 10
@@ -149,7 +156,7 @@ Resources:
           ASG_NAME: !Ref AWS::StackName
           DNS_TTL: 15
           HOST_BASE_NAME: etcd
-          HOSTED_ZONE_NAME: !Sub ${ClusterName}.local
+          HOSTED_ZONE_NAME: !Sub ${EtcdDomain}
           HOSTED_ZONE_ID: !Ref HostedZoneId
 
   AutoNamingEventsRule:
@@ -326,8 +333,8 @@ Resources:
                 content: |
                   [Service]
                   Environment=AWS_REGION=${AWS::Region}
-                  Environment=KEIGHTS_DOMAIN=k8s.local
-                  Environment=KEIGHTS_ETCD_DOMAIN=${ClusterName}.local
+                  Environment=KEIGHTS_CLUSTER_DOMAIN=${ClusterDomain}
+                  Environment=KEIGHTS_ETCD_DOMAIN=${EtcdDomain}
                   Environment=KEIGHTS_PREFIX=etcd
                   Environment=KEIGHTS_APISERVER=${LoadBalancer.DNSName}
                   Environment=KEIGHTS_API_PORT=443
