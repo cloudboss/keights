@@ -1,0 +1,32 @@
+- hosts: localhost
+  connection: local
+  roles:
+  - role: keights-stack
+    keights_stack:
+      cluster_name: '{{ cluster }}'
+      cfn_role_arn: '{{ cfn_role_arn }}'
+      vpc_id: '{{ vpc_id }}'
+      kms_key_id: '{{ kms_key_id }}'
+      kms_key_alias: '{{ kms_key_alias }}'
+      api_access_cidr: '{{ api_access_cidr }}'
+      ssh_access_cidr: '{{ ssh_access_cidr }}'
+      keights_version: '{{ keights_version }}'
+      resource_bucket: '{{ resource_bucket }}'
+      masters:
+        service_cidr: '{{ service_cidr }}'
+        pod_cidr: '{{ pod_cidr }}'
+        subnet_ids: '{{ subnet_ids }}'
+        instance_type: '{{ master_instance_type }}'
+        keypair: '{{ keypair }}'
+        load_balancer_scheme: '{{ load_balancer_scheme }}'
+        etcd_volume_size: '{{ etcd_volume_size }}'
+        etcd_internal_device: '{{ etcd_internal_device }}'
+      node_groups: '{{ node_groups }}'
+
+  - role: keights-system
+    keights_system:
+      cluster_name: '{{ cluster }}'
+      cluster_apiserver: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}:6443'
+      network:
+        plugin: calico
+        pod_cidr: '{{ pod_cidr }}'
