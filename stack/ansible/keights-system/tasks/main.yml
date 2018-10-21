@@ -83,9 +83,3 @@
   until: apply_k8s_manifests is succeeded
   retries: 12
   delay: 10
-
-- name: clean up kubeconfig file
-  file:
-    path: '{{ cache_dir.path }}/kubeconfig'
-    state: absent
-  changed_when: false

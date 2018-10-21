@@ -80,6 +80,7 @@
 - name: build common stack
   cloudformation:
     stack_name: '{{ keights_stack.cluster_name }}-common'
+    role_arn: '{{ keights_stack.cfn_role_arn | default(omit) }}'
     template: '{{ role_path }}/files/common.yml'
     template_parameters:
       VpcId: '{{ keights_stack.vpc_id }}'
@@ -99,6 +100,7 @@
 - name: build master stack
   cloudformation:
     stack_name: '{{ keights_stack.cluster_name }}-master'
+    role_arn: '{{ keights_stack.cfn_role_arn | default(omit) }}'
     template: '{{ role_path }}/files/master.yml'
     template_parameters:
       ClusterName: '{{ keights_stack.cluster_name }}'
@@ -139,6 +141,7 @@
 - name: build node stack
   cloudformation:
     stack_name: '{{ keights_stack.cluster_name }}-node-{{ item.name }}'
+    role_arn: '{{ keights_stack.cfn_role_arn | default(omit) }}'
     template: '{{ role_path }}/files/node.yml'
     template_parameters:
       ClusterName: '{{ keights_stack.cluster_name }}'
