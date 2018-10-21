@@ -30,7 +30,7 @@ etcd:
     - {{ .MyIP }}
     - {{ .Prefix }}-{{ .MyAZ }}.{{ .EtcdDomain }}
 networking:
-  dnsDomain: {{ .Domain }}
+  dnsDomain: {{ .ClusterDomain }}
   podSubnet: {{ .PodSubnet }}
   serviceSubnet: {{ .ServiceSubnet }}
 bootstrapTokens:
@@ -109,7 +109,7 @@ kubeletConfiguration:
     cloudProvider: aws
     clusterDNS:
     - {{ .ClusterDNS }}
-    clusterDomain: k8s.local
+    clusterDomain: {{ .ClusterDomain }}
     containerLogMaxFiles: 5
     containerLogMaxSize: 10Mi
     contentType: application/vnd.kubernetes.protobuf

@@ -15,11 +15,15 @@ resources:
     file: versions/keights/((git-branch))/snap
 - name: keights-pr
   type: pull-request
+  check_every: 12h
+  webhook_token: ((github-keights-webhook-token))
   source:
     access_token: ((github-access-token))
     private_key: ((github-deploy-key-keights))
     base: ((git-branch))
     repo: cloudboss/keights
+    require_review_approval: true
+    only_mergeable: true
 
 jobs:
 - name: build-pull-request
@@ -68,6 +72,10 @@ jobs:
       version: version-snap
     params:
       KEIGHTS_BRANCH: ((git-branch))
+  - task: run-e2e
+    file: keights-pr/ci/tasks/run-e2e.yml
+    input_mapping:
+      artifacts: build-cluster-artifacts
   on_failure:
     put: keights-pr
     params:

@@ -83,3 +83,15 @@
   until: apply_k8s_manifests is succeeded
   retries: 12
   delay: 10
+
+- name: wait for network to come up
+  k8s_facts:
+    kubeconfig: '{{ cache_dir.path }}/kubeconfig'
+    kind: Pod
+    namespace: kube-system
+    label_selectors:
+    - k8s-app in (calico-node, calico-typha, kube-router)
+  register: pods
+  until: pods | json_query('resources[].status.containerStatuses[].state | map(&keys(@)[?@ != `running`], @)[]') == []
+  retries: 60
+  delay: 10
