@@ -8,6 +8,7 @@
 - name: set default values
   set_fact:
     cluster_dns: '{{ keights_stack.masters.service_cidr.split(".")[:-1] | join(".") }}.10'
+    default_etcd_domain: '{{ "{}.local".format(keights_stack.cluster_name) }}'
     k8s_version: '{{ keights_stack.k8s_version | default(keights_version.split("-")[0]) }}'
     default_image: 'debian-stretch-k8s-hvm-amd64-{{ keights_version }}'
     cache_dir: '{{ playbook_dir }}/.cache'
@@ -85,6 +86,7 @@
     template_parameters:
       VpcId: '{{ keights_stack.vpc_id }}'
       ClusterName: '{{ keights_stack.cluster_name }}'
+      EtcdDomain: '{{ keights_stack.etcd_domain | default(default_etcd_domain) }}'
       KmsKeyId: '{{ keights_stack.kms_key_id }}'
       ApiAccessCidr: '{{ keights_stack.api_access_cidr }}'
       # TODO: give masters and nodes separate ssh_access_cidr
@@ -121,6 +123,8 @@
       PodCidr: '{{ keights_stack.masters.pod_cidr }}'
       ServiceCidr: '{{ keights_stack.masters.service_cidr }}'
       ClusterDns: '{{ cluster_dns }}'
+      ClusterDomain: '{{ keights_stack.cluster_domain | default("cluster.local") }}'
+      EtcdDomain: '{{ keights_stack.etcd_domain | default(default_etcd_domain) }}'
       EtcdVolumeSize: '{{ keights_stack.masters.etcd_volume_size | default(10) }}'
       EtcdDevice: '{{ keights_stack.masters.etcd_device | default("xvdg") }}'
       EtcdInternalDevice: '{{ keights_stack.masters.etcd_internal_device | default("/dev/xvdg") }}'
@@ -156,6 +160,7 @@
       NodeInstanceProfile: '{{ common_stack.stack_outputs.NodeInstanceProfile }}'
       NodeSecurityGroups: '{{ ([common_stack.stack_outputs.NodeSecurityGroup] + item.extra_security_groups | default([])) | join(",") }}'
       ClusterDns: '{{ cluster_dns }}'
+      ClusterDomain: '{{ keights_stack.cluster_domain | default("cluster.local") }}'
       NodeLabels: '{% set j = joiner(",") %}{% for k, v in item.node_labels.items() | default({}) %}{{ j() }}{{ k }}={{ v }}{% endfor %}'
       LoadBalancerDnsName: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
     tags:

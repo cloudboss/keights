@@ -26,6 +26,10 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `resource_bucket`: (Required, type *string*) - S3 bucket used for storing and retrieving artifacts.
 
+`cluster_domain`: (Optional, type *string*, default `cluster.local`) - Domain used by internal Kubernetes network.
+
+`etcd_domain`: (Optional, type *string*, default `{{cluster_name}}.local`) - Domain used by etcd servers, by default this is derived from the cluster name.
+
 `cfn_role_arn`: (Optional, type *string*) - IAM service role ARN to be passed to CloudFormation. See [AWS documentation on using CloudFormation with a service role](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-servicerole.html) for more details.
 
 `k8s_version`: (Optional, type *string*) - Version of Kubernetes. This defaults to the version corresponding with the `keights-stack` version, for example if the `keights-stack` version is `1.10.7-3`, then `k8s_version` is `1.10.7`. Versions other than the default will not be tested.

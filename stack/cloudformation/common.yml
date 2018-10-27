@@ -9,6 +9,9 @@ Parameters:
   ClusterName:
     Description: Name of Kubernetes cluster
     Type: String
+  EtcdDomain:
+    Description: Domain name given to etcd Route53 zone.
+    Type: String
   KmsKeyId:
     Description: KMS key used to manage secrets
     Type: String
@@ -175,7 +178,7 @@ Resources:
   HostedZone:
     Type: AWS::Route53::HostedZone
     Properties:
-      Name: !Sub ${ClusterName}.local
+      Name: !Sub ${EtcdDomain}
       VPCs:
         - VPCId: !Ref VpcId
           VPCRegion: !Ref AWS::Region

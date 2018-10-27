@@ -26,7 +26,7 @@
   - role: keights-system
     keights_system:
       cluster_name: '{{ cluster }}'
-      cluster_apiserver: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}:6443'
+      cluster_apiserver: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
       network:
         plugin: calico
         pod_cidr: '{{ pod_cidr }}'
