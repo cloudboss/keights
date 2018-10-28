@@ -1,0 +1,40 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: python
+    tag: '3.6'
+
+inputs:
+- name: repo
+- name: version
+
+outputs:
+- name: build-cluster-artifacts
+
+caches:
+- path: ../../../python
+
+params:
+  AWS_REGION: us-east-1
+  AWS_DEFAULT_REGION: us-east-1
+  CLUSTER: pipe-1
+  KEIGHTS_BRANCH:
+
+run:
+  path: /bin/sh
+  args:
+  - -e
+  - -c
+  - |
+    deploy=`pwd`/repo/stack/ansible/deploy
+    artifacts=`pwd`/build-cluster-artifacts
+    version=`cat version/version`
+
+    cd repo/ci/assets/${KEIGHTS_BRANCH}/cluster
+    sed "s|__VERSION__|${version}|g" requirements.yml.tmpl > requirements.yml
+    PYTHON_BASE=/python ${deploy}
+
+    cp .cache/keights-system/kubeconfig ${artifacts}

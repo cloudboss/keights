@@ -26,6 +26,12 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `resource_bucket`: (Required, type *string*) - S3 bucket used for storing and retrieving artifacts.
 
+`cluster_domain`: (Optional, type *string*, default `cluster.local`) - Domain used by internal Kubernetes network.
+
+`etcd_domain`: (Optional, type *string*, default `{{cluster_name}}.local`) - Domain used by etcd servers, by default this is derived from the cluster name.
+
+`cfn_role_arn`: (Optional, type *string*) - IAM service role ARN to be passed to CloudFormation. See [AWS documentation on using CloudFormation with a service role](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-servicerole.html) for more details.
+
 `k8s_version`: (Optional, type *string*) - Version of Kubernetes. This defaults to the version corresponding with the `keights-stack` version, for example if the `keights-stack` version is `1.10.7-3`, then `k8s_version` is `1.10.7`. Versions other than the default will not be tested.
 
 `image`: (Optional, type *string*) - The default AMI to use for both masters and nodes. This should be the name of the image, rather than an AMI ID. This defaults to `debian-stretch-k8s-hvm-amd64-v<version>`, where `<version>` is the keights version. A public image with this name is available in `us-east-1`, so if you are not running there, you may copy it into your own region. If more than one image is found with the same name, the first one is used.
@@ -90,10 +96,6 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `node_labels`: (Optional, type *dict*, default `{}`) - A dictionary of key/value pairs used to assign Kubernetes labels to nodes.
 
-# Dependencies
-
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
-
 # Example Playbook
 
 ```
@@ -112,8 +114,6 @@ A list of other roles hosted on Galaxy should go here, plus any details in regar
     kms_key_alias: alias/cloudboss
     ssh_access_cidr: 0.0.0.0/0
 
-- hosts: localhost
-  connection: local
   roles:
   - role: keights-stack
     keights_stack:

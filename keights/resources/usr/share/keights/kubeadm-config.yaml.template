@@ -17,7 +17,7 @@ etcd:
   - {{ .MyIP }}
   - {{ .Prefix }}-{{ .MyAZ }}.{{ .EtcdDomain }}
 networking:
-  dnsDomain: {{ .Domain }}
+  dnsDomain: {{ .ClusterDomain }}
   podSubnet: {{ .PodSubnet }}
   serviceSubnet: {{ .ServiceSubnet }}
 cloudProvider: aws

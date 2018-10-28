@@ -45,6 +45,10 @@ Parameters:
       the value of ServiceCidr + 10
     Default: 10.1.0.10
     Type: String
+  ClusterDomain:
+    Description: Domain name used for cluster network.
+    Default: cluster.local
+    Type: String
   NodeLabels:
     Description: >-
       Kubernetes node labels as a comma separated list of
@@ -132,7 +136,7 @@ Resources:
                 permissions: '0644'
                 content: |
                   [Service]
-                  Environment=KEIGHTS_CLUSTER_DOMAIN=k8s.local
+                  Environment=KEIGHTS_CLUSTER_DOMAIN=${ClusterDomain}
                   Environment=KEIGHTS_NODE_LABELS=kubernetes.io/role=node,node-role.kubernetes.io/node=,${NodeLabels}
                   ExecStart=
                   ExecStart=/usr/bin/kubelet \

@@ -6,7 +6,7 @@ After=keights-whisper-controller.service
 [Service]
 Type=simple
 # Environment=AWS_REGION=
-# Environment=KEIGHTS_DOMAIN=
+# Environment=KEIGHTS_CLUSTER_DOMAIN=
 # Environment=KEIGHTS_ETCD_DOMAIN=
 # Environment=KEIGHTS_PREFIX=
 # Environment=KEIGHTS_APISERVER=
@@ -34,7 +34,7 @@ ExecStart=/bin/sh -c ' \
     /usr/bin/keights template \
       -t /usr/share/keights/kubeadm-config.yaml.template \
       -D /var/lib/kubeadm/config.yaml \
-      -v Domain=${KEIGHTS_DOMAIN} \
+      -v ClusterDomain=${KEIGHTS_CLUSTER_DOMAIN} \
       -v EtcdDomain=${KEIGHTS_ETCD_DOMAIN} \
       -v Prefix=${KEIGHTS_PREFIX} \
       -v APIServer=${KEIGHTS_APISERVER} \
