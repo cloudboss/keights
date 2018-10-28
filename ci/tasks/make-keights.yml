@@ -10,26 +10,31 @@ image_resource:
 inputs:
 - name: repo
 - name: version
+  optional: true
 
 caches:
 - path: ../../../root/go
 
 params:
   REPO_SLUG: cloudboss/keights
+  VERSION_FILE: version/version
   GITHUB_TOKEN:
 
 run:
-  dir: repo
   path: /bin/sh
   args:
   - -e
   - -c
   - |
     unset GOPATH
-    version=`cat ../version/version`
+
+    version=`cat ${VERSION_FILE}`
+    first_char=`echo ${version} | cut -c 1`
+    [ "${first_char=}" != v ] && version="v${version}"
 
     apt-get update
     apt-get install -y --no-install-recommends jq zip
 
+    cd repo
     make test
-    make github-release VERSION=v${version} REPO_SLUG=${REPO_SLUG}
+    make github-release VERSION=${version} REPO_SLUG=${REPO_SLUG}

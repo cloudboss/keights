@@ -24,6 +24,15 @@ resources:
     repo: cloudboss/keights
     require_review_approval: true
     only_mergeable: true
+- name: keights-release
+  type: git
+  check_every: 12h
+  webhook_token: ((github-keights-webhook-token))
+  source:
+    uri: git@github.com:cloudboss/keights.git
+    private_key: ((github-deploy-key-keights))
+    branch: ((git-branch))
+    tag_filter: '((git-branch)).[[:digit:]]-[[:digit:]]*'
 
 jobs:
 - name: build-pull-request
@@ -47,11 +56,14 @@ jobs:
     params:
       REPO_SLUG: cloudboss/keights
       GITHUB_TOKEN: ((github-access-token))
+      VERSION_FILE: version/version
   - task: build-ami
     file: keights-pr/ci/tasks/build-ami.yml
     input_mapping:
       repo: keights-pr
       version: version-snap
+    params:
+      VERSION_FILE: version/version
   - put: version-snap
     params: { pre: snap }
 
@@ -85,13 +97,35 @@ jobs:
 - name: update-pull-request-status
   public: true
   plan:
-  - aggregate:
-    - get: keights-pr
-      trigger: true
-      version: every
-      passed:
-      - build-cluster
+  - get: keights-pr
+    trigger: true
+    version: every
+    passed:
+    - build-cluster
   - put: keights-pr
     params:
       path: keights-pr
       status: success
+
+- name: build-release
+  public: true
+  plan:
+  - aggregate:
+    - get: keights-pr
+      passed: [update-pull-request-status]
+    - get: keights-release
+      trigger: true
+  - task: make-keights
+    file: keights-release/ci/tasks/make-keights.yml
+    input_mapping:
+      repo: keights-release
+    params:
+      REPO_SLUG: cloudboss/keights
+      GITHUB_TOKEN: ((github-access-token))
+      VERSION_FILE: repo/.git/ref
+  - task: build-ami
+    file: keights-pr/ci/tasks/build-ami.yml
+    input_mapping:
+      repo: keights-release
+    params:
+      VERSION_FILE: repo/.git/ref
