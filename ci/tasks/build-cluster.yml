@@ -10,9 +10,11 @@ image_resource:
 inputs:
 - name: repo
 - name: version
+- name: artifacts-in
+  optional: true
 
 outputs:
-- name: build-cluster-artifacts
+- name: artifacts-out
 
 caches:
 - path: ../../../python
@@ -20,8 +22,9 @@ caches:
 params:
   AWS_REGION: us-east-1
   AWS_DEFAULT_REGION: us-east-1
-  CLUSTER: pipe-1
+  CLUSTER:
   KEIGHTS_BRANCH:
+  START_UPGRADE:
 
 run:
   path: /bin/sh
@@ -30,11 +33,33 @@ run:
   - -c
   - |
     deploy=`pwd`/repo/stack/ansible/deploy
-    artifacts=`pwd`/build-cluster-artifacts
+    artifacts_out=`pwd`/artifacts-out
     version=`cat version/version`
 
-    cd repo/ci/assets/${KEIGHTS_BRANCH}/cluster
-    sed "s|__VERSION__|${version}|g" requirements.yml.tmpl > requirements.yml
-    PYTHON_BASE=/python ${deploy}
+    if [ -f artifacts-in/noop ]; then
+        echo 'Nothing to do, skipping'
+        touch ${artifacts_out}/noop
+        exit 0
+    fi
 
-    cp .cache/keights-system/kubeconfig ${artifacts}
+    if [ -n "${START_UPGRADE}" ]; then
+        if [ -f repo/ci/assets/${KEIGHTS_BRANCH}/upgrade_from ]; then
+            version=`cat repo/ci/assets/${KEIGHTS_BRANCH}/upgrade_from`
+        else
+            echo 'Nothing to upgrade from, skipping'
+            touch ${artifacts_out}/noop
+            exit 0
+        fi
+    fi
+
+    first_char=`echo ${version} | cut -c 1`
+    [ "${first_char=}" != v ] && version="v${version}"
+
+    build_branch=`echo ${version} | awk -F . '{print $1 "." $2}'`
+
+    cd repo/ci/assets/${build_branch}/cluster
+    sed "s|__VERSION__|${version}|g" requirements.yml.tmpl > requirements.yml
+    CF_LEGAL_CLUSTER=`echo ${CLUSTER} | tr -d .`
+    CLUSTER=${CF_LEGAL_CLUSTER} PYTHON_BASE=/python ${deploy}
+
+    cp .cache/keights-system/kubeconfig ${artifacts_out}
