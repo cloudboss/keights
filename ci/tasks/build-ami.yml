@@ -38,6 +38,8 @@ run:
     . /python/bin/activate
 
     version=`cat ${VERSION_FILE}`
+    first_char=`echo ${version} | cut -c 1`
+    [ "${first_char=}" != v ] && version="v${version}"
 
     cd repo/stack/ami/debian
-    /opt/bin/packer build -var keights-version=v${version} build.json
+    /opt/bin/packer build -var keights-version=${version} build.json
