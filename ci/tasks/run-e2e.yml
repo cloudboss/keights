@@ -8,11 +8,11 @@ image_resource:
     tag: '3.8'
 
 inputs:
-- name: artifacts
+- name: artifacts-in
 
 params:
   SONOBUOY_URL: https://github.com/heptio/sonobuoy/releases/download/v0.11.6/sonobuoy_0.11.6_linux_amd64.tar.gz
-  KUBECONFIG: artifacts/kubeconfig
+  KUBECONFIG: artifacts-in/kubeconfig
 
 run:
   path: /bin/sh
@@ -20,6 +20,11 @@ run:
   - -e
   - -c
   - |
+    if [ -f artifacts-in/noop ]; then
+        echo 'Nothing to do, skipping'
+        exit 0
+    fi
+
     wget -O /tmp/sonobuoy.tar.gz ${SONOBUOY_URL}
     mkdir -p /opt/bin
     gunzip -c /tmp/sonobuoy.tar.gz | tar -xf - -C /opt/bin sonobuoy

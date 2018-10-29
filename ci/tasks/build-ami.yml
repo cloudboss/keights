@@ -10,6 +10,7 @@ image_resource:
 inputs:
 - name: repo
 - name: version
+  optional: true
 
 caches:
 - path: ../../../python
@@ -18,6 +19,7 @@ caches:
 params:
   AWS_REGION: us-east-1
   PACKER_URL: https://releases.hashicorp.com/packer/1.3.1/packer_1.3.1_linux_amd64.zip
+  VERSION_FILE: version/version
 
 run:
   path: /bin/sh
@@ -35,7 +37,7 @@ run:
     /python/bin/pip install -r repo/stack/ami/requirements.txt
     . /python/bin/activate
 
-    version=`cat version/version`
+    version=`cat ${VERSION_FILE}`
 
     cd repo/stack/ami/debian
     /opt/bin/packer build -var keights-version=v${version} build.json
