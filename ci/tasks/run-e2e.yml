@@ -12,6 +12,7 @@ inputs:
 
 params:
   SONOBUOY_URL: https://github.com/heptio/sonobuoy/releases/download/v0.11.6/sonobuoy_0.11.6_linux_amd64.tar.gz
+  KUBECTL_URL: https://storage.googleapis.com/kubernetes-release/release/v1.12.1/bin/linux/amd64/kubectl
   KUBECONFIG: artifacts-in/kubeconfig
 
 run:
@@ -29,7 +30,15 @@ run:
     mkdir -p /opt/bin
     gunzip -c /tmp/sonobuoy.tar.gz | tar -xf - -C /opt/bin sonobuoy
 
+    wget -O /opt/bin/kubectl ${KUBECTL_URL}
+    chmod ugo+x /opt/bin/kubectl
+
     export PATH=/opt/bin:${PATH}
+
+    echo "Waiting for network..."
+    kubectl create job verify-network --image busybox:1.28.1 -- nc -z kubernetes 443
+    kubectl wait --for=condition=complete --timeout=600s job/verify-network
+    kubectl delete job verify-network
 
     echo "Running sonobuoy version `sonobuoy version`"
 
