@@ -10,8 +10,17 @@ Parameters:
     Description: Name of Kubernetes cluster
     Type: String
   EtcdDomain:
-    Description: Domain name given to etcd Route53 zone.
+    Description: >-
+      Domain name given to Route53 hosted zone for etcd records.
+      If empty, the EtcdHostedZoneId parameter must be provided.
     Type: String
+    Default: ''
+  EtcdHostedZoneId:
+    Description: >-
+      ID of Route53 hosted zone for etcd records. If empty,
+      a private zone will be created.
+    Type: String
+    Default: ''
   KmsKeyId:
     Description: KMS key used to manage secrets
     Type: String
@@ -23,6 +32,10 @@ Parameters:
     Description: CIDR block given ssh access to cluster
     Default: 0.0.0.0/0
     Type: String
+
+Conditions:
+  HasManagedHostedZone: !Equals [!Ref EtcdHostedZoneId, '']
+  HasUnmanagedHostedZone: !Not [!Equals [!Ref EtcdHostedZoneId, '']]
 
 Resources:
   LoadBalancerSecurityGroup:
@@ -177,6 +190,7 @@ Resources:
 
   HostedZone:
     Type: AWS::Route53::HostedZone
+    Condition: HasManagedHostedZone
     Properties:
       Name: !Sub ${EtcdDomain}
       VPCs:
@@ -186,6 +200,7 @@ Resources:
   K8sMasterAccess:
     Type: AWS::IAM::ManagedPolicy
     Properties:
+      Roles: [!Ref MasterRole]
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -261,6 +276,7 @@ Resources:
   K8sNodeAccess:
     Type: AWS::IAM::ManagedPolicy
     Properties:
+      Roles: [!Ref NodeRole]
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -287,6 +303,7 @@ Resources:
   K8sLambdaAccess:
     Type: AWS::IAM::ManagedPolicy
     Properties:
+      Roles: [!Ref LambdaRole]
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -313,11 +330,34 @@ Resources:
               - kms:Encrypt
             Resource:
               - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${KmsKeyId}'
+
+  K8sLambdaRoute53ManagedAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: HasManagedHostedZone
+    Properties:
+      Roles: [!Ref LambdaRole]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
           - Effect: Allow
             Action:
               - route53:ChangeResourceRecordSets
             Resource:
               - !Sub 'arn:aws:route53:::hostedzone/${HostedZone}'
+
+  K8sLambdaRoute53UnmanagedAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: HasUnmanagedHostedZone
+    Properties:
+      Roles: [!Ref LambdaRole]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - route53:ChangeResourceRecordSets
+            Resource:
+              - !Sub 'arn:aws:route53:::hostedzone/${EtcdHostedZoneId}'
 
   MasterRole:
     Type: AWS::IAM::Role
@@ -329,8 +369,6 @@ Resources:
             Principal:
               Service: ec2.amazonaws.com
             Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - !Ref K8sMasterAccess
 
   MasterInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -347,8 +385,6 @@ Resources:
             Principal:
               Service: ec2.amazonaws.com
             Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - !Ref K8sNodeAccess
 
   NodeInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -365,8 +401,6 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - !Ref K8sLambdaAccess
 
 Outputs:
   LoadBalancerSecurityGroup:
@@ -411,3 +445,4 @@ Outputs:
   HostedZoneId:
     Description: ID of Route53 DNS hosted zone
     Value: !Ref HostedZone
+    Condition: HasManagedHostedZone
