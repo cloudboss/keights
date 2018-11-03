@@ -82,6 +82,12 @@ Parameters:
   EtcdDomain:
     Description: Domain name given to etcd Route53 zone.
     Type: String
+  EtcdPrefix:
+    Description: >-
+      Prefix given to etcd hostnames. This will be combined with the
+      availability zone and the value of the EtcdDomain parameter.
+    Type: String
+    Default: etcd
   EtcdVolumeSize:
     Description: Size of etcd volume in GB
     Default: 10
@@ -155,8 +161,8 @@ Resources:
         Variables:
           ASG_NAME: !Ref AWS::StackName
           DNS_TTL: 15
-          HOST_BASE_NAME: etcd
-          HOSTED_ZONE_NAME: !Sub ${EtcdDomain}
+          HOST_BASE_NAME: !Ref EtcdPrefix
+          HOSTED_ZONE_NAME: !Ref EtcdDomain
           HOSTED_ZONE_ID: !Ref HostedZoneId
 
   AutoNamingEventsRule:
@@ -335,7 +341,7 @@ Resources:
                   Environment=AWS_REGION=${AWS::Region}
                   Environment=KEIGHTS_CLUSTER_DOMAIN=${ClusterDomain}
                   Environment=KEIGHTS_ETCD_DOMAIN=${EtcdDomain}
-                  Environment=KEIGHTS_PREFIX=etcd
+                  Environment=KEIGHTS_PREFIX=${EtcdPrefix}
                   Environment=KEIGHTS_APISERVER=${LoadBalancer.DNSName}
                   Environment=KEIGHTS_API_PORT=443
                   Environment=KEIGHTS_POD_SUBNET=${PodCidr}

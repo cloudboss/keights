@@ -87,6 +87,7 @@
       VpcId: '{{ keights_stack.vpc_id }}'
       ClusterName: '{{ keights_stack.cluster_name }}'
       EtcdDomain: '{{ keights_stack.etcd_domain | default(default_etcd_domain) }}'
+      EtcdHostedZoneId: '{{ keights_stack.etcd_hosted_zone_id | default("") }}'
       KmsKeyId: '{{ keights_stack.kms_key_id }}'
       ApiAccessCidr: '{{ keights_stack.api_access_cidr }}'
       # TODO: give masters and nodes separate ssh_access_cidr
@@ -125,6 +126,7 @@
       ClusterDns: '{{ cluster_dns }}'
       ClusterDomain: '{{ keights_stack.cluster_domain | default("cluster.local") }}'
       EtcdDomain: '{{ keights_stack.etcd_domain | default(default_etcd_domain) }}'
+      EtcdPrefix: '{{ keights_stack.etcd_prefix | default("etcd") }}'
       EtcdVolumeSize: '{{ keights_stack.masters.etcd_volume_size | default(10) }}'
       EtcdDevice: '{{ keights_stack.masters.etcd_device | default("xvdg") }}'
       EtcdInternalDevice: '{{ keights_stack.masters.etcd_internal_device | default("/dev/xvdg") }}'
@@ -132,7 +134,7 @@
       KubernetesVersion: '{{ k8s_version }}'
       KeightsVersion: '{{ keights_version }}'
       ResourceBucket: '{{ keights_stack.resource_bucket }}'
-      HostedZoneId: '{{ common_stack.stack_outputs.HostedZoneId }}'
+      HostedZoneId: '{{ common_stack.stack_outputs.HostedZoneId | default(keights_stack.etcd_hosted_zone_id) }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'
