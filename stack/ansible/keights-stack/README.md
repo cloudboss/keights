@@ -30,6 +30,10 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `etcd_domain`: (Optional, type *string*, default `{{cluster_name}}.local`) - Domain used by etcd servers, by default this is derived from the cluster name.
 
+`etcd_hosted_zone_id`: (Optional, type *string*, default `''`) - Route53 hosted zone ID used for etcd DNS records. If not provided, a private hosted zone will be created. The name of the zone with this ID must match the value of `etcd_domain`.
+
+`etcd_prefix`: (Optional, type *string*, default `etcd`) - Prefix given to etcd DNS records. This will be combined with the availability zone and the value of the `etcd_domain` parameter.
+
 `cfn_role_arn`: (Optional, type *string*) - IAM service role ARN to be passed to CloudFormation. See [AWS documentation on using CloudFormation with a service role](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-servicerole.html) for more details.
 
 `k8s_version`: (Optional, type *string*) - Version of Kubernetes. This defaults to the version corresponding with the `keights-stack` version, for example if the `keights-stack` version is `1.10.7-3`, then `k8s_version` is `1.10.7`. Versions other than the default will not be tested.
