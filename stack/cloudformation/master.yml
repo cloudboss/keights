@@ -229,7 +229,7 @@ Resources:
     CreationPolicy:
       ResourceSignal:
         Count: !Ref NumInstances
-        Timeout: PT15M
+        Timeout: PT30M
     Properties:
       AutoScalingGroupName: !Ref AWS::StackName
       DesiredCapacity: !Ref NumInstances
