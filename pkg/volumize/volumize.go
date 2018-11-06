@@ -71,6 +71,10 @@ func (v *Volumizer) WaitForVolume(clusterName, volumeTag *string, minutes time.D
 			Name:   aws.String("availability-zone"),
 			Values: []*string{aws.String(v.availabilityZone)},
 		},
+		{
+			Name:   aws.String("status"),
+			Values: []*string{aws.String("available")},
+		},
 	}
 	input := &ec2.DescribeVolumesInput{Filters: filters}
 	err := helpers.WaitFor(minutes*time.Minute, func() error {
@@ -97,19 +101,21 @@ func (v *Volumizer) AttachVolume(volume *ec2.Volume, device string) error {
 		InstanceId: &v.instanceID,
 		VolumeId:   volume.VolumeId,
 	}
-	_, err := v.ec2.AttachVolume(input)
-	if err != nil {
-		if awsErr, ok := err.(awserr.Error); ok {
-			if awsErr.Code() == "VolumeInUse" {
-				return nil
+	return helpers.WaitFor(10*time.Minute, func() error {
+		_, err := v.ec2.AttachVolume(input)
+		if err != nil {
+			if awsErr, ok := err.(awserr.Error); ok {
+				if awsErr.Code() == "VolumeInUse" {
+					return nil
+				}
 			}
 		}
-	}
-	return err
+		return err
+	})
 }
 
 func (v *Volumizer) WaitForDevice(device string) error {
-	return helpers.WaitFor(5*time.Minute, func() error {
+	return helpers.WaitFor(10*time.Minute, func() error {
 		_, err := os.Stat(device)
 		if err != nil {
 			return fmt.Errorf("No device %s found", device)
