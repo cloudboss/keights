@@ -5,7 +5,7 @@
     "root-vol": "xvde",
     "docker-vol": "xvdf",
     "docker-version": "1.12.6-0~debian-stretch",
-    "k8s-version": "1.10.6",
+    "k8s-version": "1.10.9",
     "cni-version": "0.6.0",
     "kube-router-version": "0.2.0",
     "core-dns-version": "1.0.6",
