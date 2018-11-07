@@ -11,7 +11,8 @@
     "etcd-version": "3.2.18",
     "pause-version": "3.1",
     "addon-manager-version": "8.6",
-    "dashboard-version": "1.10.0"
+    "dashboard-version": "1.10.0",
+    "share-accounts": "all"
   },
 
   "builders": [{
@@ -22,7 +23,8 @@
     "associate_public_ip_address": true,
     "ssh_username": "admin",
     "ssh_timeout": "5m",
-    "ami_groups": "all",
+    "ami_groups": "{{ user `share-accounts` }}",
+    "snapshot_groups": "{{ user `share-accounts` }}",
 
     "ena_support": true,
     "sriov_support": true,
