@@ -12,6 +12,11 @@
     k8s_version: '{{ keights_stack.k8s_version | default(keights_version.split("-")[0]) }}'
     default_image: 'debian-stretch-k8s-hvm-amd64-{{ keights_version }}'
     cache_dir: '{{ playbook_dir }}/.cache'
+    default_docker_options:
+      'ip-masq': false
+      'iptables': false
+      'log-driver': journald
+      'storage-driver': overlay2
 
 - name: ensure cache directory
   file:
@@ -135,6 +140,8 @@
       KeightsVersion: '{{ keights_version }}'
       ResourceBucket: '{{ keights_stack.resource_bucket }}'
       HostedZoneId: '{{ common_stack.stack_outputs.HostedZoneId | default(keights_stack.etcd_hosted_zone_id) }}'
+      # Piping to_json twice escapes the json so it can be put on one line in the CloudFormation template.
+      DockerOptions: '{{ keights_stack.masters.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'
@@ -163,6 +170,7 @@
       ClusterDns: '{{ cluster_dns }}'
       NodeLabels: '{% set j = joiner(",") %}{% for k, v in item.node_labels.items() | default({}) %}{{ j() }}{{ k }}={{ v }}{% endfor %}'
       LoadBalancerDnsName: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
+      DockerOptions: '{{ item.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'
