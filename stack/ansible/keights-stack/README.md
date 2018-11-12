@@ -77,6 +77,7 @@ All role variables go under a top level dictionary `keights_stack`.
 `image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which Kubernetes component docker images are pulled.
 
 `etcd_image`: (Optional, type *string*, default `k8s.gcr.io/etcd-amd64:3.1.12`) - Docker image used for etcd.
+`docker_options`: (Optional, type *dict*, default `{"ip-masq": false, "iptables": false, "log-driver": "journald", "storage-driver": "overlay2"}`) - Options to write to `/etc/docker/daemon.json`, which should follow [documentation for docker](https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file).
 
 ### node_groups
 

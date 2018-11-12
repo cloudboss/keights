@@ -58,6 +58,18 @@ Parameters:
   LoadBalancerDnsName:
     Description: DNS name of kubernetes apiserver load balancer
     Type: String
+  DockerOptions:
+    Description: >-
+      Options to write to /etc/docker/daemon.json, which should follow
+      https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file.
+    Type: String
+    Default: |
+      {
+        "ip-masq": false,
+        "iptables": false,
+        "log-driver": "journald",
+        "storage-driver": "overlay2"
+      }
 
 Resources:
   AutoScalingGroup:
@@ -98,6 +110,11 @@ Resources:
           !Sub |
             #cloud-config
             write_files:
+              - path: /etc/docker/daemon.json
+                owner: root:root
+                permissions: '0644'
+                content: ${DockerOptions}
+
               - path: /etc/systemd/system/keights-bootstrap-kubeconfig.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
