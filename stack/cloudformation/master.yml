@@ -123,6 +123,18 @@ Parameters:
   HostedZoneId:
     Description: ID of Route53 DNS hosted zone
     Type: String
+  DockerOptions:
+    Description: >-
+      Options to write to /etc/docker/daemon.json, which should follow
+      https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file.
+    Type: String
+    Default: |
+      {
+        "ip-masq": false,
+        "iptables": false,
+        "log-driver": "journald",
+        "storage-driver": "overlay2"
+      }
 
 Conditions:
   HasThreeMasters: !Equals [!Ref NumInstances, 3]
@@ -318,6 +330,11 @@ Resources:
           - |
             #cloud-config
             write_files:
+              - path: /etc/docker/daemon.json
+                owner: root:root
+                permissions: '0644'
+                content: ${DockerOptions}
+
               - path: /etc/systemd/system/keights-templatize-etcd.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
