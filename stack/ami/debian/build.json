@@ -7,12 +7,9 @@
     "docker-version": "1.12.6-0~debian-stretch",
     "k8s-version": "1.10.9",
     "cni-version": "0.6.0",
-    "kube-router-version": "0.2.0",
     "core-dns-version": "1.0.6",
     "etcd-version": "3.1.12",
     "pause-version": "3.1",
-    "addon-manager-version": "8.6",
-    "dashboard-version": "1.10.0",
     "share-accounts": "all"
   },
 
@@ -70,9 +67,7 @@
       "cni:version": "{{ user `cni-version` }}",
       "core-dns:version": "{{ user `core-dns-version` }}",
       "etcd:version": "{{ user `etcd-version` }}",
-      "pause:version": "{{ user `pause-version` }}",
-      "addon-manager:version": "{{ user `addon-manager-version` }}",
-      "dashboard:version": "{{ user `dashboard-version` }}"
+      "pause:version": "{{ user `pause-version` }}"
     },
 
     "run_tags": {
@@ -102,9 +97,7 @@
 	"-e", "cni_version={{ user `cni-version` }}",
 	"-e", "core_dns_version={{ user `core-dns-version` }}",
 	"-e", "etcd_version={{ user `etcd-version` }}",
-	"-e", "pause_version={{ user `pause-version` }}",
-	"-e", "addon_manager_version={{ user `addon-manager-version` }}",
-	"-e", "dashboard_version={{ user `dashboard-version` }}"
+	"-e", "pause_version={{ user `pause-version` }}"
       ]
     }
   ]
