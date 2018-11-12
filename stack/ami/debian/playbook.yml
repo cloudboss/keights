@@ -258,8 +258,6 @@
         docker pull k8s.gcr.io/kube-scheduler-amd64:v{{ k8s_version }}
         docker pull k8s.gcr.io/etcd-amd64:{{ etcd_version }}
         docker pull k8s.gcr.io/pause:{{ pause_version }}
-        docker pull k8s.gcr.io/kube-addon-manager-amd64:v{{ addon_manager_version }}
-        docker pull k8s.gcr.io/kubernetes-dashboard-amd64:v{{ dashboard_version }}
         docker pull k8s.gcr.io/coredns:{{ core_dns_version }}
         kill ${pid}
         EOF
@@ -275,8 +273,6 @@
         - path: etc/network/interfaces
           mode: '0644'
         - path: etc/cloud/cloud.cfg.d/01_cloudboss.cfg
-          mode: '0644'
-        - path: etc/default/docker
           mode: '0644'
         - path: etc/systemd/system/docker.service.d/cloudboss.conf
           mode: '0644'
