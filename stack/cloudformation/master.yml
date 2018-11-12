@@ -268,6 +268,7 @@ Resources:
       AvailabilityZone: !Select [0, !Split [",", !GetAtt SubnetToAz.AvailabilityZones]]
       Size: !Ref EtcdVolumeSize
       VolumeType: gp2
+      Encrypted: true
       Tags:
         - Key: Name
           Value: !Ref ClusterName
@@ -281,6 +282,7 @@ Resources:
       AvailabilityZone: !Select [1, !Split [",", !GetAtt SubnetToAz.AvailabilityZones]]
       Size: !Ref EtcdVolumeSize
       VolumeType: gp2
+      Encrypted: true
       Tags:
         - Key: Name
           Value: !Ref ClusterName
@@ -294,6 +296,7 @@ Resources:
       AvailabilityZone: !Select [2, !Split [",", !GetAtt SubnetToAz.AvailabilityZones]]
       Size: !Ref EtcdVolumeSize
       VolumeType: gp2
+      Encrypted: true
       Tags:
         - Key: Name
           Value: !Ref ClusterName
