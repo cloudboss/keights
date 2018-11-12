@@ -252,11 +252,11 @@
         while [ ! -S /var/run/docker.sock ]; do
             sleep 0.5
         done
-        docker pull k8s.gcr.io/kube-apiserver-amd64:v{{ k8s_version }}
-        docker pull k8s.gcr.io/kube-controller-manager-amd64:v{{ k8s_version }}
-        docker pull k8s.gcr.io/kube-proxy-amd64:v{{ k8s_version }}
-        docker pull k8s.gcr.io/kube-scheduler-amd64:v{{ k8s_version }}
-        docker pull k8s.gcr.io/etcd-amd64:{{ etcd_version }}
+        docker pull k8s.gcr.io/kube-apiserver:v{{ k8s_version }}
+        docker pull k8s.gcr.io/kube-controller-manager:v{{ k8s_version }}
+        docker pull k8s.gcr.io/kube-proxy:v{{ k8s_version }}
+        docker pull k8s.gcr.io/kube-scheduler:v{{ k8s_version }}
+        docker pull k8s.gcr.io/etcd:{{ etcd_version }}
         docker pull k8s.gcr.io/pause:{{ pause_version }}
         docker pull k8s.gcr.io/coredns:{{ core_dns_version }}
         kill ${pid}

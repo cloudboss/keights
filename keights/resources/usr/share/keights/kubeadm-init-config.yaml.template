@@ -1,11 +1,47 @@
-apiVersion: kubeadm.k8s.io/v1alpha2
-kubernetesVersion: {{ .KubernetesVersion }}
-kind: MasterConfiguration
-api:
+apiVersion: kubeadm.k8s.io/v1alpha3
+kind: InitConfiguration
+apiEndpoint:
   advertiseAddress: {{ .MyIP }}
-  controlPlaneEndpoint: {{ .APIServer }}:{{ .APIPort }}
+  bindPort: 6443
+bootstrapTokens:
+- groups:
+  - system:bootstrappers:kubeadm:default-node-token
+  token: {{ .Token }}
+  ttl: 0s
+  usages:
+  - signing
+  - authentication
+nodeRegistration:
+  criSocket: /var/run/dockershim.sock
+  kubeletExtraArgs:
+    cloud-provider: aws
+    pod-infra-container-image: {{ .ImageRepository }}/pause:3.1
+  name: {{ .NodeName }}
+  taints:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/master
+---
+apiVersion: kubeadm.k8s.io/v1alpha3
+kind: ClusterConfiguration
+apiServerCertSANs:
+- {{ .APIServer }}
+apiServerExtraArgs:
+  authorization-mode: Node,RBAC
+  cloud-provider: aws
+  external-hostname: {{ .APIServer }}
+auditPolicy:
+  logDir: /var/log/kubernetes/audit
+  logMaxAge: 2
+  path: ""
+certificatesDir: /etc/kubernetes/pki
+clusterName: kubernetes
+controlPlaneEndpoint: {{ .APIServer }}:{{ .APIPort }}
+controllerManagerExtraArgs:
+  cloud-provider: aws
+  configure-cloud-routes: "false"
 etcd:
   local:
+    dataDir: /var/lib/etcd
     extraArgs:
       name: {{ .Prefix }}-{{ .MyAZ }}
       data-dir: /var/lib/etcd
@@ -29,141 +65,125 @@ etcd:
     serverCertSANs:
     - {{ .MyIP }}
     - {{ .Prefix }}-{{ .MyAZ }}.{{ .EtcdDomain }}
+featureGates:
+  CoreDNS: true
+  HighAvailability: true
+imageRepository: {{ .ImageRepository }}
+kubernetesVersion: {{ .KubernetesVersion }}
 networking:
   dnsDomain: {{ .ClusterDomain }}
   podSubnet: {{ .PodSubnet }}
   serviceSubnet: {{ .ServiceSubnet }}
-bootstrapTokens:
-- groups:
-  - system:bootstrappers:kubeadm:default-node-token
-  token: {{ .Token }}
-  ttl: 0s
-  usages:
-  - signing
-  - authentication
-apiServerCertSANs:
-  - {{ .APIServer }}
-certificatesDir: /etc/kubernetes/pki
+---
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+bindAddress: 0.0.0.0
+clientConnection:
+  acceptContentTypes: ""
+  burst: 10
+  contentType: application/vnd.kubernetes.protobuf
+  kubeconfig: /var/lib/kube-proxy/kubeconfig.conf
+  qps: 5
+clusterCIDR: {{ .PodSubnet }}
+configSyncPeriod: 15m0s
+conntrack:
+  max: null
+  maxPerCore: 32768
+  min: 131072
+  tcpCloseWaitTimeout: 1h0m0s
+  tcpEstablishedTimeout: 24h0m0s
+enableProfiling: false
 featureGates:
-  HighAvailability: true
-  CoreDNS: true
-apiServerExtraArgs:
-  cloud-provider: aws
-  external-hostname: {{ .APIServer }}
-controllerManagerExtraArgs:
-  cloud-provider: aws
-  configure-cloud-routes: 'false'
-imageRepository: {{ .ImageRepository }}
-auditPolicy:
-  logDir: /var/log/kubernetes/audit
-  logMaxAge: 2
-  path: ''
-kubeProxy:
-  config:
-    bindAddress: 0.0.0.0
-    clientConnection:
-      burst: 10
-      contentType: application/vnd.kubernetes.protobuf
-      kubeconfig: /var/lib/kube-proxy/kubeconfig.conf
-      qps: 5
-    clusterCIDR: {{ .PodSubnet }}
-    configSyncPeriod: 15m0s
-    conntrack:
-      max: null
-      maxPerCore: 32768
-      min: 131072
-      tcpCloseWaitTimeout: 1h0m0s
-      tcpEstablishedTimeout: 24h0m0s
-    enableProfiling: false
-    featureGates:
-      SupportIPVSProxyMode: true
-    healthzBindAddress: 0.0.0.0:10256
-    mode: ipvs
-    ipvs:
-      excludeCIDRs: null
-      minSyncPeriod: 0s
-      syncPeriod: 30s
-    metricsBindAddress: 127.0.0.1:10249
-    nodePortAddresses: null
-    oomScoreAdj: -999
-    resourceContainer: /kube-proxy
-    udpIdleTimeout: 250ms
-kubeletConfiguration:
-  baseConfig:
-    address: 0.0.0.0
-    authentication:
-      anonymous:
-        enabled: false
-      webhook:
-        cacheTTL: 2m0s
-        enabled: true
-      x509:
-        clientCAFile: /etc/kubernetes/pki/ca.crt
-    authorization:
-      mode: Webhook
-      webhook:
-        cacheAuthorizedTTL: 5m0s
-        cacheUnauthorizedTTL: 30s
-    cgroupDriver: cgroupfs
-    cgroupsPerQOS: true
-    cloudProvider: aws
-    clusterDNS:
-    - {{ .ClusterDNS }}
-    clusterDomain: {{ .ClusterDomain }}
-    containerLogMaxFiles: 5
-    containerLogMaxSize: 10Mi
-    contentType: application/vnd.kubernetes.protobuf
-    cpuCFSQuota: true
-    cpuManagerPolicy: none
-    cpuManagerReconcilePeriod: 10s
-    enableControllerAttachDetach: true
-    enableDebuggingHandlers: true
-    enforceNodeAllocatable:
-    - pods
-    eventBurst: 10
-    eventRecordQPS: 5
-    evictionHard:
-      imagefs.available: 15%
-      memory.available: 100Mi
-      nodefs.available: 10%
-      nodefs.inodesFree: 5%
-    evictionPressureTransitionPeriod: 5m0s
-    failSwapOn: true
-    fileCheckFrequency: 20s
-    hairpinMode: promiscuous-bridge
-    healthzBindAddress: 127.0.0.1
-    healthzPort: 10248
-    httpCheckFrequency: 20s
-    imageGCHighThresholdPercent: 85
-    imageGCLowThresholdPercent: 80
-    imageMinimumGCAge: 2m0s
-    iptablesDropBit: 15
-    iptablesMasqueradeBit: 14
-    kubeAPIBurst: 10
-    kubeAPIQPS: 5
-    makeIPTablesUtilChains: true
-    maxOpenFiles: 1000000
-    maxPods: 110
-    nodeStatusUpdateFrequency: 10s
-    oomScoreAdj: -999
-    podPidsLimit: -1
-    port: 10250
-    registryBurst: 10
-    registryPullQPS: 5
-    resolvConf: /etc/resolv.conf
-    rotateCertificates: true
-    runtimeRequestTimeout: 2m0s
-    serializeImagePulls: true
-    staticPodPath: /etc/kubernetes/manifests
-    streamingConnectionIdleTimeout: 4h0m0s
-    syncFrequency: 1m0s
-    volumeStatsAggPeriod: 1m0s
-nodeRegistration:
-  criSocket: /var/run/dockershim.sock
-  kubeletExtraArgs:
-    cloud-provider: aws
-    pod-infra-container-image: {{ .ImageRepository }}/pause:3.1
-  name: {{ .NodeName }}
-  taints:
-  - effect: NoSchedule
-    key: node-role.kubernetes.io/master
+  SupportIPVSProxyMode: true
+healthzBindAddress: 0.0.0.0:10256
+hostnameOverride: ""
+iptables:
+  masqueradeAll: false
+  masqueradeBit: 14
+  minSyncPeriod: 0s
+  syncPeriod: 30s
+ipvs:
+  excludeCIDRs: null
+  minSyncPeriod: 0s
+  scheduler: ""
+  syncPeriod: 30s
+metricsBindAddress: 127.0.0.1:10249
+mode: ipvs
+nodePortAddresses: null
+oomScoreAdj: -999
+portRange: ""
+resourceContainer: /kube-proxy
+udpIdleTimeout: 250ms
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+address: 0.0.0.0
+authentication:
+  anonymous:
+    enabled: false
+  webhook:
+    cacheTTL: 2m0s
+    enabled: true
+  x509:
+    clientCAFile: /etc/kubernetes/pki/ca.crt
+authorization:
+  mode: Webhook
+  webhook:
+    cacheAuthorizedTTL: 5m0s
+    cacheUnauthorizedTTL: 30s
+cgroupDriver: cgroupfs
+cgroupsPerQOS: true
+clusterDNS:
+- {{ .ClusterDNS }}
+clusterDomain: {{ .ClusterDomain }}
+configMapAndSecretChangeDetectionStrategy: Watch
+containerLogMaxFiles: 5
+containerLogMaxSize: 10Mi
+contentType: application/vnd.kubernetes.protobuf
+cpuCFSQuota: true
+cpuCFSQuotaPeriod: 100ms
+cpuManagerPolicy: none
+cpuManagerReconcilePeriod: 10s
+enableControllerAttachDetach: true
+enableDebuggingHandlers: true
+enforceNodeAllocatable:
+- pods
+eventBurst: 10
+eventRecordQPS: 5
+evictionHard:
+  imagefs.available: 15%
+  memory.available: 100Mi
+  nodefs.available: 10%
+  nodefs.inodesFree: 5%
+evictionPressureTransitionPeriod: 5m0s
+failSwapOn: true
+fileCheckFrequency: 20s
+hairpinMode: promiscuous-bridge
+healthzBindAddress: 127.0.0.1
+healthzPort: 10248
+httpCheckFrequency: 20s
+imageGCHighThresholdPercent: 85
+imageGCLowThresholdPercent: 80
+imageMinimumGCAge: 2m0s
+iptablesDropBit: 15
+iptablesMasqueradeBit: 14
+kubeAPIBurst: 10
+kubeAPIQPS: 5
+makeIPTablesUtilChains: true
+maxOpenFiles: 1000000
+maxPods: 110
+nodeLeaseDurationSeconds: 40
+nodeStatusUpdateFrequency: 10s
+oomScoreAdj: -999
+podPidsLimit: -1
+port: 10250
+registryBurst: 10
+registryPullQPS: 5
+resolvConf: /etc/resolv.conf
+rotateCertificates: true
+runtimeRequestTimeout: 2m0s
+serializeImagePulls: true
+staticPodPath: /etc/kubernetes/manifests
+streamingConnectionIdleTimeout: 4h0m0s
+syncFrequency: 1m0s
+volumeStatsAggPeriod: 1m0s
