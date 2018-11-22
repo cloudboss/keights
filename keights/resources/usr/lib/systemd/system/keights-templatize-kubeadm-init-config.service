@@ -1,5 +1,5 @@
 [Unit]
-Description=keights-templatize-kubeadm-config service
+Description=keights-templatize-kubeadm-init-config service
 Requires=keights-whisper-controller.service
 After=keights-whisper-controller.service
 
@@ -36,7 +36,7 @@ ExecStart=/bin/sh -c ' \
             --retry-delay 2 \
             http://169.254.169.254/latest/meta-data/local-ipv4` && \
     /usr/bin/keights template \
-      -t /usr/share/keights/kubeadm-config.yaml.template \
+      -t /usr/share/keights/kubeadm-init-config.yaml.template \
       -D /var/lib/kubeadm/config.yaml \
       -v ClusterDomain=${KEIGHTS_CLUSTER_DOMAIN} \
       -v EtcdDomain=${KEIGHTS_ETCD_DOMAIN} \

@@ -162,6 +162,7 @@ nodeRegistration:
   criSocket: /var/run/dockershim.sock
   kubeletExtraArgs:
     cloud-provider: aws
+    pod-infra-container-image: {{ .ImageRepository }}/pause:3.1
   name: {{ .NodeName }}
   taints:
   - effect: NoSchedule
