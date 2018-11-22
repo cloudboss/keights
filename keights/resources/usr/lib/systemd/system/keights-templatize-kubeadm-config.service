@@ -17,7 +17,6 @@ Type=simple
 # Environment=KEIGHTS_IMAGE_REPOSITORY=
 # Environment=KEIGHTS_KUBERNETES_VERSION=
 # Environment=KEIGHTS_AZS=
-ExecStartPre=/usr/bin/systemd-tmpfiles --create --prefix /var/lib/kubeadm
 ExecStart=/bin/sh -c ' \
     while true; do \
       [ -f /run/kubernetes/bootstrap-token ] && break; \
