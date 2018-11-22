@@ -1,33 +1,15 @@
 [Unit]
 Description=keights-kubeadm-join service
-Requires=keights-whisper-node.service
-After=keights-whisper-node.service
+Requires=keights-templatize-kubeadm-join-config.service
+After=keights-templatize-kubeadm-join-config.service
 ConditionPathExists=!/var/lib/kubeadm/initialized
 
 [Service]
-# Environment=KEIGHTS_APISERVER=
-Environment=KEIGHTS_APISERVER_PORT=443
 Type=simple
 ExecStart=/bin/sh -c ' \
-    while true; do \
-      [ -f /run/kubernetes/bootstrap-token ] && break; \
-      sleep 1; \
-    done && \
-    token=`cat /run/kubernetes/bootstrap-token` && \
-    ca_cert_hash=`openssl x509 -pubkey -in /run/kubernetes/pki/ca.crt | \
-                    openssl rsa -pubin -outform der 2>/dev/null | \
-                    openssl dgst -sha256 -hex | \
-                    sed "s/^.* //"` && \
-    node_name=`curl -s \
-            --retry 10 \
-            --retry-delay 2 \
-            http://169.254.169.254/latest/meta-data/local-hostname` && \
     /usr/bin/kubeadm join \
-      --node-name=$${node_name} \
-      --token=$${token} \
-      --discovery-token-ca-cert-hash=sha256:$${ca_cert_hash} \
-      --ignore-preflight-errors=all \
-      ${KEIGHTS_APISERVER}:${KEIGHTS_APISERVER_PORT} && \
+      --config /var/lib/kubeadm/config.yaml \
+      --ignore-preflight-errors=all && \
     touch /var/lib/kubeadm/initialized \
 '
 Restart=on-failure

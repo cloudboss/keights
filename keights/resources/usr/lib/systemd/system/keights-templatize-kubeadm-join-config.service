@@ -1,0 +1,40 @@
+[Unit]
+Description=keights-templatize-kubeadm-join-config service
+Requires=keights-whisper-node.service
+After=keights-whisper-node.service
+ConditionPathExists=!/var/lib/kubeadm/initialized
+
+[Service]
+Type=simple
+# Environment=KEIGHTS_APISERVER=
+# Environment=KEIGHTS_APISERVER_PORT=
+# Environment=KEIGHTS_IMAGE_REPOSITORY=
+# Environment=KEIGHTS_NODE_LABELS=
+ExecStart=/bin/sh -c ' \
+    while true; do \
+      [ -f /run/kubernetes/bootstrap-token ] && break; \
+      sleep 1; \
+    done && \
+    token=`cat /run/kubernetes/bootstrap-token` && \
+    ca_cert_hash=`openssl x509 -pubkey -in /run/kubernetes/pki/ca.crt | \
+            openssl rsa -pubin -outform der 2>/dev/null | \
+            openssl dgst -sha256 -hex | \
+            sed "s/^.* //"` && \
+    node_name=`curl -s \
+            --retry 10 \
+            --retry-delay 2 \
+            http://169.254.169.254/latest/meta-data/local-hostname` && \
+    /usr/bin/keights template \
+      -t /usr/share/keights/kubeadm-join-config.yaml.template \
+      -D /var/lib/kubeadm/config.yaml \
+      -v APIServer=${KEIGHTS_APISERVER} \
+      -v APIServerPort=${KEIGHTS_APISERVER_PORT} \
+      -v Token=$${token} \
+      -v CACertHash=$${ca_cert_hash} \
+      -v ImageRepository=${KEIGHTS_IMAGE_REPOSITORY} \
+      -v NodeLabels=${KEIGHTS_NODE_LABELS} \
+      -v NodeName=$${node_name} \
+'
+
+[Install]
+WantedBy=multi-user.target
