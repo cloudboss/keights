@@ -128,7 +128,7 @@ func (v *Volumizer) HasFilesystem(device, fstype string) (bool, error) {
 	blkid := helpers.RunCommand(Blkid, "-p", "-s", "TYPE", "-o", "udev", device)
 	if blkid.ExitStatus == 0 {
 		if !strings.HasPrefix(blkid.Stdout, fmt.Sprintf("ID_FS_TYPE=%v", fstype)) {
-			return false, fmt.Errorf("Unexpected error reading %s", device)
+			return false, fmt.Errorf("Unexpected error reading %s: %s", device, blkid.Stderr)
 		}
 		return true, nil
 	}
