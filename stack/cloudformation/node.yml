@@ -54,6 +54,10 @@ Parameters:
   LoadBalancerDnsName:
     Description: DNS name of kubernetes apiserver load balancer
     Type: String
+  ImageRepository:
+    Description: Repository for core Kubernetes Docker images
+    Type: String
+    Default: k8s.gcr.io
   DockerOptions:
     Description: >-
       Options to write to /etc/docker/daemon.json, which should follow
@@ -123,13 +127,15 @@ Resources:
                   Environment=AWS_REGION=${AWS::Region}
                   Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
 
-              - path: /etc/systemd/system/keights-kubeadm-join.service.d/environment.conf
+              - path: /etc/systemd/system/keights-templatize-kubeadm-join-config.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
                 content: |
                   [Service]
                   Environment=KEIGHTS_APISERVER=${LoadBalancerDnsName}
                   Environment=KEIGHTS_APISERVER_PORT=443
+                  Environment=KEIGHTS_IMAGE_REPOSITORY=${ImageRepository}
+                  Environment=KEIGHTS_NODE_LABELS=${NodeLabels},
 
               - path: /etc/systemd/system/keights-signal.service.d/environment.conf
                 owner: root:root
@@ -139,12 +145,6 @@ Resources:
                   Environment=AWS_REGION=${AWS::Region}
                   Environment=KEIGHTS_STACK_NAME=${AWS::StackName}
                   Environment=KEIGHTS_MASTER=false
-
-              - path: /etc/default/kubelet
-                owner: root:root
-                permissions: '0644'
-                content: |
-                  KUBELET_EXTRA_ARGS=--cloud-provider=aws --node-labels=kubernetes.io/role=node,node-role.kubernetes.io/node=,${NodeLabels}
 
             runcmd:
               - systemctl daemon-reload

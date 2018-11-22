@@ -1,0 +1,14 @@
+apiVersion: kubeadm.k8s.io/v1alpha2
+kind: NodeConfiguration
+discoveryTokenAPIServers:
+- {{ .APIServer }}:{{ .APIServerPort }}
+token: {{ .Token }}
+discoveryTokenCACertHashes:
+- sha256:{{ .CACertHash }}
+nodeRegistration:
+  criSocket: /var/run/dockershim.sock
+  kubeletExtraArgs:
+    cloud-provider: aws
+    pod-infra-container-image: {{ .ImageRepository }}/pause:3.1
+    node-labels: kubernetes.io/role=node,node-role.kubernetes.io/node=,{{ range $label := .NodeLabels }}{{ $label }},{{ end }}
+  name: {{ .NodeName }}

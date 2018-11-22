@@ -353,7 +353,7 @@ Resources:
                   Environment=AWS_REGION=${AWS::Region}
                   Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
 
-              - path: /etc/systemd/system/keights-templatize-kubeadm-config.service.d/environment.conf
+              - path: /etc/systemd/system/keights-templatize-kubeadm-init-config.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
                 content: |
@@ -384,7 +384,7 @@ Resources:
               - systemctl daemon-reload
               - systemctl enable var-lib-etcd.mount
               - systemctl enable kubelet.service
-              - systemctl start --no-block keights-templatize-kubeadm-config.service
+              - systemctl start --no-block keights-templatize-kubeadm-init-config.service
               - systemctl start --no-block keights-kubeadm-init.service
               - systemctl start --no-block keights-signal.service
 
