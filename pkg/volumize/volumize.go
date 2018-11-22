@@ -36,8 +36,8 @@ import (
 )
 
 const (
-	Blkid = "/usr/sbin/blkid"
-	Mkfs  = "/usr/sbin/mkfs"
+	Blkid = "blkid"
+	Mkfs  = "mkfs"
 )
 
 type Volumizer struct {
