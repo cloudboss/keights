@@ -41,5 +41,12 @@ run:
     first_char=`echo ${version} | cut -c 1`
     [ "${first_char=}" != v ] && version="v${version}"
 
+    k8s_version=`echo ${version} | cut -d - -f 1`
+    first_char=`echo ${k8s_version} | cut -c 1`
+    [ "${first_char=}" = v ] && k8s_version=`echo ${k8s_version} | cut -c 2-100`
+
     cd repo/stack/ami/debian
-    /opt/bin/packer build -var keights-version=${version} build.json
+    /opt/bin/packer build \
+        -var keights-version=${version} \
+        -var k8s-version=${k8s_version} \
+        build.json
