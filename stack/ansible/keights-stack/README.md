@@ -100,6 +100,8 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `node_labels`: (Optional, type *dict*, default `{}`) - A dictionary of key/value pairs used to assign Kubernetes labels to nodes.
 
+`image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which Kubernetes component docker images are pulled.
+
 # Example Playbook
 
 ```

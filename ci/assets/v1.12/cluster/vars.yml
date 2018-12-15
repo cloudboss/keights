@@ -16,6 +16,11 @@ pod_cidr: 10.0.0.0/16
 service_cidr: 10.1.0.0/16
 ssh_access_cidr: 172.31.0.0/16
 api_access_cidr: 172.31.0.0/16
+docker_options:
+  'ip-masq': false
+  'iptables': false
+  'log-driver': json-file
+  'storage-driver': overlay2
 node_groups:
 - name: app
   min_instances: 2
@@ -25,6 +30,7 @@ node_groups:
   instance_type: t3.medium
   keypair: '{{ keypair }}'
   ssh_access_cidr: '{{ ssh_access_cidr }}'
+  docker_options: '{{ docker_options }}'
   node_labels:
     class: app
     env: dev
