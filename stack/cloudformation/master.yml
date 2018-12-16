@@ -57,6 +57,9 @@ Parameters:
   LambdaRoleArn:
     Description: Role ARN to assign to helper Lamba functions
     Type: String
+  InstanceAttributeFunctionArn:
+    Description: ARN of Lambda for setting EC2 instance attributes
+    Type: String
   KmsKeyId:
     Description: KMS key used to manage secrets
     Type: String
@@ -197,6 +200,26 @@ Resources:
       Principal: events.amazonaws.com
       SourceArn: !GetAtt AutoNamingEventsRule.Arn
 
+  InstanceAttributeEventsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Targets:
+        - Id: !Sub ${AWS::StackName}-instattr
+          Arn: !Ref InstanceAttributeFunctionArn
+      EventPattern:
+        source: [aws.autoscaling]
+        detail-type: [EC2 Instance Launch Successful]
+        detail:
+          AutoScalingGroupName: [!Ref 'AWS::StackName']
+
+  InstanceAttributeInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref InstanceAttributeFunctionArn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt InstanceAttributeEventsRule.Arn
+
   SubnetToAz:
     Type: Custom::SubnetToAz
     DependsOn: SubnetToAzFunction
@@ -237,7 +260,7 @@ Resources:
 
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
-    DependsOn: [KubeCa, AutoNamingInvokePermission]
+    DependsOn: [KubeCa, AutoNamingInvokePermission, InstanceAttributeInvokePermission]
     CreationPolicy:
       ResourceSignal:
         Count: !Ref NumInstances
