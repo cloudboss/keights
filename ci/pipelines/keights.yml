@@ -142,12 +142,17 @@ jobs:
 - name: update-pull-request-status
   public: true
   plan:
-  - get: keights-pr
-    trigger: true
-    version: every
-    passed:
-    - build-cluster
-    - upgrade-cluster
+  - aggregate:
+    - get: keights-pr
+      trigger: true
+      version: every
+      passed:
+      - build-cluster
+      - upgrade-cluster
+    - get: version-snap
+      passed:
+      - build-cluster
+      - upgrade-cluster
   - put: keights-pr
     params:
       path: keights-pr
@@ -161,6 +166,14 @@ jobs:
       passed: [update-pull-request-status]
     - get: keights-release
       trigger: true
+    - get: version-snap
+      passed: [update-pull-request-status]
+  - task: verify-release
+    file: keights-release/ci/tasks/verify-release.yml
+    input_mapping:
+      repo-release: keights-release
+      repo-pr: keights-pr
+      version: version-snap
   - task: make-keights
     file: keights-release/ci/tasks/make-keights.yml
     input_mapping:
