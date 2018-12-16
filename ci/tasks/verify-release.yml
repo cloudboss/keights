@@ -32,7 +32,7 @@ run:
     fi
 
     cd repo-release
-    rel_ref=`git rev-parse HEAD`
+    rel_ref=`git log --no-merges --format=%H -n 1`
 
     cd ../repo-pr
     pr_ref=`git rev-parse HEAD`
