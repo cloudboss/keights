@@ -39,6 +39,9 @@ Parameters:
   NodeSecurityGroups:
     Description: Security groups of nodes
     Type: CommaDelimitedList
+  InstanceAttributeFunctionArn:
+    Description: ARN of Lambda for setting EC2 instance attributes
+    Type: String
   ClusterDns:
     Description: >-
       IP addres of cluster DNS server; should be
@@ -72,8 +75,29 @@ Parameters:
       }
 
 Resources:
+  InstanceAttributeEventsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Targets:
+        - Id: !Sub ${AWS::StackName}-instattr
+          Arn: !Ref InstanceAttributeFunctionArn
+      EventPattern:
+        source: [aws.autoscaling]
+        detail-type: [EC2 Instance Launch Successful]
+        detail:
+          AutoScalingGroupName: [!Ref 'AWS::StackName']
+
+  InstanceAttributeInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref InstanceAttributeFunctionArn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt InstanceAttributeEventsRule.Arn
+
   AutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: [InstanceAttributeInvokePermission]
     CreationPolicy:
       ResourceSignal:
         Count: !Ref MinInstances
