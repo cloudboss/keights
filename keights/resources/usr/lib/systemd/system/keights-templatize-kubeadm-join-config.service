@@ -24,6 +24,10 @@ ExecStart=/bin/sh -c ' \
             --retry 10 \
             --retry-delay 2 \
             http://169.254.169.254/latest/meta-data/local-hostname` && \
+    myip=`curl -s \
+            --retry 10 \
+            --retry-delay 2 \
+            http://169.254.169.254/latest/meta-data/local-ipv4` && \
     /usr/bin/keights template \
       -t /usr/share/keights/kubeadm-join-config.yaml.template \
       -D /var/lib/kubeadm/config.yaml \
@@ -34,6 +38,7 @@ ExecStart=/bin/sh -c ' \
       -v ImageRepository=${KEIGHTS_IMAGE_REPOSITORY} \
       -v NodeLabels=${KEIGHTS_NODE_LABELS} \
       -v NodeName=$${node_name} \
+      -v MyIP=$${myip} \
 '
 
 [Install]

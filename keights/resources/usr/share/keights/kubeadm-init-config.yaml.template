@@ -163,6 +163,7 @@ nodeRegistration:
   kubeletExtraArgs:
     cloud-provider: aws
     pod-infra-container-image: {{ .ImageRepository }}/pause:3.1
+    node-ip: {{ .MyIP }}
   name: {{ .NodeName }}
   taints:
   - effect: NoSchedule
