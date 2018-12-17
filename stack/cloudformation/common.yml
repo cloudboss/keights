@@ -32,6 +32,12 @@ Parameters:
     Description: CIDR block given ssh access to cluster
     Default: 0.0.0.0/0
     Type: String
+  KeightsVersion:
+    Description: Version of Keights
+    Type: String
+  ResourceBucket:
+    Description: Bucket used to store Lambda archives
+    Type: String
 
 Conditions:
   HasManagedHostedZone: !Equals [!Ref EtcdHostedZoneId, '']
@@ -317,6 +323,7 @@ Resources:
           - Effect: Allow
             Action:
               - 'ec2:Describe*'
+              - 'ec2:ModifyInstanceAttribute'
             Resource:
               - '*'
           - Effect: Allow
@@ -402,6 +409,17 @@ Resources:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
 
+  InstanceAttributeFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref ResourceBucket
+        S3Key: !Sub stackbot/instattr/${KeightsVersion}/go1.x/instattr-${KeightsVersion}.zip
+      Handler: instattr
+      Runtime: go1.x
+      Timeout: 30
+      Role: !GetAtt LambdaRole.Arn
+
 Outputs:
   LoadBalancerSecurityGroup:
     Description: Security group of load balancer
@@ -446,3 +464,6 @@ Outputs:
     Description: ID of Route53 DNS hosted zone
     Value: !Ref HostedZone
     Condition: HasManagedHostedZone
+  InstanceAttributeFunctionArn:
+    Description: ARN of Lambda for setting EC2 instance attributes
+    Value: !GetAtt InstanceAttributeFunction.Arn

@@ -97,6 +97,8 @@
       ApiAccessCidr: '{{ keights_stack.api_access_cidr }}'
       # TODO: give masters and nodes separate ssh_access_cidr
       SshAccessCidr: '{{ keights_stack.ssh_access_cidr }}'
+      KeightsVersion: '{{ keights_version }}'
+      ResourceBucket: '{{ keights_stack.resource_bucket }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'
@@ -125,6 +127,7 @@
       LoadBalancerIdleTimeout: '{{ keights_stack.masters.load_balancer_idle_timeout | default(600) }}'
       MasterSecurityGroups: '{{ ([common_stack.stack_outputs.MasterSecurityGroup] + keights_stack.masters.extra_security_groups | default([])) | join(",") }}'
       LambdaRoleArn: '{{ common_stack.stack_outputs.LambdaRoleArn }}'
+      InstanceAttributeFunctionArn: '{{ common_stack.stack_outputs.InstanceAttributeFunctionArn }}'
       KmsKeyId: '{{ keights_stack.kms_key_alias }}'
       PodCidr: '{{ keights_stack.masters.pod_cidr }}'
       ServiceCidr: '{{ keights_stack.masters.service_cidr }}'
@@ -167,6 +170,7 @@
       KeyPair: '{{ item.keypair }}'
       NodeInstanceProfile: '{{ common_stack.stack_outputs.NodeInstanceProfile }}'
       NodeSecurityGroups: '{{ ([common_stack.stack_outputs.NodeSecurityGroup] + item.extra_security_groups | default([])) | join(",") }}'
+      InstanceAttributeFunctionArn: '{{ common_stack.stack_outputs.InstanceAttributeFunctionArn }}'
       ClusterDns: '{{ cluster_dns }}'
       NodeLabels: '{% set j = joiner(",") %}{% for k, v in item.node_labels.items() | default({}) %}{{ j() }}{{ k }}={{ v }}{% endfor %}'
       LoadBalancerDnsName: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
