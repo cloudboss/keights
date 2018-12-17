@@ -1,0 +1,43 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: alpine/git
+    tag: '1.0.4'
+
+inputs:
+- name: repo-release
+- name: repo-pr
+- name: version
+
+run:
+  path: /bin/sh
+  args:
+  - -e
+  - -c
+  - |
+    snap_version=`cut -d - -f 1 version/version`
+    first_char=`echo ${snap_version} | cut -c 1`
+    [ "${first_char=}" = v ] && snap_version=`echo ${snap_version} | cut -c 2-100`
+
+    tag_version=`cut -d - -f 1 repo-release/.git/ref`
+    first_char=`echo ${tag_version} | cut -c 1`
+    [ "${first_char=}" = v ] && tag_version=`echo ${tag_version} | cut -c 2-100`
+
+    if [ "${snap_version}" != "${tag_version=}" ]; then
+        echo "Kubernetes ${tag_version} was not tested, aborting release"
+        exit 1
+    fi
+
+    cd repo-release
+    rel_ref=`git log --no-merges --format=%H -n 1`
+
+    cd ../repo-pr
+    pr_ref=`git rev-parse HEAD`
+
+    if [ "${rel_ref}" != "${pr_ref}" ]; then
+        echo "Tagged version does not match tested PR, aborting release"
+        exit 1
+    fi

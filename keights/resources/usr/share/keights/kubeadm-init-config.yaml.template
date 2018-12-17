@@ -75,12 +75,9 @@ kubeProxy:
       tcpCloseWaitTimeout: 1h0m0s
       tcpEstablishedTimeout: 24h0m0s
     enableProfiling: false
-    featureGates:
-      SupportIPVSProxyMode: true
     healthzBindAddress: 0.0.0.0:10256
-    mode: ipvs
-    ipvs:
-      excludeCIDRs: null
+    mode: iptables
+    iptables:
       minSyncPeriod: 0s
       syncPeriod: 30s
     metricsBindAddress: 127.0.0.1:10249
@@ -163,6 +160,7 @@ nodeRegistration:
   kubeletExtraArgs:
     cloud-provider: aws
     pod-infra-container-image: {{ .ImageRepository }}/pause:3.1
+    node-ip: {{ .MyIP }}
   name: {{ .NodeName }}
   taints:
   - effect: NoSchedule

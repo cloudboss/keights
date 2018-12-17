@@ -39,11 +39,12 @@ spec:
       serviceAccountName: kube-router
       containers:
       - name: kube-router
-        image: {{ keights_system.network.kube_router_image | default('cloudnativelabs/kube-router:v0.2.0') }}
+        image: {{ keights_system.network.kube_router_image | default('cloudnativelabs/kube-router:v0.2.3') }}
         args:
         - "--run-router=true"
         - "--run-firewall=true"
         - "--run-service-proxy=false"
+        - "--disable-source-dest-check=false"
         env:
         - name: NODE_NAME
           valueFrom:
