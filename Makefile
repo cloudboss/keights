@@ -36,7 +36,7 @@ stackbot:
 dist: keights-deb keights-stack keights-system stackbot
 
 github-release: dist
-	VERSION=$(VERSION) REPO_SLUG=$(REPO_SLUG) ./build/github-release
+	VERSION=$(VERSION) REPO_SLUG=$(REPO_SLUG) GIT_REF=`git rev-parse HEAD` ./build/github-release
 
 test:
 	go test -failfast -race -covermode=atomic ./... -run . -timeout=2m
