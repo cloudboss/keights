@@ -32,7 +32,7 @@ resources:
     uri: git@github.com:cloudboss/keights.git
     private_key: ((github-deploy-key-keights))
     branch: ((git-branch))
-    tag_filter: '((git-branch)).[[:digit:]]-[[:digit:]]*'
+    tag_filter: '((git-branch)).[[:digit:]]*-[[:digit:]]*'
 
 jobs:
 - name: build-pull-request
@@ -76,6 +76,7 @@ jobs:
       version: every
       passed: [build-pull-request]
     - get: version-snap
+      trigger: true
       passed: [build-pull-request]
   - task: build-cluster
     file: keights-pr/ci/tasks/build-cluster.yml
@@ -106,6 +107,7 @@ jobs:
       version: every
       passed: [build-pull-request]
     - get: version-snap
+      trigger: true
       passed: [build-pull-request]
   - task: build-initial-cluster
     file: keights-pr/ci/tasks/build-cluster.yml
@@ -150,6 +152,7 @@ jobs:
       - build-cluster
       - upgrade-cluster
     - get: version-snap
+      trigger: true
       passed:
       - build-cluster
       - upgrade-cluster

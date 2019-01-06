@@ -1,6 +1,7 @@
 #!/bin/sh -e
 
 GITHUB_TOKEN=${GITHUB_TOKEN:?required environment variable}
+GIT_REF=${GIT_REF:?required environment variable}
 VERSION=${VERSION:?required environment variable}
 REPO_SLUG=${REPO_SLUG:?required environment variable}
 
@@ -19,9 +20,9 @@ fail()
 release()
 {
     if echo "${VERSION}" | grep -q snap; then
-        data="{\"tag_name\":\"${VERSION}\",\"prerelease\":true}"
+        data="{\"tag_name\":\"${VERSION}\",\"target_commitish\":\"${GIT_REF}\",\"prerelease\":true}"
     else
-        data="{\"tag_name\":\"${VERSION}\"}"
+        data="{\"tag_name\":\"${VERSION}\",\"target_commitish\":\"${GIT_REF}\"}"
     fi
     http_code=`curl -s \
         -w '%{http_code}' \
