@@ -240,30 +240,6 @@
       register: chrooted_installation
       until: chrooted_installation is succeeded
 
-    - name: load overlay kernel module
-      modprobe:
-        name: overlay
-
-    - name: import kubernetes docker images in chroot
-      shell: |
-        chroot /mnt sh -s<<' EOF'
-        dockerd --storage-driver=overlay2 >/dev/null 2>&1 </dev/null &
-        pid=${!}
-        while [ ! -S /var/run/docker.sock ]; do
-            sleep 0.5
-        done
-        docker pull k8s.gcr.io/kube-apiserver:v{{ k8s_version }}
-        docker pull k8s.gcr.io/kube-controller-manager:v{{ k8s_version }}
-        docker pull k8s.gcr.io/kube-proxy:v{{ k8s_version }}
-        docker pull k8s.gcr.io/kube-scheduler:v{{ k8s_version }}
-        docker pull k8s.gcr.io/etcd:{{ etcd_version }}
-        docker pull k8s.gcr.io/pause:{{ pause_version }}
-        docker pull k8s.gcr.io/coredns:{{ core_dns_version }}
-        kill ${pid}
-        EOF
-      args:
-        creates: '/var/lib/docker/overlay2/*/diff/usr/local/bin/etcd'
-
     - name: post copy staging files into chroot
       copy:
         src: 'staging/{{ item.path }}'
