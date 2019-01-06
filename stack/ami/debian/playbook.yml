@@ -26,7 +26,7 @@
     base_repo: http://cdn-aws.deb.debian.org/debian/
     gpg_keys:
       - name: docker
-        url: https://apt.dockerproject.org/gpg
+        url: https://download.docker.com/linux/debian/gpg
       - name: google
         url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
     partitions:
@@ -223,7 +223,7 @@
           grub-pc \
           locales \
           openssh-server \
-          docker-engine={{ docker_version }} \
+          docker-ce={{ docker_version }} \
           kubernetes-cni={{ cni_version }}-00 \
           kubectl={{ k8s_version }}-00 \
           kubeadm={{ k8s_version }}-00 \

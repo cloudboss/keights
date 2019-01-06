@@ -4,7 +4,7 @@
     "debian-release": "stretch",
     "root-vol": "xvde",
     "docker-vol": "xvdf",
-    "docker-version": "17.03.1~ce-0~debian-stretch",
+    "docker-version": "18.06.1~ce~3-0~debian",
     "k8s-version": "1.12.2",
     "cni-version": "0.6.0",
     "core-dns-version": "1.2.2",
