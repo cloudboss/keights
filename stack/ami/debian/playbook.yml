@@ -29,33 +29,27 @@
         url: https://download.docker.com/linux/debian/gpg
       - name: google
         url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
-    partitions:
-      - number: 1
-        start: 0%
-        end: 2GiB
-        part_type: primary
+    volumes:
+      - device: '/dev/{{ root_vol }}'
         mount: /
+        fstype: ext4
         mount_opts: rw,barrier=0,noatime,errors=remount-ro
-      - number: 2
-        start: 2GiB
-        end: 4GiB
-        part_type: primary
+      - device: '/dev/{{ usr_vol }}'
         mount: /usr
+        fstype: ext4
         mount_opts: ro,barrier=0,noatime
-      - number: 3
-        start: 4GiB
-        end: 6GiB
-        part_type: primary
+      - device: '/dev/{{ var_vol }}'
         mount: /var
+        fstype: ext4
         mount_opts: rw,barrier=0,noatime,errors=remount-ro
-      - number: 4
-        start: 6GiB
-        end: 100%
-        part_type: primary
+      - device: '/dev/{{ var_lib_docker_vol }}'
+        mount: /var/lib/docker
+        fstype: ext4
+        mount_opts: rw,barrier=0,noatime,errors=remount-ro
+      - device: '/dev/{{ var_log_vol }}'
         mount: /var/log
+        fstype: ext4
         mount_opts: rw,barrier=0,noatime,errors=remount-ro
-    docker_mount: /var/lib/docker
-    docker_mount_opts: rw,barrier=0,noatime,errors=remount-ro
     bootstrap_exclude:
       - nano
       - wget
@@ -95,45 +89,21 @@
       with_items:
         - ca-certificates
         - debootstrap
-        - parted
 
-    - name: partition root volume
-      parted:
-        device: '/dev/{{ root_vol }}'
-        number: '{{ item.number }}'
-        part_start: '{{ item.start }}'
-        part_end: '{{ item.end }}'
-        part_type: '{{ item.part_type }}'
-        state: present
-      with_items: '{{ partitions }}'
-
-    - name: make filesystems on root volume partitions
+    - name: make filesystems on volumes
       filesystem:
-        fstype: ext4
-        dev: '/dev/{{ root_vol }}{{ item.number }}'
+        fstype: '{{ item.fstype }}'
+        dev: '{{ item.device }}'
         opts: '-L {{ item.mount }}'
-      with_items: '{{ partitions }}'
+      with_items: '{{ volumes }}'
 
-    - name: make filesystem on docker volume
-      filesystem:
-        fstype: ext4
-        dev: '/dev/{{ docker_vol }}'
-        opts: '-L {{ docker_mount }}'
-
-    - name: mount root volume partitions
+    - name: mount volumes
       mount:
-        src: '/dev/{{ root_vol }}{{ item.number }}'
+        src: '{{ item.device }}'
         path: '/mnt{{ item.mount }}'
-        fstype: ext4
+        fstype: '{{ item.fstype }}'
         state: mounted
-      with_items: '{{ partitions }}'
-
-    - name: mount docker volume
-      mount:
-        src: '/dev/{{ docker_vol }}'
-        path: '/mnt{{ docker_mount }}'
-        fstype: ext4
-        state: mounted
+      with_items: '{{ volumes }}'
 
     - name: bootstrap operating system onto root volume
       shell: |
@@ -265,16 +235,7 @@
         opts: '{{ item.mount_opts }}'
         fstab: /mnt/etc/fstab
         state: present
-      with_items: '{{ partitions }}'
-
-    - name: set fstab filesystem mount for docker volume
-      mount:
-        src: 'LABEL={{ docker_mount }}'
-        path: '{{ docker_mount }}'
-        fstype: ext4
-        opts: '{{ docker_mount_opts }}'
-        fstab: /mnt/etc/fstab
-        state: present
+      with_items: '{{ volumes }}'
 
     - name: clean up default fstab
       lineinfile:
