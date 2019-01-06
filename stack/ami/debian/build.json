@@ -5,7 +5,7 @@
     "root-vol": "xvde",
     "docker-vol": "xvdf",
     "docker-version": "18.06.1~ce~3-0~debian",
-    "k8s-version": "1.12.2",
+    "k8s-version": "",
     "cni-version": "0.6.0",
     "core-dns-version": "1.2.2",
     "etcd-version": "3.2.24",
@@ -64,10 +64,7 @@
       "docker:version": "{{ user `docker-version` }}",
       "k8s:version": "{{ user `k8s-version` }}",
       "keights:version": "{{ user `keights-version` }}",
-      "cni:version": "{{ user `cni-version` }}",
-      "core-dns:version": "{{ user `core-dns-version` }}",
-      "etcd:version": "{{ user `etcd-version` }}",
-      "pause:version": "{{ user `pause-version` }}"
+      "cni:version": "{{ user `cni-version` }}"
     },
 
     "run_tags": {
@@ -94,10 +91,7 @@
 	"-e", "docker_version={{ user `docker-version` }}",
 	"-e", "k8s_version={{ user `k8s-version` }}",
 	"-e", "keights_version={{ user `keights-version` }}",
-	"-e", "cni_version={{ user `cni-version` }}",
-	"-e", "core_dns_version={{ user `core-dns-version` }}",
-	"-e", "etcd_version={{ user `etcd-version` }}",
-	"-e", "pause_version={{ user `pause-version` }}"
+	"-e", "cni_version={{ user `cni-version` }}"
       ]
     }
   ]
