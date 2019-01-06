@@ -234,6 +234,7 @@ Resources:
               - '*'
           - Effect: Allow
             Action:
+              - elasticloadbalancing:AddTags
               - elasticloadbalancing:AttachLoadBalancerToSubnets
               - elasticloadbalancing:ApplySecurityGroupsToLoadBalancer
               - elasticloadbalancing:CreateLoadBalancer
@@ -292,7 +293,6 @@ Resources:
               - autoscaling:DescribeAutoScalingInstances
               - ec2:DescribeInstances
               - ec2:DescribeVolumes
-              - ec2:ModifyInstanceAttribute
             Resource:
               - '*'
           - Effect: Allow
@@ -305,6 +305,11 @@ Resources:
               - kms:Decrypt
             Resource:
               - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${KmsKeyId}'
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Resource:
+              - '*'
 
   K8sLambdaAccess:
     Type: AWS::IAM::ManagedPolicy
