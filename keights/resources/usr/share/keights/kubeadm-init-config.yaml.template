@@ -1,8 +1,4 @@
-apiVersion: kubeadm.k8s.io/v1alpha3
-kind: InitConfiguration
-apiEndpoint:
-  advertiseAddress: {{ .MyIP }}
-  bindPort: 6443
+apiVersion: kubeadm.k8s.io/v1beta1
 bootstrapTokens:
 - groups:
   - system:bootstrappers:kubeadm:default-node-token
@@ -11,34 +7,37 @@ bootstrapTokens:
   usages:
   - signing
   - authentication
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: {{ .MyIP }}
+  bindPort: 6443
 nodeRegistration:
   criSocket: /var/run/dockershim.sock
   kubeletExtraArgs:
     cloud-provider: aws
-    pod-infra-container-image: {{ .ImageRepository }}/pause:3.1
   name: {{ .NodeName }}
   taints:
   - effect: NoSchedule
     key: node-role.kubernetes.io/master
 ---
-apiVersion: kubeadm.k8s.io/v1alpha3
-kind: ClusterConfiguration
-apiServerCertSANs:
-- {{ .APIServer }}
-apiServerExtraArgs:
-  authorization-mode: Node,RBAC
-  cloud-provider: aws
-  external-hostname: {{ .APIServer }}
-auditPolicy:
-  logDir: /var/log/kubernetes/audit
-  logMaxAge: 2
-  path: ""
+apiServer:
+  certSANs:
+  - {{ .APIServer }}
+  extraArgs:
+    authorization-mode: Node,RBAC
+    cloud-provider: aws
+    external-hostname: {{ .APIServer }}
+  timeoutForControlPlane: 4m0s
+apiVersion: kubeadm.k8s.io/v1beta1
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
 controlPlaneEndpoint: {{ .APIServer }}:{{ .APIPort }}
-controllerManagerExtraArgs:
-  cloud-provider: aws
-  configure-cloud-routes: "false"
+controllerManager:
+  extraArgs:
+    cloud-provider: aws
+    configure-cloud-routes: "false"
+dns:
+  type: CoreDNS
 etcd:
   local:
     dataDir: /var/lib/etcd
@@ -65,10 +64,8 @@ etcd:
     serverCertSANs:
     - {{ .MyIP }}
     - {{ .Prefix }}-{{ .MyAZ }}.{{ .EtcdDomain }}
-featureGates:
-  CoreDNS: true
-  HighAvailability: true
 imageRepository: {{ .ImageRepository }}
+kind: ClusterConfiguration
 kubernetesVersion: {{ .KubernetesVersion }}
 networking:
   dnsDomain: {{ .ClusterDomain }}
@@ -76,7 +73,6 @@ networking:
   serviceSubnet: {{ .ServiceSubnet }}
 ---
 apiVersion: kubeproxy.config.k8s.io/v1alpha1
-kind: KubeProxyConfiguration
 bindAddress: 0.0.0.0
 clientConnection:
   acceptContentTypes: ""
@@ -107,6 +103,7 @@ ipvs:
   minSyncPeriod: 0s
   scheduler: ""
   syncPeriod: 30s
+kind: KubeProxyConfiguration
 metricsBindAddress: 127.0.0.1:10249
 mode: ipvs
 nodePortAddresses: null
@@ -115,9 +112,8 @@ portRange: ""
 resourceContainer: /kube-proxy
 udpIdleTimeout: 250ms
 ---
-apiVersion: kubelet.config.k8s.io/v1beta1
-kind: KubeletConfiguration
 address: 0.0.0.0
+apiVersion: kubelet.config.k8s.io/v1beta1
 authentication:
   anonymous:
     enabled: false
@@ -167,12 +163,14 @@ imageGCLowThresholdPercent: 80
 imageMinimumGCAge: 2m0s
 iptablesDropBit: 15
 iptablesMasqueradeBit: 14
+kind: KubeletConfiguration
 kubeAPIBurst: 10
 kubeAPIQPS: 5
 makeIPTablesUtilChains: true
 maxOpenFiles: 1000000
 maxPods: 110
 nodeLeaseDurationSeconds: 40
+nodeStatusReportFrequency: 10s
 nodeStatusUpdateFrequency: 10s
 oomScoreAdj: -999
 podPidsLimit: -1
