@@ -208,7 +208,7 @@ jobs:
       GITHUB_TOKEN: ((github-access-token))
       VERSION_FILE: repo/.git/ref
   - task: build-ami
-    file: keights-pr/ci/tasks/build-ami.yml
+    file: keights-release/ci/tasks/build-ami.yml
     input_mapping:
       repo: keights-release
     params:
