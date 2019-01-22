@@ -92,11 +92,22 @@ jobs:
     file: keights-pr/ci/tasks/run-e2e.yml
     input_mapping:
       artifacts-in: build-cluster-artifacts
+    output_mapping:
+      artifacts-out: run-e2e-artifacts
   on_failure:
     put: keights-pr
     params:
       path: keights-pr
       status: failure
+  ensure:
+    task: s3-upload-results
+    file: keights-pr/ci/tasks/s3-upload.yml
+    input_mapping:
+      version: version-snap
+      artifacts-in: run-e2e-artifacts
+    params:
+      KEIGHTS_BRANCH: ((git-branch))
+      JOB: build-cluster
 
 - name: upgrade-cluster
   public: true
@@ -135,11 +146,22 @@ jobs:
     file: keights-pr/ci/tasks/run-e2e.yml
     input_mapping:
       artifacts-in: upgraded-cluster-artifacts
+    output_mapping:
+      artifacts-out: run-e2e-artifacts
   on_failure:
     put: keights-pr
     params:
       path: keights-pr
       status: failure
+  ensure:
+    task: s3-upload-results
+    file: keights-pr/ci/tasks/s3-upload.yml
+    input_mapping:
+      version: version-snap
+      artifacts-in: run-e2e-artifacts
+    params:
+      KEIGHTS_BRANCH: ((git-branch))
+      JOB: upgrade-cluster
 
 - name: update-pull-request-status
   public: true
