@@ -192,6 +192,7 @@
         chroot /mnt sh -s<<' EOF'
         debconf-set-selections /tmp/debconf-selections && \
         apt-get update && \
+        apt-get upgrade && \
         DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
           cloud-init \
           grub-pc \
