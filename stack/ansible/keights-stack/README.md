@@ -70,9 +70,7 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `etcd_volume_size`: (Optional, type *int*, default `10`) - Size of etcd volume in gigabytes.
 
-`etcd_device`: (Optional, type *string*, default `xvdg`) - Name of etcd EBS volume device.
-
-`etcd_internal_device`: (Optional, type *string*, default `/dev/xvdg`) - Name of etcd volume device within machine, which may differ between EC2 instance types.
+`etcd_device`: (Optional, type *string*, default `xvdg`) - Name of etcd EBS volume device. It may be just the device name or the full path, e.g. `/dev/xvdg`.
 
 `image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which Kubernetes component docker images are pulled.
 

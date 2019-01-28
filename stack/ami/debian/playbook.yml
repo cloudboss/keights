@@ -218,6 +218,7 @@
         chroot /mnt sh -s<<' EOF'
         debconf-set-selections /tmp/debconf-selections && \
         apt-get update && \
+        apt-get upgrade && \
         DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
           cloud-init \
           grub-pc \
@@ -276,6 +277,10 @@
           mode: '0644'
         - path: etc/systemd/system/docker.service.d/cloudboss.conf
           mode: '0644'
+        - path: etc/udev/rules.d/70-ec2-nvme-devices.rules
+          mode: '0644'
+        - path: usr/sbin/ebsnvme-id
+          mode: '0755'
 
     - name: set fstab filesystem mounts
       mount:
