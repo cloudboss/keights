@@ -20,7 +20,6 @@
         keypair: '{{ keypair }}'
         load_balancer_scheme: '{{ load_balancer_scheme }}'
         etcd_volume_size: '{{ etcd_volume_size }}'
-        etcd_internal_device: '{{ etcd_internal_device }}'
         docker_options: '{{ docker_options }}'
       node_groups: '{{ node_groups }}'
 
