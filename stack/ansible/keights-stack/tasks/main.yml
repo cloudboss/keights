@@ -9,6 +9,7 @@
   set_fact:
     cluster_dns: '{{ keights_stack.masters.service_cidr.split(".")[:-1] | join(".") }}.10'
     default_etcd_domain: '{{ "{}.local".format(keights_stack.cluster_name) }}'
+    etcd_device: '{{ keights_stack.masters.etcd_device | default("xvdg") }}'
     k8s_version: '{{ keights_stack.k8s_version | default(keights_version.split("-")[0]) }}'
     default_image: 'debian-stretch-k8s-hvm-amd64-{{ keights_version }}'
     cache_dir: '{{ playbook_dir }}/.cache'
@@ -136,8 +137,8 @@
       EtcdDomain: '{{ keights_stack.etcd_domain | default(default_etcd_domain) }}'
       EtcdPrefix: '{{ keights_stack.etcd_prefix | default("etcd") }}'
       EtcdVolumeSize: '{{ keights_stack.masters.etcd_volume_size | default(10) }}'
-      EtcdDevice: '{{ keights_stack.masters.etcd_device | default("xvdg") }}'
-      EtcdInternalDevice: '{{ keights_stack.masters.etcd_internal_device | default("/dev/xvdg") }}'
+      EtcdDevice: '{{ etcd_device }}'
+      EtcdInternalDevice: '{{ etcd_device if etcd_device.startswith("/dev/") else "/dev/{}".format(etcd_device) }}'
       ImageRepository: '{{ keights_stack.masters.image_repository | default("k8s.gcr.io") }}'
       KubernetesVersion: '{{ k8s_version }}'
       KeightsVersion: '{{ keights_version }}'

@@ -2,7 +2,7 @@ cloud-init cloud-init/datasources multiselect Ec2
 grub-pc grub-pc/install_devices string /dev/{{ root_vol }}
 grub-pc grub-pc/install_devices_empty boolean false
 grub-pc grub-pc/timeout string 0
-grub-pc grub2/linux_cmdline_default string quiet elevator=noop console=tty console=ttyS0 swapaccount=1 net.ifnames=0
+grub-pc grub2/linux_cmdline_default string elevator=noop console=tty console=ttyS0 swapaccount=1 net.ifnames=0 biosdevname=0 nvme_core.io_timeout=255
 locales locales/default_environment_locale string en_US.UTF-8
 locales locales/locales_to_be_generated multiselect en_US.UTF-8 UTF-8
 openssh-server openssh-server/permit-root-login boolean false

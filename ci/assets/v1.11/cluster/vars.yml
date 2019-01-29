@@ -11,7 +11,6 @@ load_balancer_scheme: internal
 kms_key_id: 714e0cab-0d59-4885-b45b-31d44467fe5c
 kms_key_alias: alias/cloudboss
 etcd_volume_size: 10
-etcd_internal_device: /dev/nvme2n1
 pod_cidr: 10.0.0.0/16
 service_cidr: 10.1.0.0/16
 ssh_access_cidr: 172.31.0.0/16
