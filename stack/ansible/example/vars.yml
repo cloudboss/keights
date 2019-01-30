@@ -22,6 +22,10 @@ node_subnet_ids:
   - subnet-f3cdd152
   - subnet-e245724f
 
+# The name of an S3 bucket where Lambda artifacts will be uploaded
+# for CloudFormation to deploy from.
+resource_bucket: cloudboss
+
 # Minimum and maximum number of nodes in the autoscaling group.
 node_min_instances: 1
 node_max_instances: 1
