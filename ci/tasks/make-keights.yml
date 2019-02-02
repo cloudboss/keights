@@ -33,7 +33,7 @@ run:
     [ "${first_char=}" != v ] && version="v${version}"
 
     apt-get update
-    apt-get install -y --no-install-recommends jq zip
+    apt-get install -y --no-install-recommends jq rpm zip
 
     cd repo
     make test
