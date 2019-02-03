@@ -52,7 +52,7 @@ If `plugin` is `kube-router`, you may set the following keys. These will have no
   vars:
     cluster_name: cb
     vpc_id: vpc-ba92ad08
-	pod_cidr: 10.0.0.0/16
+    pod_cidr: 10.0.0.0/16
     # ... other variables here ...
 
   roles:
@@ -66,7 +66,7 @@ If `plugin` is `kube-router`, you may set the following keys. These will have no
   - role: keights-system
     keights_system:
       cluster_name: '{{ cluster_name }}'
-	  # master_stack is defined in keights-stack role, used for outputs here
+      # master_stack is defined in keights-stack role, used for outputs here
       cluster_apiserver: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
       network:
         plugin: calico
