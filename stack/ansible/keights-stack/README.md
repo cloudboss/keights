@@ -54,7 +54,7 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `pod_cidr`: (Required, type *string*) - In-cluster CIDR block used for Kubernetes pods.
 
-`subnet_ids`: (Required, type *list* of *string*) - Subnet IDs in which masters will live. Each subnet *must* be in a separate availability zone, and the number of subnet IDs will determine the number of masters.
+`subnet_ids`: (Required, type *list* of *string*) - Subnet IDs in which masters will live. Each subnet *must* be in a separate availability zone, and the number of subnet IDs will determine the number of masters. Either one or three subnets may be used for the masters.
 
 `instance_type`: (Required, type *string*) - Type of EC2 instance, e.g. `m4.large`.
 
@@ -110,9 +110,9 @@ All role variables go under a top level dictionary `keights_stack`.
     vpc_id: vpc-ba92ad08
     resource_bucket: cloudboss-public
     subnet_ids:
-	- subnet-6c31888d
-	- subnet-f3cdd152
-	- subnet-e245724f
+    - subnet-6c31888d
+    - subnet-f3cdd152
+    - subnet-e245724f
     keypair: keights
     kms_key_id: 714e0cab-0d59-4885-b45b-31d44467fe5c
     kms_key_alias: alias/cloudboss
@@ -141,11 +141,9 @@ All role variables go under a top level dictionary `keights_stack`.
       - name: app
         min_instances: 1
         max_instances: 3
-        vpc_id: '{{ vpc_id }}'
         subnet_ids: '{{ subnet_ids }}'
         instance_type: t2.large
         keypair: '{{ keypair }}'
-        ssh_access_cidr: '{{ ssh_access_cidr }}'
         node_labels:
           class: app
           env: dev

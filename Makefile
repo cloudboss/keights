@@ -11,12 +11,14 @@ keights:
 	mkdir -p _output/keights
 	go build -o _output/keights/keights ./keights
 
-keights-deb: setup keights
-	mkdir -p _output/keights-deb
-	sed "s|__VERSION__|$(VERSION)|g" build/nfpm.yml.tmpl > _output/keights-deb/nfpm.yml
-	$(HOME)/go/bin/nfpm pkg \
-		-f _output/keights-deb/nfpm.yml \
-		-t _output/keights-deb/keights_$(VERSION)_$(GOOS)_$(GOARCH).deb
+keights-pkg: setup keights
+	mkdir -p _output/keights-pkg
+	sed "s|__VERSION__|$(VERSION)|g" build/nfpm.yml.tmpl > _output/keights-pkg/nfpm.yml
+	for pkg in deb rpm; do \
+		$(HOME)/go/bin/nfpm pkg \
+			-f _output/keights-pkg/nfpm.yml \
+			-t _output/keights-pkg/keights_$(VERSION)_$(GOOS)_$(GOARCH).$${pkg}; \
+	done
 
 keights-stack:
 	cp -R stack/ansible/keights-stack _output
@@ -33,7 +35,7 @@ stackbot:
 		(cd _output/stackbot/$${bot} && zip $${bot}-$(VERSION).zip $${bot}); \
 	done
 
-dist: keights-deb keights-stack keights-system stackbot
+dist: keights-pkg keights-stack keights-system stackbot
 
 github-release: dist
 	VERSION=$(VERSION) REPO_SLUG=$(REPO_SLUG) GIT_REF=`git rev-parse HEAD` ./build/github-release

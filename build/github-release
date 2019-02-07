@@ -56,11 +56,13 @@ upload()
 
 release_id=`release` || fail "`cat ${out_file}`"
 
-# Debian package
-deb_artifact="keights_${VERSION}_linux_amd64.deb"
-deb_artifact_path="_output/keights-deb/${deb_artifact}"
-[ -f ${deb_artifact_path} ] || fail "${deb_artifact_path} not found"
-upload "${deb_artifact}" "${deb_artifact_path}" "${release_id}" || fail "`cat ${out_file}`"
+# Packages
+for pkg in deb rpm; do
+    pkg_artifact="keights_${VERSION}_linux_amd64.${pkg}"
+    pkg_artifact_path="_output/keights-pkg/${pkg_artifact}"
+    [ -f ${pkg_artifact_path} ] || fail "${pkg_artifact_path} not found"
+    upload "${pkg_artifact}" "${pkg_artifact_path}" "${release_id}" || fail "`cat ${out_file}`"
+done
 
 # AWS Lambdas
 bots="auto_namer instattr kube_ca subnet_to_az"

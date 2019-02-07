@@ -7,26 +7,20 @@
       vpc_id: '{{ vpc_id }}'
       kms_key_id: '{{ kms_key_id }}'
       kms_key_alias: '{{ kms_key_alias }}'
-      api_access_cidr: 0.0.0.0/0
-      ssh_access_cidr: 0.0.0.0/0
+      api_access_cidr: '{{ api_access_cidr }}'
+      ssh_access_cidr: '{{ ssh_access_cidr }}'
+      keights_version: '{{ keights_version }}'
       resource_bucket: '{{ resource_bucket }}'
       masters:
-        instance_type: t2.large
+        service_cidr: '{{ service_cidr }}'
         pod_cidr: '{{ pod_cidr }}'
-        service_cidr: 10.1.0.0/16
         subnet_ids: '{{ master_subnet_ids }}'
+        instance_type: '{{ master_instance_type }}'
         keypair: '{{ keypair }}'
-        load_balancer_scheme: internet-facing
-        etcd_volume_size: 10
-      node_groups:
-      - name: app
-        min_instances: '{{ node_min_instances }}'
-        max_instances: '{{ node_max_instances }}'
-        subnet_ids: '{{ node_subnet_ids }}'
-        instance_type: t2.large
-        keypair: '{{ keypair }}'
-        node_labels:
-          class: app
+        load_balancer_scheme: '{{ load_balancer_scheme }}'
+        etcd_volume_size: '{{ etcd_volume_size }}'
+      node_groups: '{{ node_groups }}'
+
   - role: keights-system
     keights_system:
       cluster_name: '{{ cluster }}'
