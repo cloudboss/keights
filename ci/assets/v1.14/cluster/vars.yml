@@ -22,8 +22,8 @@ docker_options:
   'storage-driver': overlay2
 node_groups:
 - name: app
-  min_instances: 2
-  max_instances: 2
+  min_instances: 3
+  max_instances: 3
   vpc_id: '{{ vpc_id }}'
   subnet_ids: '{{ subnet_ids }}'
   instance_type: t3.medium

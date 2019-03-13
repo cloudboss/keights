@@ -9,7 +9,7 @@
     "var-log-vol": "xvdf",
     "docker-version": "18.06.1~ce~3-0~debian",
     "k8s-version": "",
-    "cni-version": "0.6.0",
+    "cni-version": "0.7.5",
     "core-dns-version": "1.2.2",
     "etcd-version": "3.2.24",
     "pause-version": "3.1",
