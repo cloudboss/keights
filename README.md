@@ -66,14 +66,6 @@ Here are some reasons you might still consider using it:
 
 * Compared to some installers, Keights is fully AWS native. Because it is plain CloudFormation at its core, you can integrate it into your AWS accounts your way, for example with [stack sets](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-getting-started-create.html) or [AWS Service Catalog](https://docs.aws.amazon.com/servicecatalog/latest/adminguide/introduction.html).
 
-EKS offers some features that Keights does not:
-
-* The [VPC CNI](https://github.com/aws/amazon-vpc-cni-k8s) plugin used by EKS lets Kubernetes use the VPC network internally instead of requiring another network layer. Keights currently supports [calico](https://docs.projectcalico.org/v3.5/getting-started/kubernetes/) and [kube-router](https://www.kube-router.io/), but may support the VPC plugin in the future.
-
-* EKS uses [IAM authentication](https://github.com/kubernetes-sigs/aws-iam-authenticator), allowing for access to the cluster with an AWS native authentication model. Keights generates certificates to use for authentication against the cluster.
-
-* Amazon manages the control plane so you don't have to.
-
 # Releases
 
 Keights releases follow the Kubernetes version with an incrementing suffix appended. For example, Kubernetes `1.10.0` had Keights releases `v1.10.0-1`, `v1.10.0-2`, `v1.10.0-3`, and `v1.10.0-4`.
@@ -104,6 +96,8 @@ Before you start, you will need:
 
 * A KMS key with an alias - Keights does not touch your KMS keys. If you don't have one, you can create a new key in the IAM AWS console under "Encryption Keys" and give it an alias.
 
+* An AMI for the Keights version in your region - For each release, there is a public AMI published in the `us-east-1` region. If you are in another region, you will need to [copy it into your account and region](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/CopyingAMIs.html#ami-copy-steps). The published AMI can be found in the AWS console as a public image with owner `256008164056`, and is called `debian-stretch-k8s-hvm-amd64-v${KeightsVersion}`, where `${KeightsVersion}` is replaced with the actual version. If you do copy the image to your account, keep the same name to make things easier.
+
 * Python - Ansible will be installed into a [virtualenv](https://virtualenv.pypa.io/en/latest/), so you need either Python 3, or Python 2 with the `virtualenv` command installed.
 
 ### Deployment script
@@ -124,7 +118,7 @@ Copy the `stack/ansible/example` directory somewhere.
 
 You can modify any file in the directory, but you should be able to build a cluster by only modifying `vars.yml` and setting the Ansible role versions in `requirements.yml`.
 
-All of the identifiers in `vars.yml` are fake, so at a minimum you must change `vpc_id`, `master_subnet_ids`, `node_subnet_ids`, `resource_bucket`, `kms_key_id`, `kms_key_alias`, and `keypair`. Of course, you may modify any other values such as instance types. The example `vars.yml` is well commented to explain each variable.
+All of the identifiers in `vars.yml` except `image_owner` are fake, so at a minimum you must change `vpc_id`, `master_subnet_ids`, `node_subnet_ids`, `resource_bucket`, `kms_key_id`, `kms_key_alias`, and `keypair`. If you have copied the AMI to your own AWS account, you must change `image_owner` to your account number. Of course, you may modify any other values such as instance types. The example `vars.yml` is well commented to explain each variable.
 
 In `requirements.yml`, the versions of the Ansible roles should match the Keights version you want to use. You can get the URLs for the roles for each version from the [GitHub release page](https://github.com/cloudboss/keights/releases).
 
@@ -195,7 +189,7 @@ You can ssh to machines in the cluster with the keypair assigned during installa
 
 ## Keeping up to date
 
-Keep your cluster up to date by modifying any of the files in your directory and rerunning `deploy`. For example, you may update the Kubernetes version by modifying the versions of the roles in `requirements.yml` when there is a new Keights release. Keights strives to be able to make this transition smoothly, and tests each build to be upgradeable from the previous minor release.
+Keep your cluster up to date by modifying any of the files in your directory and rerunning `deploy`. For example, you may update the Kubernetes version by modifying the versions of the roles in `requirements.yml` when there is a new Keights release. Keights strives to be able to make this transition smoothly, and tests each build to be upgradeable from the previous Kubernetes minor release.
 
 Note that some changes to parameters could result in changes which are not backwards compatible. You should *always* run such updates on an identically configured test cluster before running on a live system.
 

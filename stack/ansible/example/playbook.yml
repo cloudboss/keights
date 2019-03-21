@@ -11,6 +11,7 @@
       ssh_access_cidr: '{{ ssh_access_cidr }}'
       keights_version: '{{ keights_version }}'
       resource_bucket: '{{ resource_bucket }}'
+      image_owner: '{{ image_owner }}'
       masters:
         service_cidr: '{{ service_cidr }}'
         pod_cidr: '{{ pod_cidr }}'
