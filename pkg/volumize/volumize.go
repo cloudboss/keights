@@ -56,6 +56,37 @@ func NewVolumizer(sess *session.Session, availabilityZone, instanceID string) *V
 	}
 }
 
+func (v *Volumizer) AttachedVolume(clusterName, volumeTag, device *string) (*ec2.Volume, error) {
+	filters := []*ec2.Filter{
+		{
+			Name:   aws.String("tag:Name"),
+			Values: []*string{clusterName},
+		},
+		{
+			Name:   aws.String("tag-key"),
+			Values: []*string{volumeTag},
+		},
+		{
+			Name:   aws.String("attachment.instance-id"),
+			Values: []*string{aws.String(v.instanceID)},
+		},
+		{
+			Name:   aws.String("attachment.device"),
+			Values: []*string{device},
+		},
+	}
+	input := &ec2.DescribeVolumesInput{Filters: filters}
+	output, err := v.ec2.DescribeVolumes(input)
+	if err != nil {
+		return nil, err
+	}
+	numVol := len(output.Volumes)
+	if numVol == 0 {
+		return nil, nil
+	}
+	return output.Volumes[0], nil
+}
+
 func (v *Volumizer) WaitForVolume(clusterName, volumeTag *string, minutes time.Duration) (*ec2.Volume, error) {
 	var output *ec2.DescribeVolumesOutput
 	filters := []*ec2.Filter{
@@ -156,13 +187,20 @@ func DoIt(device, internalDevice, volumeTag, fsType, clusterName string, minutes
 	if err != nil {
 		return err
 	}
+	var volume *ec2.Volume
 	volumizer := NewVolumizer(sess, identity.AvailabilityZone, identity.InstanceID)
-	volume, err := volumizer.WaitForVolume(&clusterName, &volumeTag, time.Duration(minutes))
+	volume, err = volumizer.AttachedVolume(&clusterName, &volumeTag, &device)
 	if err != nil {
 		return err
 	}
-	if err = volumizer.AttachVolume(volume, device); err != nil {
-		return err
+	if volume == nil {
+		volume, err = volumizer.WaitForVolume(&clusterName, &volumeTag, time.Duration(minutes))
+		if err != nil {
+			return err
+		}
+		if err = volumizer.AttachVolume(volume, device); err != nil {
+			return err
+		}
 	}
 	if err = volumizer.WaitForDevice(internalDevice); err != nil {
 		return err
