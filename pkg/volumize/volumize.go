@@ -180,7 +180,15 @@ func (v *Volumizer) MakeFilesystem(device, fstype string) error {
 	return nil
 }
 
-func DoIt(device, internalDevice, volumeTag, fsType, clusterName string, minutes int) error {
+func NormalizeDevice(device string) string {
+	if !strings.HasPrefix(device, "/dev/") {
+		return fmt.Sprintf("/dev/%s", device)
+	}
+	return device
+}
+
+func DoIt(device, volumeTag, fsType, clusterName string, minutes int) error {
+	device = NormalizeDevice(device)
 	sess := session.New()
 	metadata := ec2metadata.New(sess)
 	identity, err := metadata.GetInstanceIdentityDocument()
@@ -202,15 +210,15 @@ func DoIt(device, internalDevice, volumeTag, fsType, clusterName string, minutes
 			return err
 		}
 	}
-	if err = volumizer.WaitForDevice(internalDevice); err != nil {
+	if err = volumizer.WaitForDevice(device); err != nil {
 		return err
 	}
-	hasFs, err := volumizer.HasFilesystem(internalDevice, fsType)
+	hasFs, err := volumizer.HasFilesystem(device, fsType)
 	if err != nil {
 		return err
 	}
 	if !hasFs {
-		if err = volumizer.MakeFilesystem(internalDevice, fsType); err != nil {
+		if err = volumizer.MakeFilesystem(device, fsType); err != nil {
 			return err
 		}
 	}

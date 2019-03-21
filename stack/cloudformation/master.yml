@@ -96,14 +96,7 @@ Parameters:
     Default: 10
     Type: Number
   EtcdDevice:
-    Description: Name of the etcd EBS volume.
-    Default: xvdg
-    Type: String
-  EtcdInternalDevice:
-    Description: >-
-      Name of the etcd volume device within a machine. The EBS volume
-      may be xvdg, but depending on the instance type, this may not
-      show up as /dev/xvdg, but rather /dev/nvme2n1, for example.
+    Description: Name of the etcd EBS volume, using the full device path.
     Default: /dev/xvdg
     Type: String
   ImageRepository:
@@ -359,14 +352,13 @@ Resources:
                   Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
                   Environment=KEIGHTS_VOLUME_TAG=etcd:instance
                   Environment=KEIGHTS_VOLUME_DEVICE=${EtcdDevice}
-                  Environment=KEIGHTS_VOLUME_INTERNAL_DEVICE=${EtcdInternalDevice}
 
               - path: /etc/systemd/system/var-lib-etcd.mount.d/mount.conf
                 owner: root:root
                 permissions: '0644'
                 content: |
                   [Mount]
-                  What=${EtcdInternalDevice}
+                  What=${EtcdDevice}
 
               - path: /etc/systemd/system/keights-whisper-controller.service.d/environment.conf
                 owner: root:root
