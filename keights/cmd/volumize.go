@@ -26,16 +26,15 @@ import (
 )
 
 var (
-	device         string
-	internalDevice string
-	fsType         string
-	clusterName    string
-	minutes        int
-	volumizeCmd    = &cobra.Command{
+	device      string
+	fsType      string
+	clusterName string
+	minutes     int
+	volumizeCmd = &cobra.Command{
 		Use:   "volumize",
 		Short: "Attach and format EBS volumes",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return volumize.DoIt(device, internalDevice, volumeTag, fsType, clusterName, minutes)
+			return volumize.DoIt(device, volumeTag, fsType, clusterName, minutes)
 		},
 	}
 )
@@ -43,9 +42,7 @@ var (
 func init() {
 	RootCmd.AddCommand(volumizeCmd)
 	volumizeCmd.Flags().StringVarP(&device, "device", "d",
-		"xvdg", "Name of device for EBS volume")
-	volumizeCmd.Flags().StringVarP(&internalDevice, "internal-device", "D",
-		"/dev/xvdg", "Name of device within operating system")
+		"/dev/xvdg", "Name of device for EBS volume")
 	volumizeCmd.Flags().StringVarP(&fsType, "fstype", "f",
 		"ext4", "Type of filesystem to format volume")
 	volumizeCmd.Flags().StringVarP(&volumeTag, "volume-tag", "v",
