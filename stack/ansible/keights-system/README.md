@@ -40,9 +40,9 @@ If `plugin` is `calico`, you may set the following keys. These will have no effe
 
 If `plugin` is `kube-router`, you may set the following keys. These will have no effect if `plugin` is `calico`.
 
-`kube_router_image`: (Optional, type *string*, default `cloudnativelabs/kube-router:v0.2.3`) - The kube-router docker image.
+`kube_router_image`: (Optional, type *string*, default `cloudnativelabs/kube-router:v0.2.5`) - The kube-router docker image.
 
-`busybox_image`: (Optional, type *string*, default `busybox:1.28.1`) - The busybox docker image.
+`busybox_image`: (Optional, type *string*, default `busybox:1.30.1`) - The busybox docker image.
 
 # Example Playbook
 
