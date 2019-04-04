@@ -1,4 +1,4 @@
-// Copyright 2018 Joseph Wright <joseph@cloudboss.co>
+// Copyright 2019 Joseph Wright <joseph@cloudboss.co>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,12 +24,14 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 
 	"github.com/aws/aws-lambda-go/cfn"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/cloudboss/keights/pkg/helpers"
 	"github.com/cloudboss/keights/stackbot/whisperer"
 	"github.com/mitchellh/mapstructure"
 	certutil "k8s.io/client-go/util/cert"
@@ -40,100 +42,98 @@ import (
 )
 
 const (
-	clusterSecretPath    = "/%s/cluster/%s"
-	controllerSecretPath = "/%s/controller/%s"
-	etcdCaCertName       = "etcd-ca.crt"
-	etcdCaKeyName        = "etcd-ca.key"
-	bootstrapTokenName   = "bootstrap-token"
+	clusterPathTemplate    = "/%s/cluster/%s"
+	controllerPathTemplate = "/%s/controller/%s"
+	etcdCACertName         = "etcd-ca.crt"
+	etcdCAKeyName          = "etcd-ca.key"
+	bootstrapTokenName     = "bootstrap-token"
+	eventCreate            = "Create"
+	eventUpdate            = "Update"
+	eventDelete            = "Delete"
+)
+
+var (
+	certDecodeError = errors.New("could not decode CA certificate")
+	keyDecodeError  = errors.New("could not decode CA private key")
 )
 
 type resourceProperties struct {
-	ServiceToken string
-	ClusterName  string
-	KMSKeyID     string `mapstructure:"KmsKeyId"`
+	ServiceToken   string
+	ClusterName    string
+	KMSKeyID       string `mapstructure:"KmsKeyId"`
+	KeightsVersion string
 }
 
-func newClientKeyPair(caCert *x509.Certificate, caKey *rsa.PrivateKey) (*x509.Certificate, *rsa.PrivateKey, error) {
-	config := certutil.Config{
-		CommonName:   kubeadmconstants.APIServerKubeletClientCertCommonName,
-		Usages:       []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-		Organization: []string{kubeadmconstants.MastersGroup},
+func pathFormatter(template, prefix string) func(string) *string {
+	return func(suffix string) *string {
+		s := fmt.Sprintf(template, prefix, suffix)
+		return &s
 	}
-	return pkiutil.NewCertAndKey(caCert, caKey, config)
 }
 
-func handleCreate(props resourceProperties, whisp whisperer.Whisperer) error {
+func retrieveCA(whisp whisperer.Whisperer, certPath, keyPath *string) (*x509.Certificate, *rsa.PrivateKey, error) {
+	fmt.Printf("Retrieving CA via SSM parameters %s and %s\n", *certPath, *keyPath)
+
+	var caCert *x509.Certificate
+	var caKey *rsa.PrivateKey
+
+	certString, err := whisp.GetParameter(certPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	certBlock, _ := pem.Decode([]byte(*certString))
+	if certBlock == nil {
+		return nil, nil, certDecodeError
+	}
+	caCert, err = x509.ParseCertificate(certBlock.Bytes)
+	if err != nil {
+		return nil, nil, err
+	}
+	keyString, err := whisp.GetParameter(keyPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	keyBlock, _ := pem.Decode([]byte(*keyString))
+	if keyBlock == nil {
+		return nil, nil, keyDecodeError
+	}
+	caKey, err = x509.ParsePKCS1PrivateKey(keyBlock.Bytes)
+	return caCert, caKey, err
+}
+
+func genCA(whisp whisperer.Whisperer, certPath, keyPath, kmsKeyID *string) (*x509.Certificate, *rsa.PrivateKey, error) {
+	fmt.Printf("Generating CA: %s and %s\n", *certPath, *keyPath)
+
 	caCert, caKey, err := pkiutil.NewCertificateAuthority()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-
-	etcdCaCert, etcdCaKey, err := pkiutil.NewCertificateAuthority()
-	if err != nil {
-		return err
-	}
-
-	apiClientCert, apiClientKey, err := newClientKeyPair(caCert, caKey)
-	if err != nil {
-		return err
-	}
-
 	caCertPEM := string(certutil.EncodeCertPEM(caCert))
-	caCertPath := fmt.Sprintf(clusterSecretPath, props.ClusterName, kubeadmconstants.CACertName)
-	err = whisp.StoreParameter(caCertPath, props.KMSKeyID, &caCertPEM)
+	fmt.Printf("Storing %s\n", *certPath)
+	err = whisp.ForceStoreParameter(certPath, kmsKeyID, &caCertPEM)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	caKeyPEM := string(certutil.EncodePrivateKeyPEM(caKey))
-	caKeyPath := fmt.Sprintf(controllerSecretPath, props.ClusterName, kubeadmconstants.CAKeyName)
-	err = whisp.StoreParameter(caKeyPath, props.KMSKeyID, &caKeyPEM)
+	fmt.Printf("Storing %s\n", *keyPath)
+	err = whisp.ForceStoreParameter(keyPath, kmsKeyID, &caKeyPEM)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-
-	etcdCaCertPEM := string(certutil.EncodeCertPEM(etcdCaCert))
-	etcdCaCertPath := fmt.Sprintf(controllerSecretPath, props.ClusterName, etcdCaCertName)
-	err = whisp.StoreParameter(etcdCaCertPath, props.KMSKeyID, &etcdCaCertPEM)
-	if err != nil {
-		return err
-	}
-	etcdCaKeyPEM := string(certutil.EncodePrivateKeyPEM(etcdCaKey))
-	etcdCaKeyPath := fmt.Sprintf(controllerSecretPath, props.ClusterName, etcdCaKeyName)
-	err = whisp.StoreParameter(etcdCaKeyPath, props.KMSKeyID, &etcdCaKeyPEM)
-	if err != nil {
-		return err
-	}
-
-	apiClientCertPEM := string(certutil.EncodeCertPEM(apiClientCert))
-	apiClientCertPath := fmt.Sprintf(controllerSecretPath, props.ClusterName, kubeadmconstants.APIServerKubeletClientCertName)
-	err = whisp.StoreParameter(apiClientCertPath, props.KMSKeyID, &apiClientCertPEM)
-	if err != nil {
-		return err
-	}
-	apiClientKeyPEM := string(certutil.EncodePrivateKeyPEM(apiClientKey))
-	apiClientKeyPath := fmt.Sprintf(controllerSecretPath, props.ClusterName, kubeadmconstants.APIServerKubeletClientKeyName)
-	err = whisp.StoreParameter(apiClientKeyPath, props.KMSKeyID, &apiClientKeyPEM)
-	if err != nil {
-		return err
-	}
-
-	err = newServiceAccountArtifacts(whisp, props.ClusterName, props.KMSKeyID)
-	if err != nil {
-		return err
-	}
-
-	return newBootstrapToken(whisp, props.ClusterName, props.KMSKeyID)
+	return caCert, caKey, nil
 }
 
-func newServiceAccountArtifacts(whisp whisperer.Whisperer, clusterName, kmsKeyID string) error {
+func genServiceAccountArtifacts(whisp whisperer.Whisperer, keyPath, pubKeyPath, kmsKeyID *string) error {
+	fmt.Printf("Generating service account artifacts: %s and %s\n", *keyPath, *pubKeyPath)
+
 	saSigningKey, err := certs.NewServiceAccountSigningKey()
 	if err != nil {
 		return err
 	}
 
 	saSigningKeyPEM := string(certutil.EncodePrivateKeyPEM(saSigningKey))
-	saSigningKeyPath := fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.ServiceAccountPrivateKeyName)
-	err = whisp.StoreParameter(saSigningKeyPath, kmsKeyID, &saSigningKeyPEM)
+	fmt.Printf("Storing %s\n", *keyPath)
+	err = whisp.ForceStoreParameter(keyPath, kmsKeyID, &saSigningKeyPEM)
 	if err != nil {
 		return err
 	}
@@ -143,39 +143,43 @@ func newServiceAccountArtifacts(whisp whisperer.Whisperer, clusterName, kmsKeyID
 		return err
 	}
 	saSigningPubKeyPEMStr := string(saSigningPubKeyPEM)
-	saSigningPubKeyPath := fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.ServiceAccountPublicKeyName)
-	return whisp.StoreParameter(saSigningPubKeyPath, kmsKeyID, &saSigningPubKeyPEMStr)
+	fmt.Printf("Storing %s\n", *pubKeyPath)
+	return whisp.ForceStoreParameter(pubKeyPath, kmsKeyID, &saSigningPubKeyPEMStr)
 }
 
-func newBootstrapToken(whisp whisperer.Whisperer, clusterName, kmsKeyID string) error {
+func genBootstrapToken(whisp whisperer.Whisperer, path, kmsKeyID *string) error {
+	fmt.Printf("Generating bootstrap token\n")
+
 	token, err := tokenutil.GenerateToken()
 	if err != nil {
 		return err
 	}
-	path := fmt.Sprintf(clusterSecretPath, clusterName, bootstrapTokenName)
+	fmt.Printf("Storing %s\n", *path)
 	return whisp.StoreParameter(path, kmsKeyID, &token)
 }
 
-func handleDelete(props resourceProperties, whisp whisperer.Whisperer) error {
-	clusterName := props.ClusterName
-	parameters := []string{
-		fmt.Sprintf(clusterSecretPath, clusterName, kubeadmconstants.CACertName),
-		fmt.Sprintf(clusterSecretPath, clusterName, bootstrapTokenName),
-		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.CAKeyName),
-		fmt.Sprintf(controllerSecretPath, clusterName, etcdCaCertName),
-		fmt.Sprintf(controllerSecretPath, clusterName, etcdCaKeyName),
-		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.APIServerKubeletClientCertName),
-		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.APIServerKubeletClientKeyName),
-		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.ServiceAccountPrivateKeyName),
-		fmt.Sprintf(controllerSecretPath, clusterName, kubeadmconstants.ServiceAccountPublicKeyName),
+func genAPIClientCert(whisp whisperer.Whisperer, caCert *x509.Certificate, caKey *rsa.PrivateKey,
+	certPath, keyPath, kmsKeyID *string) error {
+	fmt.Printf("Generating API client certificate\n")
+
+	config := certutil.Config{
+		CommonName:   kubeadmconstants.APIServerKubeletClientCertCommonName,
+		Usages:       []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		Organization: []string{kubeadmconstants.MastersGroup},
 	}
-	errs := []error{}
-	for _, parameter := range parameters {
-		if err := whisp.DeleteParameter(&parameter); err != nil {
-			errs = append(errs, err)
-		}
+	apiClientCert, apiClientKey, err := pkiutil.NewCertAndKey(caCert, caKey, config)
+	if err != nil {
+		return err
 	}
-	return concatErrors(errs)
+	apiClientCertPEM := string(certutil.EncodeCertPEM(apiClientCert))
+	fmt.Printf("Storing %s\n", *certPath)
+	err = whisp.ForceStoreParameter(certPath, kmsKeyID, &apiClientCertPEM)
+	if err != nil {
+		return err
+	}
+	apiClientKeyPEM := string(certutil.EncodePrivateKeyPEM(apiClientKey))
+	fmt.Printf("Storing %s\n", *keyPath)
+	return whisp.ForceStoreParameter(keyPath, kmsKeyID, &apiClientKeyPEM)
 }
 
 func concatErrors(errs []error) error {
@@ -193,40 +197,143 @@ func concatErrors(errs []error) error {
 	return errors.New(errStr)
 }
 
-func Handle(_ctx context.Context, event cfn.Event) (string, map[string]interface{}, error) {
-	physicalResourceID := ""
-	data := make(map[string]interface{})
+func handleCreateOrUpdate(props resourceProperties, whisp whisperer.Whisperer) error {
+	var caCert *x509.Certificate
+	var caKey *rsa.PrivateKey
+	var err error
 
-	if event.RequestType == "Update" {
-		return physicalResourceID, data, nil
+	clusterScopedPath := pathFormatter(clusterPathTemplate, props.ClusterName)
+	controllerScopedPath := pathFormatter(controllerPathTemplate, props.ClusterName)
+
+	bootstrapTokenPath := clusterScopedPath(bootstrapTokenName)
+	caCertPath := clusterScopedPath(kubeadmconstants.CACertName)
+	caKeyPath := controllerScopedPath(kubeadmconstants.CAKeyName)
+	etcdCACertPath := controllerScopedPath(etcdCACertName)
+	etcdCAKeyPath := controllerScopedPath(etcdCAKeyName)
+	frontProxyCACertPath := controllerScopedPath(kubeadmconstants.FrontProxyCACertName)
+	frontProxyCAKeyPath := controllerScopedPath(kubeadmconstants.FrontProxyCAKeyName)
+	apiClientCertPath := controllerScopedPath(kubeadmconstants.APIServerKubeletClientCertName)
+	apiClientKeyPath := controllerScopedPath(kubeadmconstants.APIServerKubeletClientKeyName)
+	saSigningKeyPath := controllerScopedPath(kubeadmconstants.ServiceAccountPrivateKeyName)
+	saSigningPubKeyPath := controllerScopedPath(kubeadmconstants.ServiceAccountPublicKeyName)
+
+	err = helpers.IdempotentDo(
+		func() (bool, error) {
+			hasParameters, err := whisp.HasParameters(caCertPath, caKeyPath)
+			if err != nil {
+				return false, err
+			}
+			if hasParameters {
+				// Fill caCert and caKey to be used for signing API client cert if needed.
+				caCert, caKey, err = retrieveCA(whisp, caCertPath, caKeyPath)
+				if err != nil {
+					return false, err
+				}
+			}
+			return hasParameters, nil
+		},
+		func() error {
+			caCert, caKey, err = genCA(whisp, caCertPath, caKeyPath, &props.KMSKeyID)
+			return err
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	err = helpers.IdempotentDo(
+		func() (bool, error) {
+			return whisp.HasParameters(etcdCACertPath, etcdCAKeyPath)
+		},
+		func() error {
+			_, _, err = genCA(whisp, etcdCACertPath, etcdCAKeyPath, &props.KMSKeyID)
+			return err
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	err = helpers.IdempotentDo(
+		func() (bool, error) {
+			return whisp.HasParameters(frontProxyCACertPath, frontProxyCAKeyPath)
+		},
+		func() error {
+			_, _, err = genCA(whisp, frontProxyCACertPath, frontProxyCAKeyPath, &props.KMSKeyID)
+			return err
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	err = helpers.IdempotentDo(
+		func() (bool, error) {
+			return whisp.HasParameters(apiClientCertPath, apiClientKeyPath)
+		},
+		func() error {
+			return genAPIClientCert(whisp, caCert, caKey, apiClientCertPath, apiClientKeyPath, &props.KMSKeyID)
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	err = helpers.IdempotentDo(
+		func() (bool, error) {
+			return whisp.HasParameters(saSigningKeyPath, saSigningPubKeyPath)
+		},
+		func() error {
+			return genServiceAccountArtifacts(whisp, saSigningKeyPath, saSigningPubKeyPath, &props.KMSKeyID)
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	return helpers.IdempotentDo(
+		func() (bool, error) {
+			return whisp.HasParameters(bootstrapTokenPath)
+		},
+		func() error {
+			return genBootstrapToken(whisp, bootstrapTokenPath, &props.KMSKeyID)
+		},
+	)
+}
+
+func Handle(_ctx context.Context, event cfn.Event) (string, map[string]interface{}, error) {
+	fmt.Printf("Event: %+v\n", event)
+
+	emptyResourceID := ""
+	emptyResponse := make(map[string]interface{})
+
+	if event.RequestType == eventDelete {
+		fmt.Printf("Doing nothing for Delete request type\n")
+		return emptyResourceID, emptyResponse, nil
 	}
 
 	var props resourceProperties
 	err := mapstructure.Decode(event.ResourceProperties, &props)
 	if err != nil {
-		return physicalResourceID, data, err
+		fmt.Printf("Error: %v", err)
+		return emptyResourceID, emptyResponse, err
 	}
 
 	sess, err := session.NewSession()
 	if err != nil {
-		return physicalResourceID, data, err
+		fmt.Printf("Error: %v", err)
+		return emptyResourceID, emptyResponse, err
 	}
 	whisp := whisperer.NewSSMWhisperer(sess)
 
-	if event.RequestType == "Create" {
-		err = handleCreate(props, whisp)
+	if event.RequestType == eventCreate || event.RequestType == eventUpdate {
+		err = handleCreateOrUpdate(props, whisp)
 		if err != nil {
-			return physicalResourceID, data, err
+			fmt.Printf("Error: %v", err)
+			return emptyResourceID, emptyResponse, err
 		}
 	}
-
-	if event.RequestType == "Delete" {
-		err = handleDelete(props, whisp)
-		if err != nil {
-			return physicalResourceID, data, err
-		}
-	}
-	return physicalResourceID, data, nil
+	return emptyResourceID, emptyResponse, nil
 }
 
 func main() {

@@ -10,6 +10,8 @@ ExecStart=/usr/bin/keights whisper \
             -p /${KEIGHTS_CLUSTER_NAME}/cluster/bootstrap-token:/run/kubernetes/bootstrap-token \
             -p /${KEIGHTS_CLUSTER_NAME}/cluster/ca.crt:/etc/kubernetes/pki/ca.crt \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/ca.key:/etc/kubernetes/pki/ca.key \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/front-proxy-ca.crt:/etc/kubernetes/pki/front-proxy-ca.crt \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/front-proxy-ca.key:/etc/kubernetes/pki/front-proxy-ca.key \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-ca.crt:/etc/kubernetes/pki/etcd/ca.crt \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-ca.key:/etc/kubernetes/pki/etcd/ca.key \
             -p /${KEIGHTS_CLUSTER_NAME}/controller/sa.key:/etc/kubernetes/pki/sa.key \

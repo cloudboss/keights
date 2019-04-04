@@ -151,8 +151,7 @@ Resources:
         S3Key: !Sub stackbot/kube_ca/${KeightsVersion}/go1.x/kube_ca-${KeightsVersion}.zip
       Handler: kube_ca
       Runtime: go1.x
-      MemorySize: 512
-      Timeout: 30
+      Timeout: 60
       Role: !Ref LambdaRoleArn
 
   AutoNamingFunction:
@@ -227,6 +226,8 @@ Resources:
       ServiceToken: !GetAtt KubeCaFunction.Arn
       ClusterName: !Ref ClusterName
       KmsKeyId: !Ref KmsKeyId
+      # KeightsVersion is not used by the Lambda, it only triggers an update
+      KeightsVersion: !Ref KeightsVersion
 
   LoadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer

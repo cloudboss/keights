@@ -333,12 +333,18 @@ Resources:
               - '*'
           - Effect: Allow
             Action:
-              - ssm:PutParameter
-              - ssm:DeleteParameter
+              - ssm:DescribeParameters
             Resource:
               - '*'
           - Effect: Allow
             Action:
+              - ssm:GetParameters
+              - ssm:PutParameter
+            Resource:
+              - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}/*'
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
               - kms:Encrypt
             Resource:
               - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${KmsKeyId}'
