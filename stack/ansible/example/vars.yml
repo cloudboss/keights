@@ -1,41 +1,50 @@
 # This file sets common variables for a Kubernetes cluster. The stack
-# defined in this directory is designed to work using default values.
+# defined in this directory is designed to work using default values
+# for everything except the variables which are marked as required.
 # More fine grained control is possible by editing playbook.yml and
 # modifying it using the options documented in each role's README.
 #
 # The AWS identifiers in this file are not real and must be replaced
-# with your own.
+# with your own, except for `image_owner`, which corresponds to the
+# AWS account from which official Keights images are published.
 
-# ID of VPC.
+# ID of VPC (Required).
 vpc_id: vpc-ba92ad08
 
-# For masters, each subnet must be in a different availability zone.
-# The number of subnets determines the number of masters. Either one
-# or three subnets may be used for the masters.
+# Master subnet IDs (Required). For masters, each subnet must be in a
+# different availability zone. The number of subnets determines the
+# number of masters. Either one or three subnets may be used for the
+# masters.
 master_subnet_ids:
 - subnet-6c31888d
 
-# Nodes do not have any restrictions on the subnets that may be used,
-# except that they must be in the same VPC as the masters.
+# Node subnet IDs (Required).  Nodes do not have any restrictions on
+# the subnets that may be used, except that they must be in the same
+# VPC as the masters.
 node_subnet_ids:
 - subnet-6c31888d
 - subnet-f3cdd152
 - subnet-e245724f
 
-# The name of an S3 bucket where Lambda artifacts will be uploaded
-# for CloudFormation to deploy from.
+# Resource bucket (Required). The name of an S3 bucket where Lambda
+# artifacts will be uploaded for CloudFormation to deploy from.
 resource_bucket: cloudboss
 
-# KMS key ID used by SSM Parameter Store to encrypt certificates.
+# KMS key ID (Required). Used by SSM Parameter Store to encrypt
+# certificates.
 kms_key_id: d4baff42-9ea6-4f7d-a866-136587c77815
 
-# Alias of the KMS key ID above. Using an alias makes it easier to see
-# which KMS key encrypted the certificates, when viewing SSM Parameters
-# in the AWS console.
+# KMS key alias (Required). Alias of the KMS key ID above. Using an
+# alias makes it easier to see which KMS key encrypted the
+# certificates, when viewing SSM Parameters in the AWS console.
 kms_key_alias: alias/cloudboss
 
-# SSH keypair to assign to instances.
+# SSH keypair to assign to instances (Required).
 keypair: keights
+
+# Account number where the AMI is located. Only change this if you have
+# copied the AMI to your own account.
+image_owner: '256008164056'
 
 # CIDR block from which pod IP addresses will be assigned.
 pod_cidr: 10.0.0.0/16

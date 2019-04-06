@@ -24,9 +24,5 @@ ExecStart=/bin/sh -c ' \
     /usr/bin/keights signal \
         -n ${KEIGHTS_STACK_NAME} \
         -r ${KEIGHTS_RESOURCE} \
-        -s SUCCESS && \
-    if ${KEIGHTS_MASTER}; then \
-        sleep 300 && \
-        systemctl restart kubelet; \
-    fi \
+        -s SUCCESS \
 '

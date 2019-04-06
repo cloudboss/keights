@@ -1,10 +1,15 @@
-apiVersion: kubeadm.k8s.io/v1alpha3
+apiVersion: kubeadm.k8s.io/v1beta1
 kind: JoinConfiguration
-discoveryTokenAPIServers:
-- {{ .APIServer }}:{{ .APIServerPort }}
-token: {{ .Token }}
-discoveryTokenCACertHashes:
-- sha256:{{ .CACertHash }}
+caCertPath: /etc/kubernetes/pki/ca.crt
+discovery:
+  bootstrapToken:
+    apiServerEndpoint: {{ .APIServer }}:{{ .APIServerPort }}
+    caCertHashes:
+    - sha256:{{ .CACertHash }}
+    token: {{ .Token }}
+    unsafeSkipCAVerification: false
+  timeout: 5m0s
+  tlsBootstrapToken: {{ .Token }}
 nodeRegistration:
   criSocket: /var/run/dockershim.sock
   kubeletExtraArgs:

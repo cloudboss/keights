@@ -71,6 +71,7 @@ networking:
   dnsDomain: {{ .ClusterDomain }}
   podSubnet: {{ .PodSubnet }}
   serviceSubnet: {{ .ServiceSubnet }}
+scheduler: {}
 ---
 apiVersion: kubeproxy.config.k8s.io/v1alpha1
 bindAddress: 0.0.0.0
@@ -89,8 +90,6 @@ conntrack:
   tcpCloseWaitTimeout: 1h0m0s
   tcpEstablishedTimeout: 24h0m0s
 enableProfiling: false
-featureGates:
-  SupportIPVSProxyMode: true
 healthzBindAddress: 0.0.0.0:10256
 hostnameOverride: ""
 iptables:
@@ -111,6 +110,10 @@ oomScoreAdj: -999
 portRange: ""
 resourceContainer: /kube-proxy
 udpIdleTimeout: 250ms
+winkernel:
+  enableDSR: false
+  networkName: ""
+  sourceVip: ""
 ---
 address: 0.0.0.0
 apiVersion: kubelet.config.k8s.io/v1beta1
@@ -127,12 +130,12 @@ authorization:
   webhook:
     cacheAuthorizedTTL: 5m0s
     cacheUnauthorizedTTL: 30s
-cgroupDriver: cgroupfs
+cgroupDriver: systemd
 cgroupsPerQOS: true
 clusterDNS:
 - {{ .ClusterDNS }}
 clusterDomain: {{ .ClusterDomain }}
-configMapAndSecretChangeDetectionStrategy: Watch
+configMapAndSecretChangeDetectionStrategy: Cache
 containerLogMaxFiles: 5
 containerLogMaxSize: 10Mi
 contentType: application/vnd.kubernetes.protobuf
@@ -170,7 +173,7 @@ makeIPTablesUtilChains: true
 maxOpenFiles: 1000000
 maxPods: 110
 nodeLeaseDurationSeconds: 40
-nodeStatusReportFrequency: 10s
+nodeStatusReportFrequency: 1m0s
 nodeStatusUpdateFrequency: 10s
 oomScoreAdj: -999
 podPidsLimit: -1

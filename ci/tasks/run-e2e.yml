@@ -14,8 +14,10 @@ outputs:
 - name: artifacts-out
 
 params:
-  SONOBUOY_URL: https://github.com/heptio/sonobuoy/releases/download/v0.13.0/sonobuoy_0.13.0_linux_amd64.tar.gz
+  SONOBUOY_URL: https://github.com/heptio/sonobuoy/releases/download/v0.14.0/sonobuoy_0.14.0_linux_amd64.tar.gz
+  KUBECTL_URL: https://storage.googleapis.com/kubernetes-release/release/v1.13.4/bin/linux/amd64/kubectl
   KUBECONFIG: artifacts-in/kubeconfig
+  CNI_PLUGIN_DAEMONSET: kube-router
 
 run:
   path: /bin/sh
@@ -32,53 +34,29 @@ run:
     mkdir -p /opt/bin
     gunzip -c /tmp/sonobuoy.tar.gz | tar -xf - -C /opt/bin sonobuoy
 
+    wget -O /opt/bin/kubectl ${KUBECTL_URL}
+    chmod ugo+x /opt/bin/kubectl
+
     export PATH=/opt/bin:${PATH}
 
-    echo "Running sonobuoy version `sonobuoy version`"
+    echo "Waiting for ${CNI_PLUGIN_DAEMONSET} daemonset to be rolled out..."
+    kubectl -n kube-system rollout status ds --timeout=600s ${CNI_PLUGIN_DAEMONSET}
 
-    sonobuoy run
+    echo "Waiting for network..."
+    kubectl create job verify-network --image busybox:1.28.1 -- nc -z kubernetes 443
+    kubectl wait --for=condition=complete --timeout=600s job/verify-network
+    kubectl delete job verify-network
 
-    echo -n 'Waiting for sonobuoy to come up...'
-    now=`date +%s`
-    end=$((${now}+300))
-    while true; do
-        if [ `date +%s` -gt ${end} ]; then
-            echo ' timeout'
-            sonobuoy status
-            exit 1
-        fi
-        sonobuoy status >/dev/null 2>&1 && break || true
-        sleep 1
-    done
-    echo ' ok'
+    echo "Running sonobuoy `sonobuoy version --short`"
 
-    echo -n 'Waiting for e2e tests to complete...'
-    now=`date +%s`
-    end=$((${now}+7200))
-    while true; do
-        if [ `date +%s` -gt ${end} ]; then
-            echo ' timeout'
-            sonobuoy status
-            exit 1
-        fi
-        if sonobuoy status | grep -q 'Sonobuoy has completed'; then
-            # `sonobuoy retrieve` doesn't always work immediately,
-            # so sleep a little extra before breaking.
-            sleep 30
-            break
-        fi
-        echo -n '.'
-        sleep 30
-    done
-    echo ' ok'
+    sonobuoy run --wait=120
 
     echo -n 'Checking e2e results...'
-    mkdir results
-    sonobuoy retrieve artifacts-out
-    failed=`sonobuoy e2e artifacts-out/*.tar.gz | grep -A 1 'failed tests' | tail -1`
-    if [ -n "${failed}" ]; then
+    results=`sonobuoy retrieve artifacts-out`
+    failed=`sonobuoy e2e ${results} | awk '/failed tests:/{print $3}'`
+    if [ "${failed}" != 0 ]; then
         echo ' error:'
-        sonobuoy e2e artifacts-out/*.tar.gz
+        sonobuoy e2e ${results}
         exit 1
     fi
     echo ' all tests passed'

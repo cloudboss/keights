@@ -28,5 +28,4 @@
       cluster_name: '{{ cluster }}'
       cluster_apiserver: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
       network:
-        plugin: calico
-        pod_cidr: '{{ pod_cidr }}'
+        plugin: kube-router
