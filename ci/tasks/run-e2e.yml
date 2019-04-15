@@ -14,7 +14,7 @@ outputs:
 - name: artifacts-out
 
 params:
-  SONOBUOY_URL: https://github.com/heptio/sonobuoy/releases/download/v0.14.0/sonobuoy_0.14.0_linux_amd64.tar.gz
+  SONOBUOY_URL: https://github.com/heptio/sonobuoy/releases/download/v0.14.1/sonobuoy_0.14.1_linux_amd64.tar.gz
   KUBECTL_URL: https://storage.googleapis.com/kubernetes-release/release/v1.13.4/bin/linux/amd64/kubectl
   KUBECONFIG: artifacts-in/kubeconfig
   CNI_PLUGIN_DAEMONSET: kube-router
@@ -49,7 +49,7 @@ run:
 
     echo "Running sonobuoy `sonobuoy version --short`"
 
-    sonobuoy run --wait=120
+    sonobuoy run --wait=180
 
     echo -n 'Checking e2e results...'
     results=`sonobuoy retrieve artifacts-out`

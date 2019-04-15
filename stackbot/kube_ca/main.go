@@ -47,9 +47,6 @@ const (
 	etcdCACertName         = "etcd-ca.crt"
 	etcdCAKeyName          = "etcd-ca.key"
 	bootstrapTokenName     = "bootstrap-token"
-	eventCreate            = "Create"
-	eventUpdate            = "Update"
-	eventDelete            = "Delete"
 )
 
 var (
@@ -307,33 +304,30 @@ func Handle(_ctx context.Context, event cfn.Event) (string, map[string]interface
 	emptyResourceID := ""
 	emptyResponse := make(map[string]interface{})
 
-	if event.RequestType == eventDelete {
-		fmt.Printf("Doing nothing for Delete request type\n")
+	if event.RequestType != cfn.RequestCreate && event.RequestType != cfn.RequestUpdate {
+		fmt.Printf("Doing nothing for %s request type\n", event.RequestType)
 		return emptyResourceID, emptyResponse, nil
 	}
 
 	var props resourceProperties
 	err := mapstructure.Decode(event.ResourceProperties, &props)
 	if err != nil {
-		fmt.Printf("Error: %v", err)
+		fmt.Printf("Error: %v\n", err)
 		return emptyResourceID, emptyResponse, err
 	}
 
 	sess, err := session.NewSession()
 	if err != nil {
-		fmt.Printf("Error: %v", err)
+		fmt.Printf("Error: %v\n", err)
 		return emptyResourceID, emptyResponse, err
 	}
 	whisp := whisperer.NewSSMWhisperer(sess)
 
-	if event.RequestType == eventCreate || event.RequestType == eventUpdate {
-		err = handleCreateOrUpdate(props, whisp)
-		if err != nil {
-			fmt.Printf("Error: %v", err)
-			return emptyResourceID, emptyResponse, err
-		}
+	err = handleCreateOrUpdate(props, whisp)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
 	}
-	return emptyResourceID, emptyResponse, nil
+	return emptyResourceID, emptyResponse, err
 }
 
 func main() {
