@@ -30,4 +30,4 @@ requests-oauthlib==1.0.0
 rsa==4.0
 ruamel.yaml==0.15.72
 six==1.11.0
-urllib3==1.23
+urllib3==1.24.2
