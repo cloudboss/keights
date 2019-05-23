@@ -36,5 +36,5 @@ rsa==3.4.2
 ruamel.yaml==0.15.72
 s3transfer==0.1.13
 six==1.11.0
-urllib3==1.23
+urllib3==1.24.2
 websocket-client==0.53.0
