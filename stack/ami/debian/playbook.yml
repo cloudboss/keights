@@ -84,18 +84,17 @@
   tasks:
     - name: install packages for bootstrapping
       apt:
-        name: '{{ item }}'
+        name:
+          - ca-certificates
+          - debootstrap
         update_cache: true
-      with_items:
-        - ca-certificates
-        - debootstrap
 
     - name: make filesystems on volumes
       filesystem:
         fstype: '{{ item.fstype }}'
         dev: '{{ item.device }}'
         opts: '-L {{ item.mount }}'
-      with_items: '{{ volumes }}'
+      loop: '{{ volumes }}'
 
     - name: mount volumes
       mount:
@@ -103,7 +102,7 @@
         path: '/mnt{{ item.mount }}'
         fstype: '{{ item.fstype }}'
         state: mounted
-      with_items: '{{ volumes }}'
+      loop: '{{ volumes }}'
 
     - name: bootstrap operating system onto root volume
       shell: |
@@ -121,14 +120,14 @@
         path: '{{ item }}'
         state: directory
         mode: '0755'
-      with_items:
+      loop:
         - /mnt/etc/systemd/system/docker.service.d
 
     - name: download software
       get_url:
         url: '{{ item.src }}'
         dest: '{{ item.dest }}'
-      with_items:
+      loop:
         - src: https://github.com/cloudboss/keights/releases/download/{{ keights_version }}/keights_{{ keights_version }}_linux_amd64.deb
           dest: /mnt/tmp/keights.deb
 
@@ -136,14 +135,14 @@
       get_url:
         url: '{{ item.url }}'
         dest: /mnt/tmp/{{ item.name }}.gpg
-      with_items: '{{ gpg_keys }}'
+      loop: '{{ gpg_keys }}'
 
     - name: copy staging files into chroot
       copy:
         src: 'staging/{{ item.path }}'
         dest: '/mnt/{{ item.path }}'
         mode: '{{ item.mode }}'
-      with_items:
+      loop:
         - path: etc/systemd/timesyncd.conf
           mode: '0644'
         - path: etc/apt/sources.list.d/docker.list
@@ -160,7 +159,7 @@
         src: 'staging/{{ item.path }}.j2'
         dest: '/mnt/{{ item.path }}'
         mode: '{{ item.mode }}'
-      with_items:
+      loop:
         - path: tmp/debconf-selections
           mode: '0644'
 
@@ -171,7 +170,7 @@
         fstype: none
         opts: rbind
         state: mounted
-      with_items:
+      loop:
         - dev
         - proc
         - sys
@@ -185,7 +184,7 @@
         EOF
       args:
         creates: /mnt/etc/apt/trusted.gpg.d/{{ item.name }}.gpg
-      with_items: '{{ gpg_keys }}'
+      loop: '{{ gpg_keys }}'
 
     - name: install and configure additional packages in chroot
       shell: |
@@ -220,7 +219,7 @@
         src: 'staging/{{ item.path }}'
         dest: '/mnt/{{ item.path }}'
         mode: '{{ item.mode }}'
-      with_items:
+      loop:
         - path: etc/network/interfaces
           mode: '0644'
         - path: etc/cloud/cloud.cfg.d/01_cloudboss.cfg
@@ -240,7 +239,7 @@
         opts: '{{ item.mount_opts }}'
         fstab: /mnt/etc/fstab
         state: present
-      with_items: '{{ volumes }}'
+      loop: '{{ volumes }}'
 
     - name: clean up default fstab
       lineinfile:
@@ -279,7 +278,7 @@
       mount:
         path: '{{ item }}'
         state: unmounted
-      with_items:
+      loop:
         - mount: /mnt/dev
         - mount: /mnt/proc
         - mount: /mnt/sys
