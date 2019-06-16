@@ -70,6 +70,8 @@
     dest: '{{ cache_dir.path }}/storage.yml'
   - src: templates/manifests/kubernetes-dashboard.yml.j2
     dest: '{{ cache_dir.path }}/kubernetes-dashboard.yml'
+  - src: templates/manifests/aws-rbac.yml.j2
+    dest: '{{ cache_dir.path }}/aws-rbac.yml'
   register: k8s_manifests
 
 - name: apply k8s manifests
