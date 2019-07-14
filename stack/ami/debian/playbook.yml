@@ -58,7 +58,6 @@
       - apt-transport-https
       - bind9-host
       - btrfs-progs
-      - btrfs-tools
       - ca-certificates
       - curl
       - dbus
@@ -66,6 +65,7 @@
       - ebtables
       - ethtool
       - file
+      - gnupg2
       - groff-base
       - less
       - linux-image-amd64
