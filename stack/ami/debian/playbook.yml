@@ -111,7 +111,7 @@
           --merged-usr \
           --exclude={{ bootstrap_exclude | join(",") }} \
           --include={{ bootstrap_include | join(",") }} \
-          stable /mnt {{ base_repo }}
+          {{ debian_release }} /mnt {{ base_repo }}
       args:
         # Pick a file, any file...
         creates: /mnt/usr/bin/vi
