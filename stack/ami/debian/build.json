@@ -115,7 +115,8 @@
 	"-e", "docker_version={{ user `docker-version` }}",
 	"-e", "k8s_version={{ user `k8s-version` }}",
 	"-e", "keights_version={{ user `keights-version` }}",
-	"-e", "cni_version={{ user `cni-version` }}"
+	"-e", "cni_version={{ user `cni-version` }}",
+	"-e", "debian_release={{ user `debian-release` }}"
       ]
     }
   ]
