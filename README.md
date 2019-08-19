@@ -32,11 +32,6 @@ All builds and tests are run on [Concourse CI](https://ci.cloudboss.xyz/teams/ke
 | build-cluster | 1.12 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.12/jobs/build-cluster/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.12/jobs/build-cluster/builds/latest) |
 | upgrade-cluster | 1.11 -> 1.12 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.12/jobs/upgrade-cluster/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.12/jobs/upgrade-cluster/builds/latest) |
 | build-release | 1.12 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.12/jobs/build-release/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.12/jobs/build-release/builds/latest) |
-||||
-| build-pull-request | 1.11 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.11/jobs/build-pull-request/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.11/jobs/build-pull-request/builds/latest) |
-| build-cluster | 1.11 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.11/jobs/build-cluster/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.11/jobs/build-cluster/builds/latest) |
-| upgrade-cluster | 1.10 -> 1.11 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.11/jobs/upgrade-cluster/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.11/jobs/upgrade-cluster/builds/latest) |
-| build-release | 1.11 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.11/jobs/build-release/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.11/jobs/build-release/builds/latest) |
 
 # Rationale
 
