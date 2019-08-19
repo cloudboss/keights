@@ -38,7 +38,7 @@ jobs:
 - name: build-pull-request
   public: true
   plan:
-  - aggregate:
+  - in_parallel:
     - get: keights-pr
       trigger: true
       version: every
@@ -70,7 +70,7 @@ jobs:
 - name: build-cluster
   public: true
   plan:
-  - aggregate:
+  - in_parallel:
     - get: keights-pr
       trigger: true
       version: every
@@ -112,7 +112,7 @@ jobs:
 - name: upgrade-cluster
   public: true
   plan:
-  - aggregate:
+  - in_parallel:
     - get: keights-pr
       trigger: true
       version: every
@@ -166,7 +166,7 @@ jobs:
 - name: update-pull-request-status
   public: true
   plan:
-  - aggregate:
+  - in_parallel:
     - get: keights-pr
       trigger: true
       version: every
@@ -186,7 +186,7 @@ jobs:
 - name: build-release
   public: true
   plan:
-  - aggregate:
+  - in_parallel:
     - get: keights-pr
       passed: [update-pull-request-status]
     - get: keights-release
