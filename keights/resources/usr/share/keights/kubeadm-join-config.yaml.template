@@ -14,6 +14,6 @@ nodeRegistration:
   kubeletExtraArgs:
     cloud-provider: aws
     pod-infra-container-image: {{ .ImageRepository }}/pause:3.1
-    node-labels: kubernetes.io/role=node,node-role.kubernetes.io/node=,{{ range $label := .NodeLabels }}{{ $label }},{{ end }}
+    node-labels: {{ range $label := .NodeLabels }}{{ $label }},{{ end }}
   name: {{ .NodeName }}
   taints: null
