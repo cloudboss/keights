@@ -68,7 +68,7 @@
       {
         "device_name": "/dev/{{ user `var-log-vol` }}",
         "delete_on_termination": true,
-        "volume_size": 2,
+        "volume_size": 8,
         "volume_type": "gp2"
       }
     ],
