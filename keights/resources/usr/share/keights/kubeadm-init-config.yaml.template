@@ -15,6 +15,7 @@ nodeRegistration:
   criSocket: /var/run/dockershim.sock
   kubeletExtraArgs:
     cloud-provider: aws
+    volume-plugin-dir: /var/lib/kubelet/plugins/volume/exec
   name: {{ .NodeName }}
   taints:
   - effect: NoSchedule
@@ -36,6 +37,12 @@ controllerManager:
   extraArgs:
     cloud-provider: aws
     configure-cloud-routes: "false"
+    flex-volume-plugin-dir: /var/lib/kubelet/plugins/volume/exec
+  extraVolumes:
+  - name: var-lib-kubelet-plugins-volume-exec
+    hostPath: /var/lib/kubelet/plugins/volume/exec
+    mountPath: /var/lib/kubelet/plugins/volume/exec
+    readOnly: true
 dns:
   type: CoreDNS
 etcd:
