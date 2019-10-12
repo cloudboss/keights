@@ -9,6 +9,7 @@ metadata:
 data:
   cni-conf.json: |
     {
+      "cniVersion":"0.3.1",
       "name":"kubernetes",
       "type":"bridge",
       "bridge":"kube-bridge",
@@ -19,7 +20,7 @@ data:
     }
 
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   labels:
@@ -28,18 +29,21 @@ metadata:
   name: kube-router
   namespace: kube-system
 spec:
+  selector:
+    matchLabels:
+      k8s-app: kube-router
+      tier: node
   template:
     metadata:
       labels:
         k8s-app: kube-router
         tier: node
-      annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
+      priorityClassName: system-node-critical
       serviceAccountName: kube-router
       containers:
       - name: kube-router
-        image: {{ keights_system.network.kube_router_image | default('cloudnativelabs/kube-router:v0.2.5') }}
+        image: {{ keights_system.network.kube_router_image | default('cloudnativelabs/kube-router:v0.3.2') }}
         imagePullPolicy: IfNotPresent
         args:
         - --run-router=true
@@ -76,13 +80,12 @@ spec:
         imagePullPolicy: IfNotPresent
         command:
         - /bin/sh
-        - -c
-        - set -e -x;
-          if [ ! -f /etc/cni/net.d/10-kuberouter.conf ]; then
-            TMP=/etc/cni/net.d/.tmp-kuberouter-cfg;
-            cp /etc/kube-router/cni-conf.json ${TMP};
-            mv ${TMP} /etc/cni/net.d/10-kuberouter.conf;
-          fi
+        - -xec
+        - |
+          dest=/etc/cni/net.d/10-kuberouter.conf
+          tmp=.${dest}
+          cp /etc/kube-router/cni-conf.json ${tmp}
+          mv ${tmp} ${dest}
         volumeMounts:
         - mountPath: /etc/cni/net.d
           name: cni-conf-dir
