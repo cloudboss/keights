@@ -32,6 +32,10 @@ Parameters:
     Description: CIDR block given ssh access to cluster
     Default: 0.0.0.0/0
     Type: String
+  NodePortAccessCidr:
+    Description: CIDR block given access to NodePort services
+    Default: ''
+    Type: String
   KeightsVersion:
     Description: Version of Keights
     Type: String
@@ -42,6 +46,7 @@ Parameters:
 Conditions:
   HasManagedHostedZone: !Equals [!Ref EtcdHostedZoneId, '']
   HasUnmanagedHostedZone: !Not [!Equals [!Ref EtcdHostedZoneId, '']]
+  AllowsNodePortAccess: !Not [!Equals [!Ref NodePortAccessCidr, '']]
 
 Resources:
   LoadBalancerSecurityGroup:
@@ -179,6 +184,16 @@ Resources:
       FromPort: 22
       IpProtocol: tcp
       ToPort: 22
+
+  NodeSecurityGroupNodePortIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: AllowsNodePortAccess
+    Properties:
+      GroupId: !Ref NodeSecurityGroup
+      CidrIp: !Ref NodePortAccessCidr
+      FromPort: 30000
+      IpProtocol: tcp
+      ToPort: 32767
 
   NodeSecurityGroupAllNodeIngress:
     Type: AWS::EC2::SecurityGroupIngress
