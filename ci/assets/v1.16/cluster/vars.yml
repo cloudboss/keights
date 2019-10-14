@@ -15,6 +15,8 @@ pod_cidr: 10.0.0.0/16
 service_cidr: 10.1.0.0/16
 ssh_access_cidr: 172.31.0.0/16
 api_access_cidr: 172.31.0.0/16
+# node_port_access_cidr is opened up for testing NodePorts on public IPs.
+node_port_access_cidr: 0.0.0.0/0
 docker_options:
   'ip-masq': false
   'iptables': false

@@ -10,6 +10,7 @@
       kms_key_alias: '{{ kms_key_alias }}'
       api_access_cidr: '{{ api_access_cidr }}'
       ssh_access_cidr: '{{ ssh_access_cidr }}'
+      node_port_access_cidr: '{{ node_port_access_cidr }}'
       keights_version: '{{ keights_version }}'
       resource_bucket: '{{ resource_bucket }}'
       masters:
