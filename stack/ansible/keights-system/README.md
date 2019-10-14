@@ -30,17 +30,21 @@ If `plugin` is `calico`, you may set the following keys. These will have no effe
 
 `pod_cidr`: (Required, type *string*) - Kubernetes cluster pod CIDR, which must match what was given to the `keights-stack` Ansible role.
 
-`cni_image`: (Optional, type *string*, default `quay.io/calico/cni:v3.2.3`) - The CNI docker image.
+`cni_image`: (Optional, type *string*, default `calico/cni:v3.9.1`) - The CNI docker image.
 
-`calico_node_image`: (Optional, type *string*, default `quay.io/calico/node:v3.2.3`) - The Calico node docker image.
+`calico_node_image`: (Optional, type *string*, default `calico/node:v3.9.1`) - The Calico node docker image.
 
-`typha_image`: (Optional, type *string*, default `quay.io/calico/typha:v3.2.3`) - The [Typha](https://github.com/projectcalico/typha) docker image.
+`pod2daemon_flexvol_image`: (Optional, type *string*, default `calico/pod2daemon-flexvol:v3.9.1`) - The Calico flex volume driver docker image.
 
-`typha_replicas`: (Optional, type *int*, default `1`) - The number of Typha replicas. Refer to [the documentation](https://docs.projectcalico.org/v3.2/getting-started/kubernetes/installation/calico#installing-with-the-kubernetes-api-datastoremore-than-50-nodes) for recommended values.
+`kube_controllers_image`: (Optional, type *string*, default `calico/kube-controllers:v3.9.1`) - The Calico kube controllers docker image.
+
+`typha_image`: (Optional, type *string*, default `calico/typha:v3.9.1`) - The [Typha](https://github.com/projectcalico/typha) docker image.
+
+`typha_autoscaler_image` (Optional, type *string*, default `k8s.gcr.io/cluster-proportional-autoscaler-amd64:1.1.2`) - The Typha autoscaler docker image.
 
 If `plugin` is `kube-router`, you may set the following keys. These will have no effect if `plugin` is `calico`.
 
-`kube_router_image`: (Optional, type *string*, default `cloudnativelabs/kube-router:v0.2.5`) - The kube-router docker image.
+`kube_router_image`: (Optional, type *string*, default `cloudnativelabs/kube-router:v0.3.2`) - The kube-router docker image.
 
 `busybox_image`: (Optional, type *string*, default `busybox:1.30.1`) - The busybox docker image.
 
