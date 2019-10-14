@@ -98,6 +98,7 @@
       ApiAccessCidr: '{{ keights_stack.api_access_cidr }}'
       # TODO: give masters and nodes separate ssh_access_cidr
       SshAccessCidr: '{{ keights_stack.ssh_access_cidr }}'
+      NodePortAccessCidr: '{{ keights_stack.node_port_access_cidr | default("") }}'
       KeightsVersion: '{{ keights_version }}'
       ResourceBucket: '{{ keights_stack.resource_bucket }}'
     tags:

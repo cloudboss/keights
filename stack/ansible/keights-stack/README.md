@@ -24,6 +24,8 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `ssh_access_cidr`: (Required, type *string*) - CIDR block given ssh access to cluster nodes.
 
+`node_port_access_cidr`: (Optional, type *string*) - CIDR block given access to NodePort services. If not defined, then NodePorts are not exposed.
+
 `resource_bucket`: (Required, type *string*) - S3 bucket used for storing and retrieving artifacts.
 
 `cluster_domain`: (Optional, type *string*, default `cluster.local`) - Domain used by internal Kubernetes network.
