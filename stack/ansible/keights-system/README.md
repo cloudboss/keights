@@ -40,7 +40,7 @@ If `plugin` is `calico`, you may set the following keys. These will have no effe
 
 `typha_image`: (Optional, type *string*, default `calico/typha:v3.9.1`) - The [Typha](https://github.com/projectcalico/typha) docker image.
 
-`typha_autoscaler_image` (Optional, type *string*, default `k8s.gcr.io/cluster-proportional-autoscaler-amd64:1.1.2`) - The Typha autoscaler docker image.
+`typha_autoscaler_image` (Optional, type *string*, default `k8s.gcr.io/cluster-proportional-autoscaler-amd64:1.7.1`) - The Typha autoscaler docker image.
 
 If `plugin` is `kube-router`, you may set the following keys. These will have no effect if `plugin` is `calico`.
 
