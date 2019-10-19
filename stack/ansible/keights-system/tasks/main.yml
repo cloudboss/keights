@@ -1,4 +1,21 @@
 ---
+- name: set keights version
+  set_fact:
+    keights_version: '{{ item }}'
+  with_file:
+    - '{{ role_path }}/version'
+
+- name: set default values
+  set_fact:
+    k8s_version: '{{ keights_system.k8s_version | default(keights_version.split("-")[0]) }}'
+    rr_cluster_id: '{{ keights_system.network.rr_cluster_id | default(42) }}'
+
+- name: assert that route reflector cluster id is an integer
+  assert:
+    that:
+      - '{{ rr_cluster_id | int }}'
+    msg: '`keights_system.network.rr_cluster_id` must be an integer'
+
 - name: define ssm paths
   set_fact:
     ca_cert_ssm_path: '/{{ keights_system.cluster_name }}/cluster/ca.crt'
