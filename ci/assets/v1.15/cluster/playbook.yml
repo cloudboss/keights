@@ -29,3 +29,5 @@
       cluster_apiserver: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
       network:
         plugin: kube-router
+        # Let the masters act as route reflectors for CI clusters
+        rr_node_label: node-role.kubernetes.io/master
