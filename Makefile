@@ -27,7 +27,9 @@ keights-stack:
 	tar czf _output/keights-stack-$(VERSION).tar.gz -C _output keights-stack
 
 keights-system:
-	tar czf _output/keights-system-$(VERSION).tar.gz -C stack/ansible keights-system
+	cp -R stack/ansible/keights-system _output
+	echo $(VERSION) > _output/keights-system/version
+	tar czf _output/keights-system-$(VERSION).tar.gz -C _output keights-system
 
 stackbot:
 	for bot in auto_namer instattr kube_ca subnet_to_az; do \
