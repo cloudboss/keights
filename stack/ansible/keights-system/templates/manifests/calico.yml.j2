@@ -1,3 +1,4 @@
+#jinja2: trim_blocks:False
 # Calico Version v3.9.1
 # https://docs.projectcalico.org/v3.9/introduction
 ---
@@ -406,6 +407,49 @@ spec:
       terminationGracePeriodSeconds: 0
       priorityClassName: system-node-critical
       initContainers:
+        {% if keights_system.network.rr_node_label | default('') %}
+        # This container adds a route reflector cluster ID to
+        # a node if one of its labels matches `RR_NODE_LABEL`.
+        - name: update-node
+          image: {{ keights_system.network.calico_ctl_image | default('calico/ctl:v3.9.1') }}
+          env:
+            - name: DATASTORE_TYPE
+              value: kubernetes
+            - name: RR_CLUSTER_ID
+              value: "{{ rr_cluster_id }}"
+            - name: RR_NODE_LABEL
+              value: "{{ keights_system.network.rr_node_label }}"
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          command: [/bin/sh]
+          args:
+            - -xec
+            - |
+              # Iterate over all node labels and output the matching label if found.
+              # `index .ObjectMeta.Labels` cannot be used, because labels with empty
+              # values and nonexistent labels both return the empty string.
+              label=`calicoctl get no ${NODE_NAME} \
+                  -o go-template="{% raw %}{{range .}}{{range \\$k, \\$_ := .ObjectMeta.Labels}}{{if eq \\$k \"${RR_NODE_LABEL}\"}}{{\\$k}}{{end}}{{end}}{{end}}{% endraw %}"`
+
+              [ -n "${label}" ] || exit 0
+
+              spec_bgp=`calicoctl get no ${NODE_NAME} \
+                  -o go-template='{% raw %}{{range .}}{{.Spec.BGP}}{{end}}{% endraw %}'`
+
+              if [ "${spec_bgp}" != "<nil>" ]; then
+                  rr_cluster_id=`calicoctl get no ${NODE_NAME} \
+                      -o go-template='{% raw %}{{range .}}{{.Spec.BGP.RouteReflectorClusterID}}{{end}}{% endraw %}'`
+                  # Route reflector cluster ID is already set.
+                  [ -z "${rr_cluster_id}" ] || exit 0
+              fi
+
+              calicoctl get node ${NODE_NAME} -o yaml --export | sed "s|spec: {}|spec:\n  bgp:|g" > node.yaml
+              echo "    routeReflectorClusterID: ${RR_CLUSTER_ID}" >> node.yaml
+              calicoctl apply -f node.yaml
+        {% endif %}
+
         # This container performs upgrade from host-local IPAM to calico-ipam.
         # It can be deleted if this is a fresh installation, or if you have already
         # upgraded to use calico-ipam.
@@ -823,6 +867,39 @@ spec:
     kind: NetworkSet
     plural: networksets
     singular: networkset
+
+{% if keights_system.network.rr_node_label | default('') %}
+---
+
+kind: BGPPeer
+apiVersion: crd.projectcalico.org/v1
+metadata:
+  name: peer-to-rrs
+spec:
+  nodeSelector: '!has({{ keights_system.network.rr_node_label }})'
+  peerSelector: 'has({{ keights_system.network.rr_node_label }})'
+
+---
+
+kind: BGPPeer
+apiVersion: crd.projectcalico.org/v1
+metadata:
+  name: rr-mesh
+spec:
+  nodeSelector: 'has({{ keights_system.network.rr_node_label }})'
+  peerSelector: 'has({{ keights_system.network.rr_node_label }})'
+
+---
+
+apiVersion: crd.projectcalico.org/v1
+kind: BGPConfiguration
+metadata:
+  name: default
+spec:
+  logSeverityScreen: Info
+  nodeToNodeMeshEnabled: false
+
+{% endif %}
 
 ---
 
