@@ -24,6 +24,10 @@ All role variables go under a top level dictionary `keights_system`.
 
 The `network` dictionary may contain the following keys:
 
+`rr_node_label`: (Optional, type *string*, default `''`) - If defined, nodes with this label will be configured as route reflectors (see [here](https://docs.projectcalico.org/v3.9/networking/routereflector) and [here](https://github.com/cloudnativelabs/kube-router/blob/master/docs/bgp.md#route-reflector-setup--without-full-mesh)). To set the label on nodes, define it within [`node_labels`](https://github.com/cloudboss/keights/tree/master/stack/ansible/keights-stack#node_groups) when creating a node group. The value of the label is not important, only the presence of the label. Caution: if `rr_node_label` is defined and no nodes have a matching label, there will be no networking!
+
+`rr_cluster_id`: (Optional, type *string*, default `10.0.0.1` for calico, `42` for kube-router) - Route reflector cluster ID when `rr_node_label` is defined. Calico expects the cluster ID to be an IPv4 address, while kube-router expects an integer.
+
 `plugin`: (Required, type *string*) - May be one of `calico`, `kube-router`.
 
 If `plugin` is `calico`, you may set the following keys. These will have no effect if `plugin` is `kube-router`.
@@ -33,6 +37,8 @@ If `plugin` is `calico`, you may set the following keys. These will have no effe
 `cni_image`: (Optional, type *string*, default `calico/cni:v3.9.1`) - The CNI docker image.
 
 `calico_node_image`: (Optional, type *string*, default `calico/node:v3.9.1`) - The Calico node docker image.
+
+`calico_ctl_image`: (Optional, type *string*, default `calico/ctl:v3.9.1`) - The Calico ctl docker image.
 
 `pod2daemon_flexvol_image`: (Optional, type *string*, default `calico/pod2daemon-flexvol:v3.9.1`) - The Calico flex volume driver docker image.
 
@@ -47,6 +53,8 @@ If `plugin` is `kube-router`, you may set the following keys. These will have no
 `kube_router_image`: (Optional, type *string*, default `cloudnativelabs/kube-router:v0.3.2`) - The kube-router docker image.
 
 `busybox_image`: (Optional, type *string*, default `busybox:1.30.1`) - The busybox docker image.
+
+`kubectl_image`: (Optional, type *string*, default `k8s.gcr.io/hyperkube:${k8s_version}`) - The kubectl docker image.
 
 # Example Playbook
 
