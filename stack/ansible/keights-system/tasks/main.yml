@@ -1,4 +1,38 @@
 ---
+- name: set keights version
+  set_fact:
+    keights_version: '{{ item }}'
+  with_file:
+    - '{{ role_path }}/version'
+
+- name: set kubernetes version
+  set_fact:
+    k8s_version: '{{ keights_system.k8s_version | default(keights_version.split("-")[0]) }}'
+
+- name: set route reflector cluster id
+  set_fact:
+    rr_cluster_id: '{{ keights_system.network.rr_cluster_id | default("10.0.0.1") }}'
+  when: "keights_system.network.plugin == 'calico'"
+
+- name: assert that route reflector cluster id is an ipv4 address
+  assert:
+    that:
+      - "'{{ rr_cluster_id }}' | regex_search('([0-9]{1,3}\\.){3}[0-9]{1,3}')"
+    msg: '`keights_system.network.rr_cluster_id` must be an ipv4 address'
+  when: "keights_system.network.plugin == 'calico'"
+
+- name: set route reflector cluster id
+  set_fact:
+    rr_cluster_id: '{{ keights_system.network.rr_cluster_id | default("42") }}'
+  when: "keights_system.network.plugin == 'kube-router'"
+
+- name: assert that route reflector cluster id is an integer
+  assert:
+    that:
+      - 'rr_cluster_id | int'
+    msg: '`keights_system.network.rr_cluster_id` must be an integer'
+  when: "keights_system.network.plugin == 'kube-router'"
+
 - name: define ssm paths
   set_fact:
     ca_cert_ssm_path: '/{{ keights_system.cluster_name }}/cluster/ca.crt'

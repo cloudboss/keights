@@ -1,3 +1,4 @@
+#jinja2: trim_blocks:False
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -75,6 +76,34 @@ spec:
         - name: cni-conf-dir
           mountPath: /etc/cni/net.d
       initContainers:
+      {% if keights_system.network.rr_node_label | default('') %}
+      # Label a node so you can annotate a node...
+      - name: annotate-node
+        image: {{ keights_system.network.kubectl_image | default('k8s.gcr.io/hyperkube:{}'.format(k8s_version)) }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: RR_NODE_LABEL
+          value: "{{ keights_system.network.rr_node_label }}"
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        command:
+        - /bin/sh
+        - -xec
+        - |
+          found_label=`kubectl get no ${NODE_NAME} \
+              -o go-template \
+              --template="{% raw %}{{range \\$k, \\$_ := .metadata.labels}}{{if eq \\$k \"${RR_NODE_LABEL}\"}}{{\\$k}}{{end}}{{end}}{% endraw %}"`
+
+          if [ -n "${found_label}" ]; then
+              kubectl patch no ${NODE_NAME} \
+                  --patch '{"metadata":{"annotations":{"kube-router.io/rr.server":"{{ rr_cluster_id }}"}}}'
+          else
+              kubectl patch no ${NODE_NAME} \
+                  --patch '{"metadata":{"annotations":{"kube-router.io/rr.client":"{{ rr_cluster_id }}"}}}'
+          fi
+      {% endif %}
       - name: install-cni
         image: {{ keights_system.network.busybox_image | default('busybox:1.30.1') }}
         imagePullPolicy: IfNotPresent
@@ -140,6 +169,12 @@ rules:
       - list
       - get
       - watch
+  - apiGroups:
+    - ""
+    resources:
+      - nodes
+    verbs:
+      - patch
   - apiGroups:
     - "networking.k8s.io"
     resources:

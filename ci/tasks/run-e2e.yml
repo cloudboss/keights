@@ -9,6 +9,7 @@ image_resource:
 
 inputs:
 - name: artifacts-in
+- name: repo
 
 outputs:
 - name: artifacts-out
@@ -43,7 +44,7 @@ run:
     kubectl -n kube-system rollout status ds --timeout=600s ${CNI_PLUGIN_DAEMONSET}
 
     echo "Waiting for network..."
-    kubectl create job verify-network --image busybox:1.28.1 -- nc -z kubernetes 443
+    kubectl apply -f repo/ci/assets/verify-network.yml
     kubectl wait --for=condition=complete --timeout=600s job/verify-network
     kubectl delete job verify-network
 

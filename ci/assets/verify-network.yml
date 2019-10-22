@@ -1,0 +1,37 @@
+# This job connects to the `kubernetes` service on port 443.
+# A successful connection indicates that routing works, as
+# well as in-cluster DNS resolution since it connects by
+# hostname.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verify-network
+spec:
+  # Run the same number of pods as nodes. This is combined with
+  # pod anti-affinity to ensure the job runs on every node.
+  completions: 6
+  parallelism: 6
+
+  backoffLimit: 1000
+  template:
+    spec:
+      containers:
+      - name: verify-network
+        image: busybox:1.30.1
+        command: ['nc']
+        args: ['-z', 'kubernetes', '443']
+      restartPolicy: OnFailure
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+        operator: Exists
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: job-name
+                operator: In
+                values:
+                - verify-network
+            topologyKey: kubernetes.io/hostname
