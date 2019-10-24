@@ -287,13 +287,13 @@ Resources:
             Action:
               - ssm:GetParameters
             Resource:
-              - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}/cluster/*'
-              - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}/controller/*'
+              - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}/cluster/*'
+              - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}/controller/*'
           - Effect: Allow
             Action:
               - kms:Decrypt
             Resource:
-              - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${KmsKeyId}'
+              - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/${KmsKeyId}'
 
   K8sNodeAccess:
     Type: AWS::IAM::ManagedPolicy
@@ -314,12 +314,12 @@ Resources:
             Action:
               - 'ssm:GetParameters'
             Resource:
-              - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}/cluster/*'
+              - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}/cluster/*'
           - Effect: Allow
             Action:
               - kms:Decrypt
             Resource:
-              - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${KmsKeyId}'
+              - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/${KmsKeyId}'
           - Effect: Allow
             Action:
               - sts:AssumeRole
@@ -339,7 +339,7 @@ Resources:
               - logs:CreateLogStream
               - logs:PutLogEvents
             Resource:
-              - 'arn:aws:logs:*:*:*'
+              - !Sub 'arn:${AWS::Partition}:logs:*:*:*'
           - Effect: Allow
             Action:
               - 'ec2:Describe*'
@@ -356,13 +356,13 @@ Resources:
               - ssm:GetParameters
               - ssm:PutParameter
             Resource:
-              - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}/*'
+              - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}/*'
           - Effect: Allow
             Action:
               - kms:Decrypt
               - kms:Encrypt
             Resource:
-              - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${KmsKeyId}'
+              - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/${KmsKeyId}'
 
   K8sLambdaRoute53ManagedAccess:
     Type: AWS::IAM::ManagedPolicy
@@ -376,7 +376,7 @@ Resources:
             Action:
               - route53:ChangeResourceRecordSets
             Resource:
-              - !Sub 'arn:aws:route53:::hostedzone/${HostedZone}'
+              - !Sub 'arn:${AWS::Partition}:route53:::hostedzone/${HostedZone}'
 
   K8sLambdaRoute53UnmanagedAccess:
     Type: AWS::IAM::ManagedPolicy
@@ -390,7 +390,7 @@ Resources:
             Action:
               - route53:ChangeResourceRecordSets
             Resource:
-              - !Sub 'arn:aws:route53:::hostedzone/${EtcdHostedZoneId}'
+              - !Sub 'arn:${AWS::Partition}:route53:::hostedzone/${EtcdHostedZoneId}'
 
   MasterRole:
     Type: AWS::IAM::Role
