@@ -7,9 +7,10 @@ kind: Job
 metadata:
   name: verify-network
 spec:
-  # Run the same number of pods as nodes. This is combined with
-  # pod anti-affinity to ensure the job runs on every node.
-  completions: 6
+  # Run multiple passes on each node. Combining the number
+  # of completions with pod anti-affinity ensures the job
+  # runs on every node multiple times.
+  completions: 24
   parallelism: 6
 
   backoffLimit: 1000

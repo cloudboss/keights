@@ -13,11 +13,20 @@
     "core-dns-version": "1.2.2",
     "etcd-version": "3.2.24",
     "pause-version": "3.1",
-    "share-accounts": "all"
+    "share-accounts": "all",
+    "base-ami-pattern": "debian-stretch-hvm-x86_64-gp2-*",
+    "base-ami-owner": "379101102735",
+    "ssh-interface": "public_ip",
+    "vpc-id": "",
+    "subnet-id": ""
   },
 
   "builders": [{
     "type": "amazon-ebssurrogate",
+
+    "vpc_id": "{{ user `vpc-id` }}",
+    "subnet_id": "{{ user `subnet-id` }}",
+    "ssh_interface": "{{ user `ssh-interface` }}",
 
     "ssh_pty": true,
     "instance_type": "t2.micro",
@@ -33,10 +42,10 @@
     "source_ami_filter": {
       "filters": {
         "virtualization-type": "hvm",
-        "name": "debian-{{ user `debian-release` }}-hvm-x86_64-gp2-*",
+        "name": "{{ user `base-ami-pattern` }}",
         "root-device-type": "ebs"
       },
-      "owners": ["379101102735"],
+      "owners": ["{{ user `base-ami-owner` }}"],
       "most_recent": true
     },
 
