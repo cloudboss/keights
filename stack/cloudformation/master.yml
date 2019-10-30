@@ -54,8 +54,14 @@ Parameters:
   MasterSecurityGroups:
     Description: Security groups of masters
     Type: CommaDelimitedList
-  LambdaRoleArn:
-    Description: Role ARN to assign to helper Lamba functions
+  AutoNamerLambdaRoleArn:
+    Description: Role ARN to assign to AutoNamer helper Lamba function
+    Type: String
+  KubeCaLambdaRoleArn:
+    Description: Role ARN to assign to KubeCa helper Lamba function
+    Type: String
+  SubnetToAzLambdaRoleArn:
+    Description: Role ARN to assign to SubnetToAz helper Lamba function
     Type: String
   InstanceAttributeFunctionArn:
     Description: ARN of Lambda for setting EC2 instance attributes
@@ -141,7 +147,7 @@ Resources:
       Handler: subnet_to_az
       Runtime: go1.x
       Timeout: 30
-      Role: !Ref LambdaRoleArn
+      Role: !Ref SubnetToAzLambdaRoleArn
 
   KubeCaFunction:
     Type: AWS::Lambda::Function
@@ -152,7 +158,7 @@ Resources:
       Handler: kube_ca
       Runtime: go1.x
       Timeout: 60
-      Role: !Ref LambdaRoleArn
+      Role: !Ref KubeCaLambdaRoleArn
 
   AutoNamingFunction:
     Type: AWS::Lambda::Function
@@ -163,7 +169,7 @@ Resources:
       Handler: auto_namer
       Runtime: go1.x
       Timeout: 30
-      Role: !Ref LambdaRoleArn
+      Role: !Ref AutoNamerLambdaRoleArn
       Environment:
         Variables:
           ASG_NAME: !Ref AWS::StackName

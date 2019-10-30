@@ -320,10 +320,14 @@ Resources:
             Resource:
               - '*'
 
-  K8sLambdaAccess:
+  CloudwatchLogsLambdaAccess:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Roles: [!Ref LambdaRole]
+      Roles:
+        - !Ref AutoNamerLambdaRole
+        - !Ref InstAttrLambdaRole
+        - !Ref KubeCaLambdaRole
+        - !Ref SubnetToAzLambdaRole
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -334,12 +338,68 @@ Resources:
               - logs:PutLogEvents
             Resource:
               - !Sub 'arn:${AWS::Partition}:logs:*:*:*'
+
+  AutoNamerLambdaAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Roles: [!Ref AutoNamerLambdaRole]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
           - Effect: Allow
             Action:
-              - 'ec2:Describe*'
+              - 'ec2:DescribeInstances'
+            Resource:
+              - '*'
+
+  AutoNamerLambdaRoute53ManagedAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: HasManagedHostedZone
+    Properties:
+      Roles: [!Ref AutoNamerLambdaRole]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - route53:ChangeResourceRecordSets
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:route53:::hostedzone/${HostedZone}'
+
+  AutoNamerLambdaRoute53UnmanagedAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: HasUnmanagedHostedZone
+    Properties:
+      Roles: [!Ref AutoNamerLambdaRole]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - route53:ChangeResourceRecordSets
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:route53:::hostedzone/${EtcdHostedZoneId}'
+
+  InstAttrLambdaAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Roles: [!Ref InstAttrLambdaRole]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
               - 'ec2:ModifyInstanceAttribute'
             Resource:
               - '*'
+
+  KubeCaLambdaAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Roles: [!Ref KubeCaLambdaRole]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
           - Effect: Allow
             Action:
               - ssm:DescribeParameters
@@ -358,33 +418,18 @@ Resources:
             Resource:
               - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/${KmsKeyId}'
 
-  K8sLambdaRoute53ManagedAccess:
+  SubnetToAzLambdaAccess:
     Type: AWS::IAM::ManagedPolicy
-    Condition: HasManagedHostedZone
     Properties:
-      Roles: [!Ref LambdaRole]
+      Roles: [!Ref SubnetToAzLambdaRole]
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Action:
-              - route53:ChangeResourceRecordSets
+              - 'ec2:DescribeSubnets'
             Resource:
-              - !Sub 'arn:${AWS::Partition}:route53:::hostedzone/${HostedZone}'
-
-  K8sLambdaRoute53UnmanagedAccess:
-    Type: AWS::IAM::ManagedPolicy
-    Condition: HasUnmanagedHostedZone
-    Properties:
-      Roles: [!Ref LambdaRole]
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Action:
-              - route53:ChangeResourceRecordSets
-            Resource:
-              - !Sub 'arn:${AWS::Partition}:route53:::hostedzone/${EtcdHostedZoneId}'
+              - '*'
 
   MasterRole:
     Type: AWS::IAM::Role
@@ -418,7 +463,40 @@ Resources:
     Properties:
       Roles: [!Ref NodeRole]
 
-  LambdaRole:
+  AutoNamerLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+
+  InstAttrLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+
+  KubeCaLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+
+  SubnetToAzLambdaRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -438,7 +516,7 @@ Resources:
       Handler: instattr
       Runtime: go1.x
       Timeout: 30
-      Role: !GetAtt LambdaRole.Arn
+      Role: !GetAtt InstAttrLambdaRole.Arn
 
 Outputs:
   LoadBalancerSecurityGroup:
@@ -474,12 +552,30 @@ Outputs:
   NodeRoleArn:
     Description: IAM role ARN for nodes
     Value: !GetAtt NodeRole.Arn
-  LambdaRole:
-    Description: IAM role for custom CloudFormation Lambdas
-    Value: !Ref LambdaRole
-  LambdaRoleArn:
-    Description: IAM role ARN for custom CloudFormation Lambdas
-    Value: !GetAtt LambdaRole.Arn
+  AutoNamerLambdaRole:
+    Description: IAM role for AutoNamer Lambda
+    Value: !Ref AutoNamerLambdaRole
+  AutoNamerLambdaRoleArn:
+    Description: IAM role ARN for AutoNamer Lambda
+    Value: !GetAtt AutoNamerLambdaRole.Arn
+  InstAttrLambdaRole:
+    Description: IAM role for InstAttr Lambda
+    Value: !Ref InstAttrLambdaRole
+  InstAttrLambdaRoleArn:
+    Description: IAM role ARN for InstAttr Lambda
+    Value: !GetAtt InstAttrLambdaRole.Arn
+  KubeCaLambdaRole:
+    Description: IAM role for KubeCa Lambda
+    Value: !Ref KubeCaLambdaRole
+  KubeCaLambdaRoleArn:
+    Description: IAM role ARN for KubeCa Lambda
+    Value: !GetAtt KubeCaLambdaRole.Arn
+  SubnetToAzLambdaRole:
+    Description: IAM role for SubnetToAz Lambda
+    Value: !Ref SubnetToAzLambdaRole
+  SubnetToAzLambdaRoleArn:
+    Description: IAM role ARN for SubnetToAz Lambda
+    Value: !GetAtt SubnetToAzLambdaRole.Arn
   HostedZoneId:
     Description: ID of Route53 DNS hosted zone
     Value: !Ref HostedZone
