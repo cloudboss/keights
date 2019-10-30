@@ -18,6 +18,8 @@ caches:
 
 params:
   AWS_REGION: us-east-1
+  VPC_ID: vpc-c71371be
+  SUBNET_ID: subnet-37ef771b
   PACKER_URL: https://releases.hashicorp.com/packer/1.3.1/packer_1.3.1_linux_amd64.zip
   VERSION_FILE: version/version
 
@@ -47,4 +49,6 @@ run:
     /opt/bin/packer build \
         -var keights-version=${version} \
         -var k8s-version=${k8s_version} \
+        -var vpc-id=${VPC_ID} \
+        -var subnet-id=${SUBNET_ID} \
         build.json

@@ -92,6 +92,7 @@ jobs:
     file: keights-pr/ci/tasks/run-e2e.yml
     input_mapping:
       artifacts-in: build-cluster-artifacts
+      repo: keights-pr
     output_mapping:
       artifacts-out: run-e2e-artifacts
     ensure:
@@ -146,6 +147,7 @@ jobs:
     file: keights-pr/ci/tasks/run-e2e.yml
     input_mapping:
       artifacts-in: upgraded-cluster-artifacts
+      repo: keights-pr
     output_mapping:
       artifacts-out: run-e2e-artifacts
     ensure:

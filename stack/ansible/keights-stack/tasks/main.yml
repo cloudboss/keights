@@ -128,7 +128,9 @@
       LoadBalancerSecurityGroup: '{{ common_stack.stack_outputs.LoadBalancerSecurityGroup }}'
       LoadBalancerIdleTimeout: '{{ keights_stack.masters.load_balancer_idle_timeout | default(600) }}'
       MasterSecurityGroups: '{{ ([common_stack.stack_outputs.MasterSecurityGroup] + keights_stack.masters.extra_security_groups | default([])) | join(",") }}'
-      LambdaRoleArn: '{{ common_stack.stack_outputs.LambdaRoleArn }}'
+      AutoNamerLambdaRoleArn: '{{ common_stack.stack_outputs.AutoNamerLambdaRoleArn }}'
+      KubeCaLambdaRoleArn: '{{ common_stack.stack_outputs.KubeCaLambdaRoleArn }}'
+      SubnetToAzLambdaRoleArn: '{{ common_stack.stack_outputs.SubnetToAzLambdaRoleArn }}'
       InstanceAttributeFunctionArn: '{{ common_stack.stack_outputs.InstanceAttributeFunctionArn }}'
       KmsKeyId: '{{ keights_stack.kms_key_alias }}'
       PodCidr: '{{ keights_stack.masters.pod_cidr }}'
@@ -184,3 +186,27 @@
   loop: '{{ keights_stack.node_groups }}'
   tags:
     - nodes
+
+- name: map node subnets to tags
+  set_fact:
+    subnet_tag_map: '{{ subnet_tag_map | combine(dict(item.subnet_ids | zip_longest([], fillvalue=node_groups[idx].subnet_tags) | list)) }}'
+  loop: '{{ keights_stack.node_groups }}'
+  loop_control:
+    index_var: idx
+  when: '"subnet_tags" in item'
+
+- name: collect subnet facts
+  ec2_vpc_subnet_facts:
+    filters:
+      subnet-id: '{{ item.key }}'
+  loop: '{{ subnet_tag_map | dict2items }}'
+  register: node_subnet_facts
+
+- name: tag node subnets
+  ec2_vpc_subnet:
+    vpc_id: '{{ keights_stack.vpc_id }}'
+    cidr: '{{ item.subnets.0.cidr_block }}'
+    map_public: '{{ item.subnets.0.map_public_ip_on_launch }}'
+    tags: '{{ item.item.value }}'
+    purge_tags: false
+  loop: '{{ node_subnet_facts.results }}'

@@ -4,7 +4,7 @@ require (
 	github.com/PuerkitoBio/purell v1.1.0 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/aws/aws-lambda-go v1.6.0
-	github.com/aws/aws-sdk-go v1.13.11
+	github.com/aws/aws-sdk-go v1.25.18
 	github.com/docker/distribution v2.6.2+incompatible // indirect
 	github.com/emicklei/go-restful v2.6.0+incompatible // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
@@ -21,7 +21,6 @@ require (
 	github.com/goreleaser/nfpm v0.11.0 // indirect
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
-	github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8 // indirect
 	github.com/json-iterator/go v0.0.0-20180228091157-3353055b2a1a // indirect
 	github.com/jtolds/gls v4.2.1+incompatible // indirect
 	github.com/mailru/easyjson v0.0.0-20180311161919-f594efddfa17 // indirect
@@ -50,3 +49,5 @@ require (
 	k8s.io/kube-openapi v0.0.0-20180216212618-50ae88d24ede // indirect
 	k8s.io/kubernetes v1.9.7
 )
+
+go 1.13
