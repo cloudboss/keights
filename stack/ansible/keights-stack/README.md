@@ -100,6 +100,8 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which Kubernetes component docker images are pulled.
 
+`subnet_tags`: (Optional, type *dict*, default `{}`) - A dictionary of tags to add to node subnets. For example `{'kubernetes.io/cluster/cb': 'shared', 'kubernetes.io/role/internal-elb': '1'}`, where `cb` is the name of the cluster; this would allow the `cb` cluster to create internal ELBs in the node subnets. This is documented fully in the [EKS documentation](https://docs.aws.amazon.com/eks/latest/userguide/network_reqs.html#vpc-subnet-tagging), though it is not specific to EKS.
+
 # Example Playbook
 
 ```
