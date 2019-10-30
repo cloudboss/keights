@@ -72,6 +72,9 @@ api_access_cidr: 0.0.0.0/0
 # node groups as you want to the list below.
 node_groups:
 - subnet_ids: '{{ node_subnet_ids }}'
+  subnet_tags:
+    'kubernetes.io/cluster/{{ cluster }}': 'shared'
+    'kubernetes.io/role/internal-elb': '1'
   # The name must be unique for each group
   name: app
   min_instances: 2
