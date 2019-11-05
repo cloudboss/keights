@@ -40,7 +40,7 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `k8s_version`: (Optional, type *string*) - Version of Kubernetes. This defaults to the version corresponding with the `keights-stack` version, for example if the `keights-stack` version is `1.10.7-3`, then `k8s_version` is `1.10.7`. Versions other than the default will not be tested.
 
-`image`: (Optional, type *string*) - The default AMI to use for both masters and nodes. This should be the name of the image, rather than an AMI ID. This defaults to `debian-stretch-k8s-hvm-amd64-v<version>`, where `<version>` is the keights version. A public image with this name is available in `us-east-1`, so if you are not running there, you may copy it into your own region. If more than one image is found with the same name, the first one is used.
+`image`: (Optional, type *string*) - The default AMI to use for both masters and nodes. This should be the name of the image, rather than an AMI ID. This defaults to `debian-buster-k8s-hvm-amd64-v<version>`, where `<version>` is the keights version. A public image with this name is available in `us-east-1`, so if you are not running there, you may copy it into your own region. If more than one image is found with the same name, the first one is used.
 
 `image_owner`: (Optional, type *string*, default `256008164056`) - AWS account owning the AMI. Set this if using your own image.
 
