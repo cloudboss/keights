@@ -1,0 +1,23 @@
+[Unit]
+Description=keights-etcd-signal service
+
+[Service]
+# Environment=AWS_REGION=
+# Environment=KEIGHTS_STACK_NAME=
+# Environment=KEIGHTS_RESOURCE=
+Type=oneshot
+ExecStart=/bin/sh -c ' \
+    while true; do \
+        docker exec -i -e ETCDCTL_API=3 etcd \
+	    /usr/local/bin/etcdctl \
+	        --endpoints https://127.0.0.1:2379 \
+		--cacert /etc/pki/etcd/ca.crt \
+		--cert /etc/pki/etcd/peer.crt \
+		--key /etc/pki/etcd/peer.key endpoint status && break; \
+        sleep 5; \
+    done; \
+    /usr/bin/keights signal \
+        -n ${KEIGHTS_STACK_NAME} \
+        -r ${KEIGHTS_RESOURCE} \
+        -s SUCCESS \
+'

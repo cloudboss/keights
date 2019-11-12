@@ -25,6 +25,7 @@ params:
   CLUSTER:
   KEIGHTS_BRANCH:
   START_UPGRADE:
+  ETCD_MODE:
 
 run:
   path: /bin/sh
@@ -43,8 +44,8 @@ run:
     fi
 
     if [ -n "${START_UPGRADE}" ]; then
-        if [ -f repo/ci/assets/${KEIGHTS_BRANCH}/upgrade_from ]; then
-            version=`cat repo/ci/assets/${KEIGHTS_BRANCH}/upgrade_from`
+        if [ -f repo/ci/assets/${KEIGHTS_BRANCH}-${ETCD_MODE}/upgrade_from ]; then
+            version=`cat repo/ci/assets/${KEIGHTS_BRANCH}-${ETCD_MODE}/upgrade_from`
         else
             echo 'Nothing to upgrade from, skipping'
             touch ${artifacts_out}/noop
@@ -57,7 +58,7 @@ run:
 
     build_branch=`echo ${version} | awk -F . '{print $1 "." $2}'`
 
-    cd repo/ci/assets/${build_branch}/cluster
+    cd repo/ci/assets/${build_branch}-${ETCD_MODE}/cluster
     sed "s|__VERSION__|${version}|g" requirements.yml.tmpl > requirements.yml
     CF_LEGAL_CLUSTER=`echo ${CLUSTER} | tr -d .`
     CLUSTER=${CF_LEGAL_CLUSTER} PYTHON_BASE=/python ${deploy}

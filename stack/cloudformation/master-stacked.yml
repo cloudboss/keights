@@ -1,0 +1,397 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Kubernetes master resources
+
+Parameters:
+  ClusterName:
+    Description: Name of Kubernetes cluster
+    Type: String
+  NumInstances:
+    Description: Number of master instances
+    Type: Number
+    Default: 1
+    AllowedValues: [1, 3]
+    ConstraintDescription: You must choose an odd number of instances
+  VpcId:
+    Description: ID of VPC where cluster will be placed
+    Type: AWS::EC2::VPC::Id
+  SubnetIds:
+    Description: >-
+      List of subnets IDs in VPC where cluster will be placed.
+      The number of subnets must match the NumInstances parameter.
+    Type: List<AWS::EC2::Subnet::Id>
+  LoadBalancerSubnetIds:
+    Description: >-
+      List of subnets IDs in VPC for API load balancer.
+      The number of subnets must match the NumInstances parameter.
+    Type: List<AWS::EC2::Subnet::Id>
+  ImageId:
+    Description: ID of AMI used for instances
+    Type: AWS::EC2::Image::Id
+  InstanceType:
+    Description: Type of EC2 instance
+    Type: String
+  KeyPair:
+    Description: SSH keypair assigned to instances
+    Type: AWS::EC2::KeyPair::KeyName
+  MasterInstanceProfile:
+    Description: Name of IAM Instance profile to assign to instances
+    Type: String
+  LoadBalancerScheme:
+    Description: Scheme of API load balancer
+    Type: String
+    Default: internal
+    AllowedValues:
+      - internal
+      - internet-facing
+  LoadBalancerSecurityGroup:
+    Description: Security group of load balancer
+    Type: String
+  LoadBalancerIdleTimeout:
+    Description: Idle timeout on load balancer
+    Type: Number
+    Default: 600
+  MasterSecurityGroups:
+    Description: Security groups of masters
+    Type: CommaDelimitedList
+  AutoNamerLambdaRoleArn:
+    Description: Role ARN to assign to AutoNamer helper Lamba function
+    Type: String
+  SubnetToAzLambdaRoleArn:
+    Description: Role ARN to assign to SubnetToAz helper Lamba function
+    Type: String
+  InstanceAttributeFunctionArn:
+    Description: ARN of Lambda for setting EC2 instance attributes
+    Type: String
+  KmsKeyId:
+    Description: KMS key used to manage secrets
+    Type: String
+    Default: ''
+  PodCidr:
+    Description: CIDR block of addresses for pods
+    Default: 10.0.0.0/16
+    Type: String
+  ServiceCidr:
+    Description: CIDR block of addresses for services
+    Default: 10.1.0.0/16
+    Type: String
+  ClusterDns:
+    Description: >-
+      IP addres of cluster DNS server; should be
+      the value of ServiceCidr + 10
+    Default: 10.1.0.10
+    Type: String
+  ClusterDomain:
+    Description: Domain name used for cluster network.
+    Default: cluster.local
+    Type: String
+  EtcdDomain:
+    Description: Domain name given to etcd Route53 zone.
+    Type: String
+  EtcdPrefix:
+    Description: >-
+      Prefix given to etcd hostnames. This will be combined with the
+      availability zone and the value of the EtcdDomain parameter.
+    Type: String
+    Default: etcd
+  EtcdVolumeSize:
+    Description: Size of etcd volume in GB
+    Default: 10
+    Type: Number
+  EtcdDevice:
+    Description: Name of the etcd EBS volume, using the full device path.
+    Default: /dev/xvdg
+    Type: String
+  ImageRepository:
+    Description: Repository for core Kubernetes Docker images
+    Type: String
+    Default: k8s.gcr.io
+  KubernetesVersion:
+    Description: Version of Kubernetes
+    Type: String
+  KeightsVersion:
+    Description: Version of Keights
+    Type: String
+  ResourceBucket:
+    Description: Bucket used to store Lambda archives
+    Type: String
+  HostedZoneId:
+    Description: ID of Route53 DNS hosted zone
+    Type: String
+  DockerOptions:
+    Description: >-
+      Options to write to /etc/docker/daemon.json, which should follow
+      https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file.
+    Type: String
+    Default: |
+      {
+        "ip-masq": false,
+        "iptables": false,
+        "log-driver": "journald",
+        "storage-driver": "overlay2"
+      }
+
+Conditions:
+  HasThreeMasters: !Equals [!Ref NumInstances, 3]
+
+Resources:
+  SubnetToAzFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref ResourceBucket
+        S3Key: !Sub stackbot/subnet_to_az/${KeightsVersion}/go1.x/subnet_to_az-${KeightsVersion}.zip
+      Handler: subnet_to_az
+      Runtime: go1.x
+      Timeout: 30
+      Role: !Ref SubnetToAzLambdaRoleArn
+
+  AutoNamingFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref ResourceBucket
+        S3Key: !Sub stackbot/auto_namer/${KeightsVersion}/go1.x/auto_namer-${KeightsVersion}.zip
+      Handler: auto_namer
+      Runtime: go1.x
+      Timeout: 30
+      Role: !Ref AutoNamerLambdaRoleArn
+      Environment:
+        Variables:
+          ASG_NAME: !Ref AWS::StackName
+          DNS_TTL: 15
+          HOST_BASE_NAME: !Ref EtcdPrefix
+          HOSTED_ZONE_NAME: !Ref EtcdDomain
+          HOSTED_ZONE_ID: !Ref HostedZoneId
+
+  AutoNamingEventsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Targets:
+        - Id: !Sub ${AWS::StackName}-auto-namer
+          Arn: !GetAtt AutoNamingFunction.Arn
+      EventPattern:
+        source: [aws.autoscaling]
+        detail-type: [EC2 Instance Launch Successful]
+        detail:
+          AutoScalingGroupName: [!Ref 'AWS::StackName']
+
+  AutoNamingInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AutoNamingFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt AutoNamingEventsRule.Arn
+
+  InstanceAttributeEventsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Targets:
+        - Id: !Sub ${AWS::StackName}-instattr
+          Arn: !Ref InstanceAttributeFunctionArn
+      EventPattern:
+        source: [aws.autoscaling]
+        detail-type: [EC2 Instance Launch Successful]
+        detail:
+          AutoScalingGroupName: [!Ref 'AWS::StackName']
+
+  InstanceAttributeInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref InstanceAttributeFunctionArn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt InstanceAttributeEventsRule.Arn
+
+  SubnetToAz:
+    Type: Custom::SubnetToAz
+    DependsOn: SubnetToAzFunction
+    Properties:
+      ServiceToken: !GetAtt SubnetToAzFunction.Arn
+      SubnetIds: !Ref SubnetIds
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      CrossZone: true
+      ConnectionSettings:
+        IdleTimeout: !Ref LoadBalancerIdleTimeout
+      HealthCheck:
+        HealthyThreshold: 3
+        Interval: 30
+        Target: TCP:6443
+        Timeout: 10
+        UnhealthyThreshold: 3
+      LoadBalancerName: !Ref ClusterName
+      Listeners:
+        - InstancePort: 6443
+          InstanceProtocol: TCP
+          Protocol: TCP
+          LoadBalancerPort: 443
+      Scheme: !Ref LoadBalancerScheme
+      SecurityGroups:
+        - !Ref LoadBalancerSecurityGroup
+      Subnets: !Ref LoadBalancerSubnetIds
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: [AutoNamingInvokePermission, InstanceAttributeInvokePermission]
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref NumInstances
+        Timeout: PT30M
+    Properties:
+      AutoScalingGroupName: !Ref AWS::StackName
+      DesiredCapacity: !Ref NumInstances
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MaxSize: !Ref NumInstances
+      MinSize: !Ref NumInstances
+      VPCZoneIdentifier: !Ref SubnetIds
+      LoadBalancerNames: [!Ref LoadBalancer]
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+          PropagateAtLaunch: true
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MaxBatchSize: 1
+        PauseTime: PT15M
+        WaitOnResourceSignals: true
+        SuspendProcesses:
+          - HealthCheck
+          - ReplaceUnhealthy
+          - AZRebalance
+          - AlarmNotification
+          - ScheduledActions
+
+  Volume1:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !Select [0, !Split [",", !GetAtt SubnetToAz.AvailabilityZones]]
+      Size: !Ref EtcdVolumeSize
+      VolumeType: gp2
+      Encrypted: true
+      Tags:
+        - Key: Name
+          Value: !Ref ClusterName
+        - Key: etcd:instance
+          Value: 1
+
+  Volume2:
+    Type: AWS::EC2::Volume
+    Condition: HasThreeMasters
+    Properties:
+      AvailabilityZone: !Select [1, !Split [",", !GetAtt SubnetToAz.AvailabilityZones]]
+      Size: !Ref EtcdVolumeSize
+      VolumeType: gp2
+      Encrypted: true
+      Tags:
+        - Key: Name
+          Value: !Ref ClusterName
+        - Key: etcd:instance
+          Value: 2
+
+  Volume3:
+    Type: AWS::EC2::Volume
+    Condition: HasThreeMasters
+    Properties:
+      AvailabilityZone: !Select [2, !Split [",", !GetAtt SubnetToAz.AvailabilityZones]]
+      Size: !Ref EtcdVolumeSize
+      VolumeType: gp2
+      Encrypted: true
+      Tags:
+        - Key: Name
+          Value: !Ref ClusterName
+        - Key: etcd:instance
+          Value: 3
+
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      IamInstanceProfile: !Ref MasterInstanceProfile
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPair
+      PlacementTenancy: default
+      SecurityGroups: !Ref MasterSecurityGroups
+      UserData:
+        Fn::Base64:
+          !Sub
+          - |
+            #cloud-config
+            write_files:
+              - path: /etc/docker/daemon.json
+                owner: root:root
+                permissions: '0644'
+                content: ${DockerOptions}
+
+              - path: /etc/systemd/system/keights-volumize.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
+                  Environment=KEIGHTS_VOLUME_TAG=etcd:instance
+                  Environment=KEIGHTS_VOLUME_DEVICE=${EtcdDevice}
+
+              - path: /etc/systemd/system/var-lib-etcd.mount.d/mount.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Mount]
+                  What=${EtcdDevice}
+
+              - path: /etc/systemd/system/keights-whisper-controller.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
+
+              - path: /etc/systemd/system/keights-templatize-kubeadm-init-config.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_CLUSTER_DOMAIN=${ClusterDomain}
+                  Environment=KEIGHTS_ETCD_DOMAIN=${EtcdDomain}
+                  Environment=KEIGHTS_ETCD_MODE=stacked
+                  Environment=KEIGHTS_PREFIX=${EtcdPrefix}
+                  Environment=KEIGHTS_APISERVER=${LoadBalancer.DNSName}
+                  Environment=KEIGHTS_API_PORT=443
+                  Environment=KEIGHTS_POD_SUBNET=${PodCidr}
+                  Environment=KEIGHTS_SERVICE_SUBNET=${ServiceCidr}
+                  Environment=KEIGHTS_CLUSTER_DNS=${ClusterDns}
+                  Environment=KEIGHTS_IMAGE_REPOSITORY=${ImageRepository}
+                  Environment=KEIGHTS_KUBERNETES_VERSION=${KubernetesVersion}
+                  Environment=KEIGHTS_AZS=${AvailabilityZones},
+
+              - path: /etc/systemd/system/keights-controller-signal.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_STACK_NAME=${AWS::StackName}
+                  Environment=KEIGHTS_MASTER=true
+
+            runcmd:
+              - systemctl daemon-reload
+              - systemctl enable var-lib-etcd.mount
+              - systemctl enable kubelet.service
+              - systemctl start --no-block keights-kubeadm-init-stacked.service
+              - systemctl start --no-block keights-controller-signal.service
+
+          - { AvailabilityZones: !GetAtt SubnetToAz.AvailabilityZones }
+
+Outputs:
+  LoadBalancerDnsName:
+    Description: DNS name of load balancer
+    Value: !GetAtt LoadBalancer.DNSName
+  AutoScalingGroup:
+    Description: Name of autoscaling group
+    Value: !Ref AutoScalingGroup

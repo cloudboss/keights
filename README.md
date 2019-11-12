@@ -10,13 +10,15 @@ You can also use the CloudFormation templates without Ansible if you want to use
 
 # CI status
 
-All builds and tests are run on [Concourse CI](https://ci.cloudboss.xyz/teams/keights). Every supported Kubernetes minor version has a corresponding git branch in the Keights repository. Each of these branches has its own pipeline with build statuses shown below. All `build-cluster` and `upgrade-cluster` jobs run conformance tests against the cluster using [Sonobuoy](https://github.com/heptio/sonobuoy).
+All builds and tests are run on [Concourse CI](https://ci.cloudboss.xyz/teams/keights). Every supported Kubernetes minor version has a corresponding git branch in the Keights repository. Each of these branches has its own pipeline with build statuses shown below. All `build-cluster-*` and `upgrade-cluster-*` jobs run conformance tests against the cluster using [Sonobuoy](https://github.com/heptio/sonobuoy).
 
 | Job | Version | Status |
 | ----- | ------- | ------ |
 | build-pull-request | 1.16 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.16/jobs/build-pull-request/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.16/jobs/build-pull-request/builds/latest) |
-| build-cluster | 1.16 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.16/jobs/build-cluster/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.16/jobs/build-cluster/builds/latest) |
-| upgrade-cluster | 1.15 -> 1.16 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.16/jobs/upgrade-cluster/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.16/jobs/upgrade-cluster/builds/latest) |
+| build-cluster-external-etcd | 1.16 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.16/jobs/build-cluster-external-etcd/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.16/jobs/build-cluster-external-etcd/builds/latest) |
+| build-cluster-stacked-etcd | 1.16 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.16/jobs/build-cluster-stacked-etcd/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.16/jobs/build-cluster-stacked-etcd/builds/latest) |
+| upgrade-cluster-external-etcd | 1.15 -> 1.16 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.16/jobs/upgrade-cluster-external-etcd/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.16/jobs/upgrade-cluster-external-etcd/builds/latest) |
+| upgrade-cluster-stacked-etcd | 1.15 -> 1.16 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.16/jobs/upgrade-cluster-stacked-etcd/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.16/jobs/upgrade-cluster-stacked-etcd/builds/latest) |
 | build-release | 1.16 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.16/jobs/build-release/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.16/jobs/build-release/builds/latest) |
 ||||
 | build-pull-request | 1.15 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.15/jobs/build-pull-request/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.15/jobs/build-pull-request/builds/latest) |
@@ -70,7 +72,7 @@ Releases are downloaded from the [GitHub release page](https://github.com/cloudb
 
 # CloudFormation with Ansible
 
-Keights builds clusters from three CloudFormation templates: `common.yml`, `master.yml`, and `node.yml`. You can create more than one instance of the `node.yml` stack for a cluster, using different parameters to define instance sizes and node labels.
+Keights builds clusters from several CloudFormation templates. All clusters use the `common.yml` and `node.yml` templates. Clusters with a [stacked etcd](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/ha-topology/) use `master-stacked.yml` to build the control plane, and clusters with an external etcd use `etcd.yml` and `master-external.yml` to build the control plane. You can create more than one instance of the `node.yml` stack for a cluster, using different parameters to define instance sizes and node labels.
 
 Ansible does not run on machines in the cluster to configure them, as you might expect. For one thing, there is not a lot of configuration to be done; Keights follows an immutable infrastructure approach and uses a custom AMI with dependencies preinstalled. Per-cluster configuration variables are set in [user data](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html) in the CloudFormation templates. The remaining per-instance configuration is handled by the [`keights` binary](#the-keights-binary) and kubeadm via systemd services built into the AMI.
 

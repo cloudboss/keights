@@ -45,6 +45,7 @@ controllerManager:
     readOnly: true
 dns:
   type: CoreDNS
+{{- if eq .EtcdMode "stacked" }}
 etcd:
   local:
     dataDir: /var/lib/etcd
@@ -71,6 +72,18 @@ etcd:
     serverCertSANs:
     - {{ .MyIP }}
     - {{ .Prefix }}-{{ .MyAZ }}.{{ .EtcdDomain }}
+{{- end }}
+{{- if eq .EtcdMode "external" }}
+etcd:
+  external:
+    endpoints:
+    {{- range $i, $az := .AZs }}
+    - https://{{ $.Prefix }}-{{ $az }}.{{ $.EtcdDomain }}:2379
+    {{- end }}
+    caFile: /etc/kubernetes/pki/etcd/ca.crt
+    certFile: /etc/kubernetes/pki/apiserver-etcd-client.crt
+    keyFile: /etc/kubernetes/pki/apiserver-etcd-client.key
+{{- end }}
 imageRepository: {{ .ImageRepository }}
 kind: ClusterConfiguration
 kubernetesVersion: {{ .KubernetesVersion }}

@@ -1,7 +1,8 @@
 [Unit]
 Description=keights-kubeadm-join service
-Requires=keights-templatize-kubeadm-join-config.service
-After=keights-templatize-kubeadm-join-config.service
+Requires=keights-whisper-node.service keights-templatize-kubeadm-join-config.service
+After=keights-whisper-node.service keights-templatize-kubeadm-join-config.service
+Before=keights-node-signal.service
 ConditionPathExists=!/var/lib/kubeadm/initialized
 
 [Service]
@@ -15,5 +16,3 @@ ExecStart=/bin/sh -c ' \
 Restart=on-failure
 RestartSec=10s
 
-[Install]
-WantedBy=multi-user.target

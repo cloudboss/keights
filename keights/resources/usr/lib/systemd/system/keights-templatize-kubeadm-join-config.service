@@ -5,7 +5,7 @@ After=keights-whisper-node.service
 ConditionPathExists=!/var/lib/kubeadm/initialized
 
 [Service]
-Type=simple
+Type=oneshot
 # Environment=KEIGHTS_APISERVER=
 # Environment=KEIGHTS_APISERVER_PORT=
 # Environment=KEIGHTS_IMAGE_REPOSITORY=
@@ -35,6 +35,3 @@ ExecStart=/bin/sh -c ' \
       -v NodeLabels=${KEIGHTS_NODE_LABELS} \
       -v NodeName=$${node_name} \
 '
-
-[Install]
-WantedBy=multi-user.target

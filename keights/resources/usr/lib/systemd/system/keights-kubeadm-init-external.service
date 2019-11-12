@@ -1,0 +1,19 @@
+[Unit]
+Description=keights-kubeadm-init-external service
+Requires=keights-whisper-controller.service keights-templatize-kubeadm-init-config.service
+After=keights-whisper-controller.service keights-templatize-kubeadm-init-config.service
+Before=keights-controller-signal.service
+ConditionPathExists=!/var/lib/kubeadm/initialized
+
+[Service]
+Type=simple
+ExecStart=/bin/sh -c ' \
+    /usr/bin/kubeadm init phase certs apiserver-etcd-client && \
+    /usr/bin/kubeadm init \
+      --config=/var/lib/kubeadm/config.yaml \
+      --ignore-preflight-errors=all \
+      --skip-token-print && \
+    touch /var/lib/kubeadm/initialized \
+'
+Restart=on-failure
+RestartSec=10s
