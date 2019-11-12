@@ -17,6 +17,3 @@ ExecStart=/bin/sh -c ' \
 	sleep 10; \
     done \
 '
-
-[Install]
-WantedBy=multi-user.target

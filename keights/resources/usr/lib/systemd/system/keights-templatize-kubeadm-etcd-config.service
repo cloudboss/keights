@@ -1,0 +1,26 @@
+[Unit]
+Description=keights-templatize-kubeadm-etcd-config service
+
+[Service]
+Type=oneshot
+# Environment=KEIGHTS_ETCD_DOMAIN=
+# Environment=KEIGHTS_PREFIX=
+# Environment=KEIGHTS_AZS=
+ExecStart=/bin/sh -c ' \
+    myaz=`curl -s \
+            --retry 10 \
+            --retry-delay 2 \
+            http://169.254.169.254/latest/meta-data/placement/availability-zone` && \
+    myip=`curl -s \
+            --retry 10 \
+            --retry-delay 2 \
+            http://169.254.169.254/latest/meta-data/local-ipv4` && \
+    /usr/bin/keights template \
+      -t /usr/share/keights/kubeadm-etcd-config.yaml.template \
+      -D /var/lib/kubeadm/config.yaml \
+      -v EtcdDomain=${KEIGHTS_ETCD_DOMAIN} \
+      -v Prefix=${KEIGHTS_PREFIX} \
+      -v AZs=${KEIGHTS_AZS} \
+      -v MyAZ=$${myaz} \
+      -v MyIP=$${myip} \
+'

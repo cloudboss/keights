@@ -5,7 +5,7 @@ REPO_SLUG := cloudboss/keights
 export GOARCH GOOS GITHUB_TOKEN
 
 setup:
-	go get github.com/goreleaser/nfpm/cmd/nfpm
+	go get github.com/goreleaser/nfpm/cmd/nfpm@v0.11.0
 
 keights:
 	mkdir -p _output/keights

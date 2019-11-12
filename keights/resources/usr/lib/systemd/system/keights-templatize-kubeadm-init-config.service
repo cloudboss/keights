@@ -4,10 +4,11 @@ Requires=keights-whisper-controller.service
 After=keights-whisper-controller.service
 
 [Service]
-Type=simple
+Type=oneshot
 # Environment=AWS_REGION=
 # Environment=KEIGHTS_CLUSTER_DOMAIN=
 # Environment=KEIGHTS_ETCD_DOMAIN=
+# Environment=KEIGHTS_ETCD_MODE=
 # Environment=KEIGHTS_PREFIX=
 # Environment=KEIGHTS_APISERVER=
 # Environment=KEIGHTS_API_PORT=
@@ -40,6 +41,7 @@ ExecStart=/bin/sh -c ' \
       -D /var/lib/kubeadm/config.yaml \
       -v ClusterDomain=${KEIGHTS_CLUSTER_DOMAIN} \
       -v EtcdDomain=${KEIGHTS_ETCD_DOMAIN} \
+      -v EtcdMode=${KEIGHTS_ETCD_MODE} \
       -v Prefix=${KEIGHTS_PREFIX} \
       -v APIServer=${KEIGHTS_APISERVER} \
       -v APIPort=${KEIGHTS_API_PORT} \
@@ -54,6 +56,3 @@ ExecStart=/bin/sh -c ' \
       -v MyAZ=$${myaz} \
       -v MyIP=$${myip} \
 '
-
-[Install]
-RequiredBy=keights-templates.target

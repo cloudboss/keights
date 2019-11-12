@@ -1,0 +1,13 @@
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: ClusterConfiguration
+certificatesDir: /etc/pki
+etcd:
+  local:
+    serverCertSANs:
+    - {{ .MyIP }}
+    {{- range $i, $az := .AZs }}
+    - {{ $.Prefix }}-{{ $az }}.{{ $.EtcdDomain }}
+    {{- end }}
+    peerCertSANs:
+    - {{ .MyIP }}
+    - {{ .Prefix }}-{{ .MyAZ }}.{{ .EtcdDomain }}

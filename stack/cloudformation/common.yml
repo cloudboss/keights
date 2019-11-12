@@ -9,6 +9,14 @@ Parameters:
   ClusterName:
     Description: Name of Kubernetes cluster
     Type: String
+  EtcdMode:
+    Description: >-
+      Mode for running etcd. If 'stacked', then etcd runs on
+      the masters, and if 'external' then it runs on its
+      own instances.
+    Type: String
+    AllowedValues: ['stacked', 'external']
+    Default: 'stacked'
   EtcdDomain:
     Description: >-
       Domain name given to Route53 hosted zone for etcd records.
@@ -44,11 +52,49 @@ Parameters:
     Type: String
 
 Conditions:
+  HasExternalEtcd: !Equals [!Ref EtcdMode, 'external']
   HasManagedHostedZone: !Equals [!Ref EtcdHostedZoneId, '']
   HasUnmanagedHostedZone: !Not [!Equals [!Ref EtcdHostedZoneId, '']]
   AllowsNodePortAccess: !Not [!Equals [!Ref NodePortAccessCidr, '']]
 
 Resources:
+  EtcdSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: HasExternalEtcd
+    Properties:
+      GroupDescription: !Sub ${ClusterName} etcd
+      VpcId: !Ref VpcId
+
+  EtcdSecurityGroupEtcdIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasExternalEtcd
+    Properties:
+      GroupId: !Ref EtcdSecurityGroup
+      SourceSecurityGroupId: !Ref EtcdSecurityGroup
+      FromPort: 2379
+      ToPort: 2380
+      IpProtocol: tcp
+
+  EtcdSecurityGroupMasterIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasExternalEtcd
+    Properties:
+      GroupId: !Ref EtcdSecurityGroup
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      FromPort: 2379
+      ToPort: 2379
+      IpProtocol: tcp
+
+  EtcdSecurityGroupSshIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasExternalEtcd
+    Properties:
+      GroupId: !Ref EtcdSecurityGroup
+      CidrIp: !Ref SshAccessCidr
+      FromPort: 22
+      IpProtocol: tcp
+      ToPort: 22
+
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -217,6 +263,32 @@ Resources:
       VPCs:
         - VPCId: !Ref VpcId
           VPCRegion: !Ref AWS::Region
+
+  EtcdAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: HasExternalEtcd
+    Properties:
+      Roles: [!Ref EtcdRole]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - ec2:AttachVolume
+              - ec2:DescribeVolumes
+            Resource:
+              - '*'
+          - Effect: Allow
+            Action:
+              - ssm:GetParameters
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}/controller/etcd-ca.crt'
+              - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}/controller/etcd-ca.key'
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/${KmsKeyId}'
 
   K8sMasterAccess:
     Type: AWS::IAM::ManagedPolicy
@@ -446,6 +518,24 @@ Resources:
             Resource:
               - '*'
 
+  EtcdRole:
+    Type: AWS::IAM::Role
+    Condition: HasExternalEtcd
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+
+  EtcdInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Condition: HasExternalEtcd
+    Properties:
+      Roles: [!Ref EtcdRole]
+
   MasterRole:
     Type: AWS::IAM::Role
     Properties:
@@ -534,6 +624,10 @@ Resources:
       Role: !GetAtt InstAttrLambdaRole.Arn
 
 Outputs:
+  EtcdSecurityGroup:
+    Description: Security group of etcd
+    Value: !Ref EtcdSecurityGroup
+    Condition: HasExternalEtcd
   LoadBalancerSecurityGroup:
     Description: Security group of load balancer
     Value: !Ref LoadBalancerSecurityGroup
@@ -543,6 +637,14 @@ Outputs:
   NodeSecurityGroup:
     Description: Security group of nodes
     Value: !Ref NodeSecurityGroup
+  EtcdInstanceProfile:
+    Description: Instance profile for etcd nodes
+    Value: !Ref EtcdInstanceProfile
+    Condition: HasExternalEtcd
+  EtcdInstanceProfileArn:
+    Description: Instance profile ARN for etcd nodes
+    Value: !GetAtt EtcdInstanceProfile.Arn
+    Condition: HasExternalEtcd
   MasterInstanceProfile:
     Description: Instance profile for master nodes
     Value: !Ref MasterInstanceProfile
