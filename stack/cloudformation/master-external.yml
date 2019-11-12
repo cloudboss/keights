@@ -1,0 +1,260 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Kubernetes master resources
+
+Parameters:
+  ClusterName:
+    Description: Name of Kubernetes cluster
+    Type: String
+  NumInstances:
+    Description: Number of master instances
+    Type: Number
+    Default: 1
+  VpcId:
+    Description: ID of VPC where cluster will be placed
+    Type: AWS::EC2::VPC::Id
+  MasterSubnetIds:
+    Description: >-
+      List of subnets IDs in VPC where master instances will be placed.
+    Type: List<AWS::EC2::Subnet::Id>
+  LoadBalancerSubnetIds:
+    Description: >-
+      List of subnets IDs in VPC for API load balancer.
+    Type: List<AWS::EC2::Subnet::Id>
+  ImageId:
+    Description: ID of AMI used for instances
+    Type: AWS::EC2::Image::Id
+  InstanceType:
+    Description: Type of EC2 instance for master instances
+    Type: String
+  KeyPair:
+    Description: SSH keypair assigned to instances
+    Type: AWS::EC2::KeyPair::KeyName
+  InstanceProfile:
+    Description: Name of IAM Instance profile to assign to master instances
+    Type: String
+  LoadBalancerScheme:
+    Description: Scheme of API load balancer
+    Type: String
+    Default: internal
+    AllowedValues:
+      - internal
+      - internet-facing
+  LoadBalancerSecurityGroup:
+    Description: Security group of load balancer
+    Type: String
+  LoadBalancerIdleTimeout:
+    Description: Idle timeout on load balancer
+    Type: Number
+    Default: 600
+  SecurityGroups:
+    Description: Security groups of masters
+    Type: CommaDelimitedList
+  InstanceAttributeFunctionArn:
+    Description: ARN of Lambda for setting EC2 instance attributes
+    Type: String
+  PodCidr:
+    Description: CIDR block of addresses for pods
+    Default: 10.0.0.0/16
+    Type: String
+  ServiceCidr:
+    Description: CIDR block of addresses for services
+    Default: 10.1.0.0/16
+    Type: String
+  ClusterDns:
+    Description: >-
+      IP addres of cluster DNS server; should be
+      the value of ServiceCidr + 10
+    Default: 10.1.0.10
+    Type: String
+  ClusterDomain:
+    Description: Domain name used for cluster network.
+    Default: cluster.local
+    Type: String
+  EtcdDomain:
+    Description: Domain name given to etcd Route53 zone.
+    Type: String
+  EtcdPrefix:
+    Description: >-
+      Prefix given to etcd hostnames. This will be combined with the
+      availability zone and the value of the EtcdDomain parameter.
+    Type: String
+    Default: etcd
+  EtcdAvailabilityZones:
+    Description: Availability zones where etcd is located.
+    Type: CommaDelimitedList
+  ImageRepository:
+    Description: Repository for core Kubernetes Docker images
+    Type: String
+    Default: k8s.gcr.io
+  KubernetesVersion:
+    Description: Version of Kubernetes
+    Type: String
+  KeightsVersion:
+    Description: Version of Keights
+    Type: String
+  ResourceBucket:
+    Description: Bucket used to store Lambda archives
+    Type: String
+  HostedZoneId:
+    Description: ID of Route53 DNS hosted zone
+    Type: String
+  DockerOptions:
+    Description: >-
+      Options to write to /etc/docker/daemon.json, which should follow
+      https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file.
+    Type: String
+    Default: |
+      {
+        "ip-masq": false,
+        "iptables": false,
+        "log-driver": "journald",
+        "storage-driver": "overlay2"
+      }
+
+Resources:
+  InstanceAttributeEventsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Targets:
+        - Id: !Sub ${AWS::StackName}-instattr
+          Arn: !Ref InstanceAttributeFunctionArn
+      EventPattern:
+        source: [aws.autoscaling]
+        detail-type: [EC2 Instance Launch Successful]
+        detail:
+          AutoScalingGroupName: [!Ref 'AWS::StackName']
+
+  InstanceAttributeInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref InstanceAttributeFunctionArn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt InstanceAttributeEventsRule.Arn
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      CrossZone: true
+      ConnectionSettings:
+        IdleTimeout: !Ref LoadBalancerIdleTimeout
+      HealthCheck:
+        HealthyThreshold: 3
+        Interval: 30
+        Target: TCP:6443
+        Timeout: 10
+        UnhealthyThreshold: 3
+      LoadBalancerName: !Ref ClusterName
+      Listeners:
+        - InstancePort: 6443
+          InstanceProtocol: TCP
+          Protocol: TCP
+          LoadBalancerPort: 443
+      Scheme: !Ref LoadBalancerScheme
+      SecurityGroups:
+        - !Ref LoadBalancerSecurityGroup
+      Subnets: !Ref LoadBalancerSubnetIds
+
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: [InstanceAttributeInvokePermission]
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref NumInstances
+        Timeout: PT30M
+    Properties:
+      AutoScalingGroupName: !Ref AWS::StackName
+      DesiredCapacity: !Ref NumInstances
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MaxSize: !Ref NumInstances
+      MinSize: !Ref NumInstances
+      VPCZoneIdentifier: !Ref MasterSubnetIds
+      LoadBalancerNames: [!Ref LoadBalancer]
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+          PropagateAtLaunch: true
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MaxBatchSize: 1
+        PauseTime: PT15M
+        WaitOnResourceSignals: true
+        SuspendProcesses:
+          - HealthCheck
+          - ReplaceUnhealthy
+          - AZRebalance
+          - AlarmNotification
+          - ScheduledActions
+
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPair
+      PlacementTenancy: default
+      SecurityGroups: !Ref SecurityGroups
+      UserData:
+        Fn::Base64:
+          !Sub
+          - |
+            #cloud-config
+            write_files:
+              - path: /etc/docker/daemon.json
+                owner: root:root
+                permissions: '0644'
+                content: ${DockerOptions}
+
+              - path: /etc/systemd/system/keights-whisper-controller.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
+
+              - path: /etc/systemd/system/keights-templatize-kubeadm-init-config.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_CLUSTER_DOMAIN=${ClusterDomain}
+                  Environment=KEIGHTS_ETCD_DOMAIN=${EtcdDomain}
+                  Environment=KEIGHTS_ETCD_MODE=external
+                  Environment=KEIGHTS_PREFIX=${EtcdPrefix}
+                  Environment=KEIGHTS_APISERVER=${LoadBalancer.DNSName}
+                  Environment=KEIGHTS_API_PORT=443
+                  Environment=KEIGHTS_POD_SUBNET=${PodCidr}
+                  Environment=KEIGHTS_SERVICE_SUBNET=${ServiceCidr}
+                  Environment=KEIGHTS_CLUSTER_DNS=${ClusterDns}
+                  Environment=KEIGHTS_IMAGE_REPOSITORY=${ImageRepository}
+                  Environment=KEIGHTS_KUBERNETES_VERSION=${KubernetesVersion}
+                  Environment=KEIGHTS_AZS=${AvailabilityZones},
+
+              - path: /etc/systemd/system/keights-controller-signal.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=AWS_REGION=${AWS::Region}
+                  Environment=KEIGHTS_STACK_NAME=${AWS::StackName}
+                  Environment=KEIGHTS_MASTER=true
+
+            runcmd:
+              - systemctl daemon-reload
+              - systemctl enable kubelet.service
+              - systemctl start --no-block keights-kubeadm-init-external.service
+              - systemctl start --no-block keights-controller-signal.service
+
+          - { AvailabilityZones: !Join [',', !Ref EtcdAvailabilityZones] }
+
+Outputs:
+  LoadBalancerDnsName:
+    Description: DNS name of load balancer
+    Value: !GetAtt LoadBalancer.DNSName
+  AutoScalingGroup:
+    Description: Name of autoscaling group
+    Value: !Ref AutoScalingGroup

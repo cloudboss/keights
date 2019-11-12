@@ -161,20 +161,20 @@ Resources:
                   Environment=KEIGHTS_IMAGE_REPOSITORY=${ImageRepository}
                   Environment=KEIGHTS_NODE_LABELS=${NodeLabels},
 
-              - path: /etc/systemd/system/keights-signal.service.d/environment.conf
+              - path: /etc/systemd/system/keights-node-signal.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
                 content: |
                   [Service]
                   Environment=AWS_REGION=${AWS::Region}
                   Environment=KEIGHTS_STACK_NAME=${AWS::StackName}
-                  Environment=KEIGHTS_MASTER=false
+                  Environment=KEIGHTS_RESOURCE=AutoScalingGroup
 
             runcmd:
               - systemctl daemon-reload
               - systemctl enable kubelet.service
               - systemctl start --no-block keights-kubeadm-join.service
-              - systemctl start --no-block keights-signal.service
+              - systemctl start --no-block keights-node-signal.service
 
 Outputs:
   AutoScalingGroup:

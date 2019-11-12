@@ -67,7 +67,7 @@ jobs:
   - put: version-snap
     params: { pre: snap }
 
-- name: build-cluster
+- name: build-cluster-external-etcd
   public: true
   plan:
   - in_parallel:
@@ -86,8 +86,9 @@ jobs:
     output_mapping:
       artifacts-out: build-cluster-artifacts
     params:
-      CLUSTER: pipe-((git-branch))-1
+      CLUSTER: pipe-((git-branch))-ex-1
       KEIGHTS_BRANCH: ((git-branch))
+      ETCD_MODE: external
   - task: run-e2e
     file: keights-pr/ci/tasks/run-e2e.yml
     input_mapping:
@@ -103,14 +104,14 @@ jobs:
         artifacts-in: run-e2e-artifacts
       params:
         KEIGHTS_BRANCH: ((git-branch))
-        JOB: build-cluster
+        JOB: build-cluster-external-etcd
   on_failure:
     put: keights-pr
     params:
       path: keights-pr
       status: failure
 
-- name: upgrade-cluster
+- name: upgrade-cluster-external-etcd
   public: true
   plan:
   - in_parallel:
@@ -130,8 +131,9 @@ jobs:
       artifacts-out: initial-cluster-artifacts
     params:
       START_UPGRADE: troo
-      CLUSTER: pipe-((git-branch))-2
+      CLUSTER: pipe-((git-branch))-ex-2
       KEIGHTS_BRANCH: ((git-branch))
+      ETCD_MODE: external
   - task: upgrade-cluster
     file: keights-pr/ci/tasks/build-cluster.yml
     input_mapping:
@@ -141,8 +143,9 @@ jobs:
     output_mapping:
       artifacts-out: upgraded-cluster-artifacts
     params:
-      CLUSTER: pipe-((git-branch))-2
+      CLUSTER: pipe-((git-branch))-ex-2
       KEIGHTS_BRANCH: ((git-branch))
+      ETCD_MODE: external
   - task: run-e2e
     file: keights-pr/ci/tasks/run-e2e.yml
     input_mapping:
@@ -158,7 +161,108 @@ jobs:
         artifacts-in: run-e2e-artifacts
       params:
         KEIGHTS_BRANCH: ((git-branch))
-        JOB: upgrade-cluster
+        JOB: upgrade-cluster-external-etcd
+  on_failure:
+    put: keights-pr
+    params:
+      path: keights-pr
+      status: failure
+
+- name: build-cluster-stacked-etcd
+  public: true
+  plan:
+  - in_parallel:
+    - get: keights-pr
+      trigger: true
+      version: every
+      passed: [build-pull-request]
+    - get: version-snap
+      trigger: true
+      passed: [build-pull-request]
+  - task: build-cluster
+    file: keights-pr/ci/tasks/build-cluster.yml
+    input_mapping:
+      repo: keights-pr
+      version: version-snap
+    output_mapping:
+      artifacts-out: build-cluster-artifacts
+    params:
+      CLUSTER: pipe-((git-branch))-st-1
+      KEIGHTS_BRANCH: ((git-branch))
+      ETCD_MODE: stacked
+  - task: run-e2e
+    file: keights-pr/ci/tasks/run-e2e.yml
+    input_mapping:
+      artifacts-in: build-cluster-artifacts
+      repo: keights-pr
+    output_mapping:
+      artifacts-out: run-e2e-artifacts
+    ensure:
+      task: s3-upload-results
+      file: keights-pr/ci/tasks/s3-upload.yml
+      input_mapping:
+        version: version-snap
+        artifacts-in: run-e2e-artifacts
+      params:
+        KEIGHTS_BRANCH: ((git-branch))
+        JOB: build-cluster-stacked-etcd
+  on_failure:
+    put: keights-pr
+    params:
+      path: keights-pr
+      status: failure
+
+- name: upgrade-cluster-stacked-etcd
+  public: true
+  plan:
+  - in_parallel:
+    - get: keights-pr
+      trigger: true
+      version: every
+      passed: [build-pull-request]
+    - get: version-snap
+      trigger: true
+      passed: [build-pull-request]
+  - task: build-initial-cluster
+    file: keights-pr/ci/tasks/build-cluster.yml
+    input_mapping:
+      repo: keights-pr
+      version: version-snap
+    output_mapping:
+      artifacts-out: initial-cluster-artifacts
+    params:
+      START_UPGRADE: troo
+      CLUSTER: pipe-((git-branch))-st-2
+      KEIGHTS_BRANCH: ((git-branch))
+      ETCD_MODE: stacked
+  - task: upgrade-cluster
+    file: keights-pr/ci/tasks/build-cluster.yml
+    input_mapping:
+      repo: keights-pr
+      version: version-snap
+      artifacts-in: initial-cluster-artifacts
+    output_mapping:
+      artifacts-out: upgraded-cluster-artifacts
+    params:
+      CLUSTER: pipe-((git-branch))-st-2
+      KEIGHTS_BRANCH: ((git-branch))
+      ETCD_MODE: stacked
+  - task: run-e2e
+    file: keights-pr/ci/tasks/run-e2e.yml
+    input_mapping:
+      artifacts-in: upgraded-cluster-artifacts
+      repo: keights-pr
+    output_mapping:
+      artifacts-out: run-e2e-artifacts
+    ensure:
+      task: s3-upload-results
+      file: keights-pr/ci/tasks/s3-upload.yml
+      input_mapping:
+        version: version-snap
+        artifacts-in: run-e2e-artifacts
+      params:
+        KEIGHTS_BRANCH: ((git-branch))
+        JOB: upgrade-cluster-stacked-etcd
   on_failure:
     put: keights-pr
     params:
@@ -173,13 +277,17 @@ jobs:
       trigger: true
       version: every
       passed:
-      - build-cluster
-      - upgrade-cluster
+      - build-cluster-external-etcd
+      - upgrade-cluster-external-etcd
+      - build-cluster-stacked-etcd
+      - upgrade-cluster-stacked-etcd
     - get: version-snap
       trigger: true
       passed:
-      - build-cluster
-      - upgrade-cluster
+      - build-cluster-external-etcd
+      - upgrade-cluster-external-etcd
+      - build-cluster-stacked-etcd
+      - upgrade-cluster-stacked-etcd
   - put: keights-pr
     params:
       path: keights-pr

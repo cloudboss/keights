@@ -383,6 +383,7 @@ Resources:
                   Environment=AWS_REGION=${AWS::Region}
                   Environment=KEIGHTS_CLUSTER_DOMAIN=${ClusterDomain}
                   Environment=KEIGHTS_ETCD_DOMAIN=${EtcdDomain}
+                  Environment=KEIGHTS_ETCD_MODE=stacked
                   Environment=KEIGHTS_PREFIX=${EtcdPrefix}
                   Environment=KEIGHTS_APISERVER=${LoadBalancer.DNSName}
                   Environment=KEIGHTS_API_PORT=443
@@ -393,7 +394,7 @@ Resources:
                   Environment=KEIGHTS_KUBERNETES_VERSION=${KubernetesVersion}
                   Environment=KEIGHTS_AZS=${AvailabilityZones},
 
-              - path: /etc/systemd/system/keights-signal.service.d/environment.conf
+              - path: /etc/systemd/system/keights-controller-signal.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
                 content: |
@@ -406,9 +407,8 @@ Resources:
               - systemctl daemon-reload
               - systemctl enable var-lib-etcd.mount
               - systemctl enable kubelet.service
-              - systemctl start --no-block keights-templatize-kubeadm-init-config.service
-              - systemctl start --no-block keights-kubeadm-init.service
-              - systemctl start --no-block keights-signal.service
+              - systemctl start --no-block keights-kubeadm-init-stacked.service
+              - systemctl start --no-block keights-controller-signal.service
 
           - { AvailabilityZones: !GetAtt SubnetToAz.AvailabilityZones }
 

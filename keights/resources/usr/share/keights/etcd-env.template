@@ -1,0 +1,16 @@
+ETCD_NAME={{ .Prefix }}-{{ .MyAZ }}
+ETCD_DATA_DIR=/var/lib/etcd
+ETCD_LISTEN_CLIENT_URLS=https://127.0.0.1:2379,https://{{ .MyIP }}:2379
+ETCD_LISTEN_PEER_URLS=https://{{ .MyIP }}:2380
+ETCD_ADVERTISE_CLIENT_URLS=https://{{ .MyIP }}:2379
+ETCD_INITIAL_ADVERTISE_PEER_URLS=https://{{ .MyIP }}:2380
+ETCD_INITIAL_CLUSTER_TOKEN={{ .EtcdDomain }}
+ETCD_INITIAL_CLUSTER={{ range $i, $az := .AZs }}{{ if $i }},{{end}}{{ $.Prefix }}-{{ $az }}=https://{{ $.Prefix }}-{{ $az }}.{{ $.EtcdDomain }}:2380{{ end }}
+ETCD_CERT_FILE=/etc/pki/etcd/server.crt
+ETCD_KEY_FILE=/etc/pki/etcd/server.key
+ETCD_PEER_CERT_FILE=/etc/pki/etcd/peer.crt
+ETCD_PEER_KEY_FILE=/etc/pki/etcd/peer.key
+ETCD_TRUSTED_CA_FILE=/etc/pki/etcd/ca.crt
+ETCD_PEER_TRUSTED_CA_FILE=/etc/pki/etcd/ca.crt
+ETCD_CLIENT_CERT_AUTH=true
+ETCD_PEER_CLIENT_CERT_AUTH=true

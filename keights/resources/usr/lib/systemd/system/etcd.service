@@ -1,0 +1,24 @@
+[Unit]
+Description=etcd service
+Requires=var-lib-etcd.mount docker.service keights-templatize-etcd-env.service keights-kubeadm-etcd.service
+After=var-lib-etcd.mount docker.service keights-templatize-etcd-env.service keights-kubeadm-etcd.service
+Before=keights-etcd-signal.service
+
+[Service]
+Type=simple
+# Environment=KEIGHTS_ETCD_IMAGE=
+ExecStartPre=-/usr/bin/docker stop etcd
+ExecStartPre=-/usr/bin/docker rm etcd
+ExecStart=/usr/bin/docker run -i --rm \
+    --name=etcd \
+    --network=host \
+    --env-file=/etc/default/etcd \
+    -v /var/lib/etcd:/var/lib/etcd \
+    -v /etc/pki/etcd:/etc/pki/etcd \
+    ${KEIGHTS_ETCD_IMAGE} /usr/local/bin/etcd
+ExecStop=/usr/bin/docker stop etcd
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
