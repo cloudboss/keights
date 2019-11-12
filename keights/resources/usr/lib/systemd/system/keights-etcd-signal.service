@@ -1,0 +1,18 @@
+[Unit]
+Description=keights-etcd-signal service
+
+[Service]
+# Environment=AWS_REGION=
+# Environment=KEIGHTS_STACK_NAME=
+# Environment=KEIGHTS_RESOURCE=
+Type=oneshot
+ExecStart=/bin/sh -c ' \
+    while true; do \
+        docker logs etcd 2>&1 | grep "etcdmain: etcd Version" && break; \
+        sleep 5; \
+    done; \
+    /usr/bin/keights signal \
+        -n ${KEIGHTS_STACK_NAME} \
+        -r ${KEIGHTS_RESOURCE} \
+        -s SUCCESS \
+'

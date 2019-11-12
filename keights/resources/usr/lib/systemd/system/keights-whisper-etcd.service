@@ -1,0 +1,10 @@
+[Unit]
+Description=keights-whisper-etcd service
+
+[Service]
+Type=oneshot
+# Environment=AWS_REGION=
+# Environment=KEIGHTS_CLUSTER_NAME=
+ExecStart=/usr/bin/keights whisper \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-ca.crt:/etc/pki/etcd/ca.crt \
+            -p /${KEIGHTS_CLUSTER_NAME}/controller/etcd-ca.key:/etc/pki/etcd/ca.key
