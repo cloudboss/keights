@@ -53,6 +53,7 @@ Parameters:
 
 Conditions:
   HasExternalEtcd: !Equals [!Ref EtcdMode, 'external']
+  HasStackedEtcd: !Equals [!Ref EtcdMode, 'stacked']
   HasManagedHostedZone: !Equals [!Ref EtcdHostedZoneId, '']
   HasUnmanagedHostedZone: !Not [!Equals [!Ref EtcdHostedZoneId, '']]
   AllowsNodePortAccess: !Not [!Equals [!Ref NodePortAccessCidr, '']]
@@ -115,18 +116,18 @@ Resources:
     Properties:
       GroupId: !Ref LoadBalancerSecurityGroup
       SourceSecurityGroupId: !Ref MasterSecurityGroup
-      FromPort: 6443
+      FromPort: 443
       IpProtocol: tcp
-      ToPort: 6443
+      ToPort: 443
 
   LoadBalancerSecurityGroupApiserverNodeIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref LoadBalancerSecurityGroup
       SourceSecurityGroupId: !Ref NodeSecurityGroup
-      FromPort: 6443
+      FromPort: 443
       IpProtocol: tcp
-      ToPort: 6443
+      ToPort: 443
 
   LoadBalancerSecurityGroupApiserverEgress:
     Type: AWS::EC2::SecurityGroupEgress
@@ -159,6 +160,61 @@ Resources:
       IpProtocol: tcp
       ToPort: 22
 
+  MasterSecurityGroupMasterEtcdIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasStackedEtcd
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      FromPort: 2379
+      ToPort: 2380
+      IpProtocol: tcp
+
+  MasterSecurityGroupMasterKubeletIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      FromPort: 10250
+      ToPort: 10250
+      IpProtocol: tcp
+
+  MasterSecurityGroupMasterDnsUdpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      FromPort: 53
+      ToPort: 53
+      IpProtocol: udp
+
+  MasterSecurityGroupMasterDnsTcpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      FromPort: 53
+      ToPort: 53
+      IpProtocol: tcp
+
+  MasterSecurityGroupNodeDnsUdpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref NodeSecurityGroup
+      FromPort: 53
+      ToPort: 53
+      IpProtocol: udp
+
+  MasterSecurityGroupNodeDnsTcpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref NodeSecurityGroup
+      FromPort: 53
+      ToPort: 53
+      IpProtocol: tcp
+
   MasterSecurityGroupLoadBalancerIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -168,45 +224,54 @@ Resources:
       ToPort: 6443
       IpProtocol: tcp
 
-  MasterSecurityGroupAllMasterIngress:
+  MasterSecurityGroupMasterApiIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref MasterSecurityGroup
       SourceSecurityGroupId: !Ref MasterSecurityGroup
-      IpProtocol: '-1'
+      FromPort: 6443
+      ToPort: 6443
+      IpProtocol: tcp
 
-  MasterSecurityGroupAllNodeUdpIngress:
+  MasterSecurityGroupNodeApiIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref MasterSecurityGroup
       SourceSecurityGroupId: !Ref NodeSecurityGroup
-      FromPort: 0
-      ToPort: 65535
-      IpProtocol: udp
+      FromPort: 6443
+      ToPort: 6443
+      IpProtocol: tcp
 
-  MasterSecurityGroupAllNodeIpipIngress:
+  MasterSecurityGroupMasterIpipIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      IpProtocol: 4
+
+  MasterSecurityGroupNodeIpipIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref MasterSecurityGroup
       SourceSecurityGroupId: !Ref NodeSecurityGroup
       IpProtocol: 4
 
-  MasterSecurityGroupBelowEtcdNodeTcpIngress:
+  MasterSecurityGroupMasterBgpIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref MasterSecurityGroup
-      SourceSecurityGroupId: !Ref NodeSecurityGroup
-      FromPort: 0
-      ToPort: 2378
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      FromPort: 179
+      ToPort: 179
       IpProtocol: tcp
 
-  MasterSecurityGroupAboveEtcdNodeTcpIngress:
+  MasterSecurityGroupNodeBgpIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref MasterSecurityGroup
       SourceSecurityGroupId: !Ref NodeSecurityGroup
-      FromPort: 2381
-      ToPort: 65535
+      FromPort: 179
+      ToPort: 179
       IpProtocol: tcp
 
   NodeSecurityGroup:
