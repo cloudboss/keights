@@ -24,6 +24,8 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `ssh_access_cidr`: (Required, type *string*) - CIDR block given ssh access to cluster nodes.
 
+`node_port_access_cidr`: (Optional, type *string*) - CIDR block given access to NodePort services. If not defined, then NodePorts are not exposed.
+
 `resource_bucket`: (Required, type *string*) - S3 bucket used for storing and retrieving artifacts.
 
 `cluster_domain`: (Optional, type *string*, default `cluster.local`) - Domain used by internal Kubernetes network.
@@ -34,17 +36,21 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `etcd_prefix`: (Optional, type *string*, default `etcd`) - Prefix given to etcd DNS records. This will be combined with the availability zone and the value of the `etcd_domain` parameter.
 
+`etcd_mode` (Optional, choice of `stacked` or `external`, default `stacked`) - If `stacked`, then etcd runs on the masters. If `external`, then etcd runs on its own instances.
+
 `cfn_role_arn`: (Optional, type *string*) - IAM service role ARN to be passed to CloudFormation. See [AWS documentation on using CloudFormation with a service role](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-servicerole.html) for more details.
 
 `k8s_version`: (Optional, type *string*) - Version of Kubernetes. This defaults to the version corresponding with the `keights-stack` version, for example if the `keights-stack` version is `1.10.7-3`, then `k8s_version` is `1.10.7`. Versions other than the default will not be tested.
 
-`image`: (Optional, type *string*) - The default AMI to use for both masters and nodes. This should be the name of the image, rather than an AMI ID. This defaults to `debian-stretch-k8s-hvm-amd64-v<version>`, where `<version>` is the keights version. A public image with this name is available in `us-east-1`, so if you are not running there, you may copy it into your own region. If more than one image is found with the same name, the first one is used.
+`image`: (Optional, type *string*) - The default AMI to use for both masters and nodes. This should be the name of the image, rather than an AMI ID. This defaults to `debian-buster-k8s-hvm-amd64-v<version>`, where `<version>` is the keights version. A public image with this name is available in `us-east-1`, so if you are not running there, you may copy it into your own region. If more than one image is found with the same name, the first one is used.
 
 `image_owner`: (Optional, type *string*, default `256008164056`) - AWS account owning the AMI. Set this if using your own image.
 
 `lookup_image`: (Optional, type *bool*, default `true`) - This may be set to `false` if not using `image` at all. In this case, `image_id` must be specified for the masters and all node groups.
 
 `masters`: (Required, type *dict*) - A dictionary of variables for Kubernetes masters, described below.
+
+`etcd`: (Optional, type *dict*) - A dictionary of variables used when `etcd_mode` is `external`, described below.
 
 `node_groups`: (Optional, type *list* of *dict*, default `[]`) - A list of dictionaries, each one defining a group of Kubernetes nodes, described below.
 
@@ -54,7 +60,7 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `pod_cidr`: (Required, type *string*) - In-cluster CIDR block used for Kubernetes pods.
 
-`subnet_ids`: (Required, type *list* of *string*) - Subnet IDs in which masters will live. Each subnet *must* be in a separate availability zone, and the number of subnet IDs will determine the number of masters. Either one or three subnets may be used for the masters.
+`subnet_ids`: (Required, type *list* of *string*) - Subnet IDs in which masters will live. When `etcd_mode` is `stacked`, each subnet *must* be in a separate availability zone, and the number of subnet IDs will determine the number of masters. Either one or three subnets may be used for the masters when `etcd_mode` is `stacked`. When `etcd_mode` is `external`, there can be any number of subnet IDs in any availability zones.
 
 `instance_type`: (Required, type *string*) - Type of EC2 instance, e.g. `m4.large`.
 
@@ -63,6 +69,8 @@ All role variables go under a top level dictionary `keights_stack`.
 `load_balancer_scheme`: (Required, choice of `internal` or `internet-facing`) - Scheme assigned to Kubernetes API load balancer.
 
 `load_balancer_idle_timeout`: (Optional, type int, default `600`) - Idle timeout on Kubernetes API load balancer.
+
+`num_instances`: (Optional, type *int*, default `1`) - Number of master instances when `etcd_mode` is `external`.
 
 `image_id`: (Optional, type *string*) - EC2 AMI ID, will override `keights_stack.image`.
 
@@ -73,6 +81,26 @@ All role variables go under a top level dictionary `keights_stack`.
 `etcd_device`: (Optional, type *string*, default `/dev/xvdg`) - Name of etcd EBS volume device.
 
 `image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which Kubernetes component docker images are pulled.
+
+`docker_options`: (Optional, type *dict*, default `{"ip-masq": false, "iptables": false, "log-driver": "journald", "storage-driver": "overlay2"}`) - Options to write to `/etc/docker/daemon.json`, which should follow [documentation for docker](https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file).
+
+### etcd
+
+`subnet_ids`: (Required, type *list* of *string*) - Subnet IDs in which etcd instances will live. Each subnet *must* be in a separate availability zone, and the number of subnet IDs will determine the number of instances. Either one or three subnets may be used.
+
+`image_id`: (Optional, type *string*) - EC2 AMI ID, will override `keights_stack.image`.
+
+`instance_type`: (Required, type *string*) - Type of EC2 instance, e.g. `m4.large`.
+
+`keypair`: (Required, type *string*) - SSH keypair assigned to EC2 instances.
+
+`extra_security_groups`: (Optional, type *list* of *string*, default `[]`) - Additional security groups that may be assigned to etcd instances.
+
+`volume_size`: (Optional, type *int*, default `10`) - Size of etcd volume in gigabytes.
+
+`device`: (Optional, type *string*, default `/dev/xvdg`) - Name of etcd EBS volume device.
+
+`image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which docker image is pulled.
 
 `docker_options`: (Optional, type *dict*, default `{"ip-masq": false, "iptables": false, "log-driver": "journald", "storage-driver": "overlay2"}`) - Options to write to `/etc/docker/daemon.json`, which should follow [documentation for docker](https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file).
 

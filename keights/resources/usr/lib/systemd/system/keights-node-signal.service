@@ -1,0 +1,18 @@
+[Unit]
+Description=keights-node-signal service
+
+[Service]
+# Environment=AWS_REGION=
+# Environment=KEIGHTS_STACK_NAME=
+# Environment=KEIGHTS_RESOURCE=
+Type=oneshot
+ExecStart=/bin/sh -c ' \
+    while true; do \
+        [ -f /var/lib/kubeadm/initialized ] && break; \
+        sleep 5; \
+    done && \
+    /usr/bin/keights signal \
+        -n ${KEIGHTS_STACK_NAME} \
+        -r ${KEIGHTS_RESOURCE} \
+        -s SUCCESS \
+'

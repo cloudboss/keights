@@ -1,18 +1,15 @@
 {
   "variables": {
     "keights-version": "",
-    "debian-release": "stretch",
+    "debian-release": "buster",
     "root-vol": "xvdb",
     "usr-vol": "xvdc",
     "var-vol": "xvdd",
     "var-lib-docker-vol": "xvde",
     "var-log-vol": "xvdf",
-    "docker-version": "18.06.1~ce~3-0~debian",
+    "docker-version": "5:18.09.9~3-0~debian-buster",
     "k8s-version": "",
     "cni-version": "0.7.5",
-    "core-dns-version": "1.2.2",
-    "etcd-version": "3.2.24",
-    "pause-version": "3.1",
     "share-accounts": "all",
     "base-ami-pattern": "debian-stretch-hvm-x86_64-gp2-*",
     "base-ami-owner": "379101102735",
@@ -77,7 +74,7 @@
       {
         "device_name": "/dev/{{ user `var-log-vol` }}",
         "delete_on_termination": true,
-        "volume_size": 2,
+        "volume_size": 8,
         "volume_type": "gp2"
       }
     ],

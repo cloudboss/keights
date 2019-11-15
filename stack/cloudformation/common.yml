@@ -9,6 +9,14 @@ Parameters:
   ClusterName:
     Description: Name of Kubernetes cluster
     Type: String
+  EtcdMode:
+    Description: >-
+      Mode for running etcd. If 'stacked', then etcd runs on
+      the masters, and if 'external' then it runs on its
+      own instances.
+    Type: String
+    AllowedValues: ['stacked', 'external']
+    Default: 'stacked'
   EtcdDomain:
     Description: >-
       Domain name given to Route53 hosted zone for etcd records.
@@ -32,6 +40,10 @@ Parameters:
     Description: CIDR block given ssh access to cluster
     Default: 0.0.0.0/0
     Type: String
+  NodePortAccessCidr:
+    Description: CIDR block given access to NodePort services
+    Default: ''
+    Type: String
   KeightsVersion:
     Description: Version of Keights
     Type: String
@@ -40,10 +52,50 @@ Parameters:
     Type: String
 
 Conditions:
+  HasExternalEtcd: !Equals [!Ref EtcdMode, 'external']
+  HasStackedEtcd: !Equals [!Ref EtcdMode, 'stacked']
   HasManagedHostedZone: !Equals [!Ref EtcdHostedZoneId, '']
   HasUnmanagedHostedZone: !Not [!Equals [!Ref EtcdHostedZoneId, '']]
+  AllowsNodePortAccess: !Not [!Equals [!Ref NodePortAccessCidr, '']]
 
 Resources:
+  EtcdSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: HasExternalEtcd
+    Properties:
+      GroupDescription: !Sub ${ClusterName} etcd
+      VpcId: !Ref VpcId
+
+  EtcdSecurityGroupEtcdIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasExternalEtcd
+    Properties:
+      GroupId: !Ref EtcdSecurityGroup
+      SourceSecurityGroupId: !Ref EtcdSecurityGroup
+      FromPort: 2379
+      ToPort: 2380
+      IpProtocol: tcp
+
+  EtcdSecurityGroupMasterIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasExternalEtcd
+    Properties:
+      GroupId: !Ref EtcdSecurityGroup
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      FromPort: 2379
+      ToPort: 2379
+      IpProtocol: tcp
+
+  EtcdSecurityGroupSshIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasExternalEtcd
+    Properties:
+      GroupId: !Ref EtcdSecurityGroup
+      CidrIp: !Ref SshAccessCidr
+      FromPort: 22
+      IpProtocol: tcp
+      ToPort: 22
+
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -64,18 +116,18 @@ Resources:
     Properties:
       GroupId: !Ref LoadBalancerSecurityGroup
       SourceSecurityGroupId: !Ref MasterSecurityGroup
-      FromPort: 6443
+      FromPort: 443
       IpProtocol: tcp
-      ToPort: 6443
+      ToPort: 443
 
   LoadBalancerSecurityGroupApiserverNodeIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref LoadBalancerSecurityGroup
       SourceSecurityGroupId: !Ref NodeSecurityGroup
-      FromPort: 6443
+      FromPort: 443
       IpProtocol: tcp
-      ToPort: 6443
+      ToPort: 443
 
   LoadBalancerSecurityGroupApiserverEgress:
     Type: AWS::EC2::SecurityGroupEgress
@@ -108,6 +160,61 @@ Resources:
       IpProtocol: tcp
       ToPort: 22
 
+  MasterSecurityGroupMasterEtcdIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasStackedEtcd
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      FromPort: 2379
+      ToPort: 2380
+      IpProtocol: tcp
+
+  MasterSecurityGroupMasterKubeletIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      FromPort: 10250
+      ToPort: 10250
+      IpProtocol: tcp
+
+  MasterSecurityGroupMasterDnsUdpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      FromPort: 53
+      ToPort: 53
+      IpProtocol: udp
+
+  MasterSecurityGroupMasterDnsTcpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      FromPort: 53
+      ToPort: 53
+      IpProtocol: tcp
+
+  MasterSecurityGroupNodeDnsUdpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref NodeSecurityGroup
+      FromPort: 53
+      ToPort: 53
+      IpProtocol: udp
+
+  MasterSecurityGroupNodeDnsTcpIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref NodeSecurityGroup
+      FromPort: 53
+      ToPort: 53
+      IpProtocol: tcp
+
   MasterSecurityGroupLoadBalancerIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -117,45 +224,54 @@ Resources:
       ToPort: 6443
       IpProtocol: tcp
 
-  MasterSecurityGroupAllMasterIngress:
+  MasterSecurityGroupMasterApiIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref MasterSecurityGroup
       SourceSecurityGroupId: !Ref MasterSecurityGroup
-      IpProtocol: '-1'
+      FromPort: 6443
+      ToPort: 6443
+      IpProtocol: tcp
 
-  MasterSecurityGroupAllNodeUdpIngress:
+  MasterSecurityGroupNodeApiIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref MasterSecurityGroup
       SourceSecurityGroupId: !Ref NodeSecurityGroup
-      FromPort: 0
-      ToPort: 65535
-      IpProtocol: udp
+      FromPort: 6443
+      ToPort: 6443
+      IpProtocol: tcp
 
-  MasterSecurityGroupAllNodeIpipIngress:
+  MasterSecurityGroupMasterIpipIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref MasterSecurityGroup
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      IpProtocol: 4
+
+  MasterSecurityGroupNodeIpipIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref MasterSecurityGroup
       SourceSecurityGroupId: !Ref NodeSecurityGroup
       IpProtocol: 4
 
-  MasterSecurityGroupBelowEtcdNodeTcpIngress:
+  MasterSecurityGroupMasterBgpIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref MasterSecurityGroup
-      SourceSecurityGroupId: !Ref NodeSecurityGroup
-      FromPort: 0
-      ToPort: 2378
+      SourceSecurityGroupId: !Ref MasterSecurityGroup
+      FromPort: 179
+      ToPort: 179
       IpProtocol: tcp
 
-  MasterSecurityGroupAboveEtcdNodeTcpIngress:
+  MasterSecurityGroupNodeBgpIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref MasterSecurityGroup
       SourceSecurityGroupId: !Ref NodeSecurityGroup
-      FromPort: 2381
-      ToPort: 65535
+      FromPort: 179
+      ToPort: 179
       IpProtocol: tcp
 
   NodeSecurityGroup:
@@ -180,6 +296,16 @@ Resources:
       IpProtocol: tcp
       ToPort: 22
 
+  NodeSecurityGroupNodePortIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: AllowsNodePortAccess
+    Properties:
+      GroupId: !Ref NodeSecurityGroup
+      CidrIp: !Ref NodePortAccessCidr
+      FromPort: 30000
+      IpProtocol: tcp
+      ToPort: 32767
+
   NodeSecurityGroupAllNodeIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -202,6 +328,32 @@ Resources:
       VPCs:
         - VPCId: !Ref VpcId
           VPCRegion: !Ref AWS::Region
+
+  EtcdAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: HasExternalEtcd
+    Properties:
+      Roles: [!Ref EtcdRole]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - ec2:AttachVolume
+              - ec2:DescribeVolumes
+            Resource:
+              - '*'
+          - Effect: Allow
+            Action:
+              - ssm:GetParameters
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}/controller/etcd-ca.crt'
+              - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}/controller/etcd-ca.key'
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/${KmsKeyId}'
 
   K8sMasterAccess:
     Type: AWS::IAM::ManagedPolicy
@@ -431,6 +583,24 @@ Resources:
             Resource:
               - '*'
 
+  EtcdRole:
+    Type: AWS::IAM::Role
+    Condition: HasExternalEtcd
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+
+  EtcdInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Condition: HasExternalEtcd
+    Properties:
+      Roles: [!Ref EtcdRole]
+
   MasterRole:
     Type: AWS::IAM::Role
     Properties:
@@ -519,6 +689,10 @@ Resources:
       Role: !GetAtt InstAttrLambdaRole.Arn
 
 Outputs:
+  EtcdSecurityGroup:
+    Description: Security group of etcd
+    Value: !Ref EtcdSecurityGroup
+    Condition: HasExternalEtcd
   LoadBalancerSecurityGroup:
     Description: Security group of load balancer
     Value: !Ref LoadBalancerSecurityGroup
@@ -528,6 +702,14 @@ Outputs:
   NodeSecurityGroup:
     Description: Security group of nodes
     Value: !Ref NodeSecurityGroup
+  EtcdInstanceProfile:
+    Description: Instance profile for etcd nodes
+    Value: !Ref EtcdInstanceProfile
+    Condition: HasExternalEtcd
+  EtcdInstanceProfileArn:
+    Description: Instance profile ARN for etcd nodes
+    Value: !GetAtt EtcdInstanceProfile.Arn
+    Condition: HasExternalEtcd
   MasterInstanceProfile:
     Description: Instance profile for master nodes
     Value: !Ref MasterInstanceProfile

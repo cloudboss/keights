@@ -1,8 +1,8 @@
 [Unit]
-Description=keights-kubeadm-init service
-Requires=var-lib-etcd.mount keights-whisper-controller.service keights-templates.target
-After=var-lib-etcd.mount keights-whisper-controller.service keights-templates.target
-Before=keights-signal.service
+Description=keights-kubeadm-init-stacked service
+Requires=var-lib-etcd.mount keights-whisper-controller.service keights-templatize-kubeadm-init-config.service
+After=var-lib-etcd.mount keights-whisper-controller.service keights-templatize-kubeadm-init-config.service
+Before=keights-controller-signal.service
 ConditionPathExists=!/var/lib/kubeadm/initialized
 
 [Service]
@@ -16,6 +16,3 @@ ExecStart=/bin/sh -c ' \
 '
 Restart=on-failure
 RestartSec=10s
-
-[Install]
-WantedBy=multi-user.target

@@ -9,15 +9,25 @@
   set_fact:
     cluster_dns: '{{ keights_stack.masters.service_cidr.split(".")[:-1] | join(".") }}.10'
     default_etcd_domain: '{{ "{}.local".format(keights_stack.cluster_name) }}'
-    etcd_device: '{{ keights_stack.masters.etcd_device | default("/dev/xvdg") }}'
+    etcd_mode: '{{ keights_stack.etcd_mode | default("stacked") }}'
     k8s_version: '{{ keights_stack.k8s_version | default(keights_version.split("-")[0]) }}'
-    default_image: 'debian-stretch-k8s-hvm-amd64-{{ keights_version }}'
+    default_image: 'debian-buster-k8s-hvm-amd64-{{ keights_version }}'
     cache_dir: '{{ playbook_dir }}/.cache'
     default_docker_options:
       'ip-masq': false
       'iptables': false
       'log-driver': journald
       'storage-driver': overlay2
+
+- name: set etcd device
+  set_fact:
+    etcd_device: '{{ keights_stack.etcd.device | default("/dev/xvdg") }}'
+  when: 'etcd_mode == "external"'
+
+- name: set etcd device
+  set_fact:
+    etcd_device: '{{ keights_stack.masters.etcd_device | default("/dev/xvdg") }}'
+  when: 'etcd_mode == "stacked"'
 
 - name: ensure cache directory
   file:
@@ -31,6 +41,11 @@
       name: '{{ keights_stack.image | default(default_image) }}'
   register: ami
   when: keights_stack.lookup_image | default(lookup_image)
+
+- name: assert valid value for etcd_mode
+  assert:
+    that: etcd_mode in ('stacked', 'external')
+    msg: "keights_stack.etcd_mode must be one of 'stacked' or 'external'"
 
 - name: assert that at least one ami is found
   assert:
@@ -92,12 +107,14 @@
     template_parameters:
       VpcId: '{{ keights_stack.vpc_id }}'
       ClusterName: '{{ keights_stack.cluster_name }}'
+      EtcdMode: '{{ etcd_mode }}'
       EtcdDomain: '{{ keights_stack.etcd_domain | default(default_etcd_domain) }}'
       EtcdHostedZoneId: '{{ keights_stack.etcd_hosted_zone_id | default("") }}'
       KmsKeyId: '{{ keights_stack.kms_key_id }}'
       ApiAccessCidr: '{{ keights_stack.api_access_cidr }}'
       # TODO: give masters and nodes separate ssh_access_cidr
       SshAccessCidr: '{{ keights_stack.ssh_access_cidr }}'
+      NodePortAccessCidr: '{{ keights_stack.node_port_access_cidr | default("") }}'
       KeightsVersion: '{{ keights_version }}'
       ResourceBucket: '{{ keights_stack.resource_bucket }}'
     tags:
@@ -108,11 +125,92 @@
   tags:
     - common
 
+- name: build etcd stack
+  cloudformation:
+    stack_name: '{{ keights_stack.cluster_name }}-etcd'
+    role_arn: '{{ keights_stack.cfn_role_arn | default(omit) }}'
+    template: '{{ role_path }}/files/etcd.yml'
+    template_parameters:
+      ClusterName: '{{ keights_stack.cluster_name }}'
+      NumInstances: '{{ keights_stack.etcd.subnet_ids | length }}'
+      VpcId: '{{ keights_stack.vpc_id }}'
+      SubnetIds: '{{ keights_stack.etcd.subnet_ids | join(",") }}'
+      ImageId: '{{ keights_stack.etcd.image_id if keights_stack.etcd.image_id is defined else image_id }}'
+      InstanceType: '{{ keights_stack.etcd.instance_type }}'
+      KeyPair: '{{ keights_stack.etcd.keypair }}'
+      InstanceProfile: '{{ common_stack.stack_outputs.EtcdInstanceProfile }}'
+      SecurityGroups: '{{ ([common_stack.stack_outputs.EtcdSecurityGroup] + keights_stack.etcd.extra_security_groups | default([])) | join(",") }}'
+      AutoNamerLambdaRoleArn: '{{ common_stack.stack_outputs.AutoNamerLambdaRoleArn }}'
+      KubeCaLambdaRoleArn: '{{ common_stack.stack_outputs.KubeCaLambdaRoleArn }}'
+      SubnetToAzLambdaRoleArn: '{{ common_stack.stack_outputs.SubnetToAzLambdaRoleArn }}'
+      KmsKeyId: '{{ keights_stack.kms_key_alias }}'
+      HostedZoneId: '{{ common_stack.stack_outputs.HostedZoneId | default(keights_stack.etcd_hosted_zone_id) }}'
+      Domain: '{{ keights_stack.etcd_domain | default(default_etcd_domain) }}'
+      Prefix: '{{ keights_stack.etcd_prefix | default("etcd") }}'
+      VolumeSize: '{{ keights_stack.etcd.volume_size | default(10) }}'
+      Device: '{{ etcd_device if etcd_device.startswith("/dev/") else "/dev/{}".format(etcd_device) }}'
+      EtcdVersion: '{{ keights_stack.etcd.etcd_version | default(default_etcd_version) }}'
+      ImageRepository: '{{ keights_stack.etcd.image_repository | default("k8s.gcr.io") }}'
+      KeightsVersion: '{{ keights_version }}'
+      ResourceBucket: '{{ keights_stack.resource_bucket }}'
+      # Piping to_json twice escapes the json so it can be put on one line in the CloudFormation template.
+      DockerOptions: '{{ keights_stack.etcd.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
+    tags:
+      KubernetesCluster: '{{ keights_stack.cluster_name }}'
+      k8s:version: '{{ k8s_version }}'
+      keights:version: '{{ keights_version }}'
+  register: etcd_stack
+  tags:
+    - etcd
+  when: 'etcd_mode == "external"'
+
 - name: build master stack
   cloudformation:
     stack_name: '{{ keights_stack.cluster_name }}-master'
     role_arn: '{{ keights_stack.cfn_role_arn | default(omit) }}'
-    template: '{{ role_path }}/files/master.yml'
+    template: '{{ role_path }}/files/master-external.yml'
+    template_parameters:
+      ClusterName: '{{ keights_stack.cluster_name }}'
+      NumInstances: '{{ keights_stack.masters.num_instances | default(1) }}'
+      VpcId: '{{ keights_stack.vpc_id }}'
+      MasterSubnetIds: '{{ keights_stack.masters.subnet_ids | join(",") }}'
+      LoadBalancerSubnetIds: '{{ keights_stack.masters.subnet_ids | join(",") }}'
+      ImageId: '{{ keights_stack.masters.image_id if keights_stack.masters.image_id is defined else image_id }}'
+      InstanceType: '{{ keights_stack.masters.instance_type }}'
+      KeyPair: '{{ keights_stack.masters.keypair }}'
+      InstanceProfile: '{{ common_stack.stack_outputs.MasterInstanceProfile }}'
+      LoadBalancerScheme: '{{ keights_stack.masters.load_balancer_scheme }}'
+      LoadBalancerSecurityGroup: '{{ common_stack.stack_outputs.LoadBalancerSecurityGroup }}'
+      LoadBalancerIdleTimeout: '{{ keights_stack.masters.load_balancer_idle_timeout | default(600) }}'
+      SecurityGroups: '{{ ([common_stack.stack_outputs.MasterSecurityGroup] + keights_stack.masters.extra_security_groups | default([])) | join(",") }}'
+      InstanceAttributeFunctionArn: '{{ common_stack.stack_outputs.InstanceAttributeFunctionArn }}'
+      PodCidr: '{{ keights_stack.masters.pod_cidr }}'
+      ServiceCidr: '{{ keights_stack.masters.service_cidr }}'
+      ClusterDns: '{{ cluster_dns }}'
+      ClusterDomain: '{{ keights_stack.cluster_domain | default("cluster.local") }}'
+      EtcdDomain: '{{ keights_stack.etcd_domain | default(default_etcd_domain) }}'
+      EtcdPrefix: '{{ keights_stack.etcd_prefix | default("etcd") }}'
+      EtcdAvailabilityZones: '{{ etcd_stack.stack_outputs.AvailabilityZones }}'
+      ImageRepository: '{{ keights_stack.masters.image_repository | default("k8s.gcr.io") }}'
+      KubernetesVersion: '{{ k8s_version }}'
+      KeightsVersion: '{{ keights_version }}'
+      ResourceBucket: '{{ keights_stack.resource_bucket }}'
+      HostedZoneId: '{{ common_stack.stack_outputs.HostedZoneId | default(keights_stack.etcd_hosted_zone_id) }}'
+      DockerOptions: '{{ keights_stack.masters.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
+    tags:
+      KubernetesCluster: '{{ keights_stack.cluster_name }}'
+      k8s:version: '{{ k8s_version }}'
+      keights:version: '{{ keights_version }}'
+  register: master_stack_external
+  tags:
+    - master
+  when: 'etcd_mode == "external"'
+
+- name: build master stack
+  cloudformation:
+    stack_name: '{{ keights_stack.cluster_name }}-master'
+    role_arn: '{{ keights_stack.cfn_role_arn | default(omit) }}'
+    template: '{{ role_path }}/files/master-stacked.yml'
     template_parameters:
       ClusterName: '{{ keights_stack.cluster_name }}'
       NumInstances: '{{ keights_stack.masters.subnet_ids | length }}'
@@ -145,15 +243,19 @@
       KeightsVersion: '{{ keights_version }}'
       ResourceBucket: '{{ keights_stack.resource_bucket }}'
       HostedZoneId: '{{ common_stack.stack_outputs.HostedZoneId | default(keights_stack.etcd_hosted_zone_id) }}'
-      # Piping to_json twice escapes the json so it can be put on one line in the CloudFormation template.
       DockerOptions: '{{ keights_stack.masters.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'
       keights:version: '{{ keights_version }}'
-  register: master_stack
+  register: master_stack_stacked
   tags:
     - master
+  when: 'etcd_mode == "stacked"'
+
+- name: set master stack
+  set_fact:
+    master_stack: '{{ master_stack_external if "stack_outputs" in master_stack_external else master_stack_stacked }}'
 
 - name: build node stack
   cloudformation:

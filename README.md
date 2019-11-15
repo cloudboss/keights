@@ -10,7 +10,7 @@ You can also use the CloudFormation templates without Ansible if you want to use
 
 # CI status
 
-All builds and tests are run on [Concourse CI](https://ci.cloudboss.xyz/teams/keights). Every supported Kubernetes minor version has a corresponding git branch in the Keights repository. Each of these branches has its own pipeline with build statuses shown below. All `build-cluster` and `upgrade-cluster` jobs run conformance tests against the cluster using [Sonobuoy](https://github.com/heptio/sonobuoy).
+All builds and tests are run on [Concourse CI](https://ci.cloudboss.xyz/teams/keights). Every supported Kubernetes minor version has a corresponding git branch in the Keights repository. Each of these branches has its own pipeline with build statuses shown below. All `build-cluster-*` and `upgrade-cluster-*` jobs run conformance tests against the cluster using [Sonobuoy](https://github.com/heptio/sonobuoy).
 
 | Job | Version | Status |
 | ----- | ------- | ------ |
@@ -69,7 +69,7 @@ Releases are downloaded from the [GitHub release page](https://github.com/cloudb
 
 # CloudFormation with Ansible
 
-Keights builds clusters from three CloudFormation templates: `common.yml`, `master.yml`, and `node.yml`. You can create more than one instance of the `node.yml` stack for a cluster, using different parameters to define instance sizes and node labels.
+Keights builds clusters from several CloudFormation templates. All clusters use the `common.yml` and `node.yml` templates. Clusters with a [stacked etcd](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/ha-topology/) use `master-stacked.yml` to build the control plane, and clusters with an external etcd use `etcd.yml` and `master-external.yml` to build the control plane. You can create more than one instance of the `node.yml` stack for a cluster, using different parameters to define instance sizes and node labels.
 
 Ansible does not run on machines in the cluster to configure them, as you might expect. For one thing, there is not a lot of configuration to be done; Keights follows an immutable infrastructure approach and uses a custom AMI with dependencies preinstalled. Per-cluster configuration variables are set in [user data](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html) in the CloudFormation templates. The remaining per-instance configuration is handled by the [`keights` binary](#the-keights-binary) and kubeadm via systemd services built into the AMI.
 
@@ -91,7 +91,7 @@ Before you start, you will need:
 
 * A KMS key with an alias - Keights does not touch your KMS keys. If you don't have one, you can create a new key in the IAM AWS console under "Encryption Keys" and give it an alias.
 
-* An AMI for the Keights version in your region - For each release, there is a public AMI published in the `us-east-1` region. If you are in another region, you will need to [copy it into your account and region](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/CopyingAMIs.html#ami-copy-steps). The published AMI can be found in the AWS console as a public image with owner `256008164056`, and is called `debian-stretch-k8s-hvm-amd64-v${KeightsVersion}`, where `${KeightsVersion}` is replaced with the actual version. If you do copy the image to your account, keep the same name to make things easier.
+* An AMI for the Keights version in your region - For each release, there is a public AMI published in the `us-east-1` region. If you are in another region, you will need to [copy it into your account and region](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/CopyingAMIs.html#ami-copy-steps). The published AMI can be found in the AWS console as a public image with owner `256008164056`, and is called `debian-buster-k8s-hvm-amd64-v${KeightsVersion}`, where `${KeightsVersion}` is replaced with the actual version. If you do copy the image to your account, keep the same name to make things easier.
 
 * Python - Ansible will be installed into a [virtualenv](https://virtualenv.pypa.io/en/latest/), so you need either Python 3, or Python 2 with the `virtualenv` command installed.
 

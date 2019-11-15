@@ -1,4 +1,4 @@
-# Copyright © 2018 Joseph Wright <joseph@cloudboss.co>
+# Copyright © 2019 Joseph Wright <joseph@cloudboss.co>
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -55,33 +55,27 @@
       - wget
       - whiptail
     bootstrap_include:
-      - apt-transport-https
-      - bind9-host
       - btrfs-progs
-      - btrfs-tools
       - ca-certificates
       - curl
       - dbus
-      - dirmngr
-      - ebtables
-      - ethtool
-      - file
-      - groff-base
-      - less
+      - isc-dhcp-client
       - linux-image-amd64
       - logrotate
-      - net-tools
+      - netbase
       - nfs-common
-      - socat
+      - procps
+      - rsyslog
       - sudo
-      - strace
-      - sysstat
-      - tcpdump
-      - traceroute
-      - vim-tiny
+      - systemd-sysv
       - xfsprogs
 
   tasks:
+    - name: define k8s variables
+      set_fact:
+        k8s_version_no_v: '{{ k8s_version[1:] if k8s_version.startswith("v") else k8s_version }}'
+        keights_version_v: '{{ keights_version if keights_version.startswith("v") else "v{}".format(keights_version) }}'
+
     - name: install packages for bootstrapping
       apt:
         name:
@@ -108,58 +102,56 @@
       shell: |
         debootstrap \
           --merged-usr \
+          --variant=minbase \
           --exclude={{ bootstrap_exclude | join(",") }} \
           --include={{ bootstrap_include | join(",") }} \
           {{ debian_release }} /mnt {{ base_repo }}
       args:
         # Pick a file, any file...
-        creates: /mnt/usr/bin/vi
-
-    - name: create directories in chroot
-      file:
-        path: '{{ item }}'
-        state: directory
-        mode: '0755'
-      loop:
-        - /mnt/etc/systemd/system/docker.service.d
+        creates: /mnt/usr/sbin/xfs_freeze
 
     - name: download software
       get_url:
         url: '{{ item.src }}'
         dest: '{{ item.dest }}'
       loop:
-        - src: https://github.com/cloudboss/keights/releases/download/{{ keights_version }}/keights_{{ keights_version }}_linux_amd64.deb
+        - src: https://github.com/cloudboss/keights/releases/download/{{ keights_version_v }}/keights_{{ keights_version_v }}_linux_amd64.deb
           dest: /mnt/tmp/keights.deb
 
-    - name: download apt gpg keys into chroot
+    - name: download apt gpg keys
       get_url:
         url: '{{ item.url }}'
-        dest: /mnt/tmp/{{ item.name }}.gpg
+        dest: /tmp/{{ item.name }}.gpg
       loop: '{{ gpg_keys }}'
 
-    - name: copy staging files into chroot
+    - name: add apt gpg keys in chroot
+      shell: |
+        apt-key \
+          --keyring /mnt/etc/apt/trusted.gpg.d/{{ item.name }}.gpg \
+          add /tmp/{{ item.name }}.gpg
+      args:
+        creates: /mnt/etc/apt/trusted.gpg.d/{{ item.name }}.gpg
+      loop: '{{ gpg_keys }}'
+
+    - name: copy files into chroot
       copy:
-        src: 'staging/{{ item.path }}'
+        src: '{{ item.path }}'
         dest: '/mnt/{{ item.path }}'
         mode: '{{ item.mode }}'
       loop:
-        - path: etc/systemd/timesyncd.conf
+        - path: etc/apt/sources.list.d/kubernetes.list
+          mode: '0644'
+
+    - name: expand templates into chroot
+      template:
+        src: '{{ item.path }}.j2'
+        dest: '/mnt/{{ item.path }}'
+        mode: '{{ item.mode }}'
+      loop:
+        - path: etc/apt/sources.list
           mode: '0644'
         - path: etc/apt/sources.list.d/docker.list
           mode: '0644'
-        - path: etc/apt/sources.list.d/kubernetes.list
-          mode: '0644'
-        - path: etc/sysctl.d/kubernetes.conf
-          mode: '0644'
-        - path: etc/modules-load.d/modules.conf
-          mode: '0644'
-
-    - name: expand staging templates into chroot
-      template:
-        src: 'staging/{{ item.path }}.j2'
-        dest: '/mnt/{{ item.path }}'
-        mode: '{{ item.mode }}'
-      loop:
         - path: tmp/debconf-selections
           mode: '0644'
 
@@ -175,23 +167,12 @@
         - proc
         - sys
 
-    - name: add apt gpg keys in chroot
-      shell: |
-        chroot /mnt sh -s<<' EOF'
-        apt-key \
-          --keyring /etc/apt/trusted.gpg.d/{{ item.name }}.gpg \
-          add /tmp/{{ item.name }}.gpg
-        EOF
-      args:
-        creates: /mnt/etc/apt/trusted.gpg.d/{{ item.name }}.gpg
-      loop: '{{ gpg_keys }}'
-
     - name: install and configure additional packages in chroot
       shell: |
         chroot /mnt sh -s<<' EOF'
         debconf-set-selections /tmp/debconf-selections && \
         apt-get update && \
-        apt-get upgrade && \
+        apt-get upgrade -y && \
         DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
           cloud-init \
           grub-pc \
@@ -199,32 +180,47 @@
           openssh-server \
           docker-ce={{ docker_version }} \
           kubernetes-cni={{ cni_version }}-00 \
-          kubectl={{ k8s_version }}-00 \
-          kubeadm={{ k8s_version }}-00 \
-          kubelet={{ k8s_version }}-00 && \
+          kubectl={{ k8s_version_no_v }}-00 \
+          kubeadm={{ k8s_version_no_v }}-00 \
+          kubelet={{ k8s_version_no_v }}-00 && \
         dpkg -i /tmp/keights.deb && \
         apt-get clean && \
+        systemctl disable kubelet.service && \
         systemctl disable apt-daily.timer && \
-        systemctl disable apt-daily-upgrade.timer
+        systemctl disable apt-daily-upgrade.timer && \
+        update-alternatives --set iptables /usr/sbin/iptables-legacy
         EOF
       args:
         creates: /mnt/usr/bin/keights
-      # Retry due to occasional network issues
-      retries: 3
-      register: chrooted_installation
-      until: chrooted_installation is succeeded
 
-    - name: post copy staging files into chroot
+    - name: create directories in chroot
+      file:
+        path: '/mnt/{{ item.path }}'
+        state: directory
+        mode: '{{ item.mode }}'
+      loop:
+        - path: etc/systemd/system/docker.service.d
+          mode: '0755'
+        - path: etc/modules-load.d
+          mode: '0755'
+
+    - name: post copy files into chroot
       copy:
-        src: 'staging/{{ item.path }}'
+        src: '{{ item.path }}'
         dest: '/mnt/{{ item.path }}'
         mode: '{{ item.mode }}'
       loop:
-        - path: etc/network/interfaces
-          mode: '0644'
         - path: etc/cloud/cloud.cfg.d/01_cloudboss.cfg
           mode: '0644'
+        - path: etc/modules-load.d/kubernetes.conf
+          mode: '0644'
+        - path: etc/network/interfaces
+          mode: '0644'
+        - path: etc/sysctl.d/kubernetes.conf
+          mode: '0644'
         - path: etc/systemd/system/docker.service.d/cloudboss.conf
+          mode: '0644'
+        - path: etc/systemd/timesyncd.conf
           mode: '0644'
         - path: etc/udev/rules.d/70-ec2-nvme-devices.rules
           mode: '0644'
@@ -270,6 +266,8 @@
         - /mnt/initrd.img.old
         - /mnt/vmlinuz.old
         - /mnt/etc/cloud/cloud.cfg.d/00_debian.cfg
+        - /mnt/etc/apt/trusted.gpg.d/docker.gpg~
+        - /mnt/etc/apt/trusted.gpg.d/google.gpg~
         - '{{ tmp_files.stdout_lines }}'
         - '{{ apt_lists.stdout_lines }}'
         - '{{ log_files.stdout_lines }}'

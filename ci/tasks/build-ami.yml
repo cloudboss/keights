@@ -43,7 +43,7 @@ run:
     first_char=`echo ${version} | cut -c 1`
     [ "${first_char=}" != v ] && version="v${version}"
 
-    k8s_version=`echo ${version} | cut -d - -f 1 | cut -c 2-100`
+    k8s_version=`echo ${version} | cut -d - -f 1 | cut -c 1-100`
 
     cd repo/stack/ami/debian
     /opt/bin/packer build \
