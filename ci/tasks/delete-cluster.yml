@@ -1,0 +1,38 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: python
+    tag: '3.6'
+
+inputs:
+- name: repo
+- name: version
+
+caches:
+- path: ../../../python
+
+params:
+  AWS_REGION: us-east-1
+  AWS_DEFAULT_REGION: us-east-1
+  CLUSTER:
+  KEIGHTS_BRANCH:
+  ETCD_MODE:
+
+run:
+  path: /bin/sh
+  args:
+  - -e
+  - -c
+  - |
+    deploy=`pwd`/repo/stack/ansible/deploy
+    version=`cat version/version`
+    first_char=`echo ${version} | cut -c 1`
+    [ "${first_char=}" != v ] && version="v${version}"
+
+    cd repo/ci/assets/${KEIGHTS_BRANCH}-${ETCD_MODE}/cluster
+    sed "s|__VERSION__|${version}|g" requirements.yml.tmpl > requirements.yml
+    CF_LEGAL_CLUSTER=`echo ${CLUSTER} | tr -d .`
+    CLUSTER=${CF_LEGAL_CLUSTER} PYTHON_BASE=/python ${deploy} -e state=absent

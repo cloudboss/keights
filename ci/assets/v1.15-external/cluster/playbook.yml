@@ -3,6 +3,7 @@
   roles:
   - role: keights-stack
     keights_stack:
+      state: '{{ state }}'
       cluster_name: '{{ cluster }}'
       cfn_role_arn: '{{ cfn_role_arn }}'
       vpc_id: '{{ vpc_id }}'
@@ -39,3 +40,4 @@
         plugin: kube-router
         # Let the masters act as route reflectors for CI clusters
         rr_node_label: node-role.kubernetes.io/master
+    when: 'state == "present"'

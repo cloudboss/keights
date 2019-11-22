@@ -3,6 +3,7 @@
   roles:
   - role: keights-stack
     keights_stack:
+      state: '{{ state }}'
       cluster_name: '{{ cluster }}'
       cfn_role_arn: '{{ cfn_role_arn }}'
       vpc_id: '{{ vpc_id }}'
@@ -29,3 +30,4 @@
       cluster_apiserver: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
       network:
         plugin: kube-router
+    when: 'state == "present"'

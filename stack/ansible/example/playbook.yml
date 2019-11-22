@@ -3,6 +3,7 @@
   roles:
   - role: keights-stack
     keights_stack:
+      state: '{{ state }}'
       cluster_name: '{{ cluster }}'
       vpc_id: '{{ vpc_id }}'
       kms_key_id: '{{ kms_key_id }}'
@@ -30,3 +31,4 @@
       network:
         plugin: calico
         pod_cidr: '{{ pod_cidr }}'
+    when: 'state == "present"'
