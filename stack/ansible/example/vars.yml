@@ -8,6 +8,11 @@
 # with your own, except for `image_owner`, which corresponds to the
 # AWS account from which official Keights images are published.
 
+# The state of the cluster may be `present` or `absent`. The value
+# may be overridden on the command line by passing e.g.
+# `-e state=absent` to `deploy`.
+state: present
+
 # ID of VPC (Required).
 vpc_id: vpc-ba92ad08
 

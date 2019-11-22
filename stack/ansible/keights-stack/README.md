@@ -14,6 +14,8 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `cluster_name`: (Required, type *string*) - Unique name given to cluster.
 
+`state`: (Optional, choice of `present` or `absent`, default `present`) - Whether or not the cluster is present or absent.
+
 `vpc_id`: (Required, type *string*) - Amazon VPC ID.
 
 `kms_key_id`: (Required, type *string*) - ID of KMS key used for encrypting certificates.

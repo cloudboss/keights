@@ -1,3 +1,4 @@
+state: present
 vpc_id: vpc-c71371be
 resource_bucket: cloudboss-public
 cfn_role_arn: arn:aws:iam::256008164056:role/keights-cloudformation
