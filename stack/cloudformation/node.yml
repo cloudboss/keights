@@ -73,6 +73,14 @@ Parameters:
         "log-driver": "journald",
         "storage-driver": "overlay2"
       }
+  KubeadmJoinConfigTemplate:
+    Description: >-
+      Template for kubeadm join config file.
+    Type: String
+    Default: '""'
+
+Conditions:
+  HasKubeadmJoinConfigTemplate: !Not [!Equals [!Ref KubeadmJoinConfigTemplate, '""']]
 
 Resources:
   InstanceAttributeEventsRule:
@@ -135,9 +143,15 @@ Resources:
       SecurityGroups: !Ref NodeSecurityGroups
       UserData:
         Fn::Base64:
-          !Sub |
+          !Sub
+          - |
             #cloud-config
             write_files:
+              - path: /etc/keights/kubeadm-join-config.yaml.template
+                owner: root:root
+                permissions: '0644'
+                content: ${KubeadmJoinConfigTemplate}
+
               - path: /etc/docker/daemon.json
                 owner: root:root
                 permissions: '0644'
@@ -160,6 +174,7 @@ Resources:
                   Environment=KEIGHTS_APISERVER_PORT=443
                   Environment=KEIGHTS_IMAGE_REPOSITORY=${ImageRepository}
                   Environment=KEIGHTS_NODE_LABELS=${NodeLabels},
+                  ${KubeadmJoinConfigTemplateEnv}
 
               - path: /etc/systemd/system/keights-node-signal.service.d/environment.conf
                 owner: root:root
@@ -176,6 +191,10 @@ Resources:
               - systemctl start --no-block keights-kubeadm-join.service
               - systemctl start --no-block keights-node-signal.service
 
+          - KubeadmJoinConfigTemplateEnv: !If
+              - HasKubeadmJoinConfigTemplate
+              - Environment=KEIGHTS_KUBEADM_JOIN_CONFIG_TEMPLATE=/etc/keights/kubeadm-join-config.yaml.template
+              - ''
 Outputs:
   AutoScalingGroup:
     Description: Name of autoscaling group

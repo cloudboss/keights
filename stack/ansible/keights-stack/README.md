@@ -86,6 +86,8 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `docker_options`: (Optional, type *dict*, default `{"ip-masq": false, "iptables": false, "log-driver": "journald", "storage-driver": "overlay2"}`) - Options to write to `/etc/docker/daemon.json`, which should follow [documentation for docker](https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file).
 
+`kubeadm_init_config_template`: (Optional, type *string*, default `''`) - A kubeadm init [configuration file](https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-init/#config-file) as a Go template string. If not defined, a default one will be used which is built into the AMI. See [Kubeadm init](#kubeadm-init) below for a description of the variables that will be available within the template. Due to CloudFormation parameter limitations, this string must not be over 4kb.
+
 ### etcd
 
 `subnet_ids`: (Required, type *list* of *string*) - Subnet IDs in which etcd instances will live. Each subnet *must* be in a separate availability zone, and the number of subnet IDs will determine the number of instances. Either one or three subnets may be used.
@@ -132,7 +134,67 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `docker_options`: (Optional, type *dict*, default `{"ip-masq": false, "iptables": false, "log-driver": "journald", "storage-driver": "overlay2"}`) - Options to write to `/etc/docker/daemon.json`, which should follow [documentation for docker](https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file).
 
+`kubeadm_join_config_template`: (Optional, type *string*, default `''`) - A kubeadm join [configuration file](https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-join/#config-file) as a Go template string. If not defined, a default one will be used which is built into the AMI. See [Kubeadm join](#kubeadm-join) below for a description of the variables that will be available within the template. Due to CloudFormation parameter limitations, this string must not be over 4kb.
+
 `subnet_tags`: (Optional, type *dict*, default `{}`) - A dictionary of tags to add to node subnets. For example `{'kubernetes.io/cluster/cb': 'shared', 'kubernetes.io/role/internal-elb': '1'}`, where `cb` is the name of the cluster; this would allow the `cb` cluster to create internal ELBs in the node subnets. This is documented fully in the [EKS documentation](https://docs.aws.amazon.com/eks/latest/userguide/network_reqs.html#vpc-subnet-tagging), though it is not specific to EKS.
+
+# Kubeadm Configuration Templates
+
+The configuration files defined in `keights_stack.masters.kubeadm_init_config_template` and `keights_stack.node_groups[].kubeadm_join_config_template` should be Go templates, which have a number of variables passed to them before expansion.
+
+## Kubeadm init
+
+The file defined in `kubeadm_init_config_template` will have the following variables available:
+
+`ClusterDomain` - The internal cluster domain, e.g. `cluster.local`.
+
+`EtcdDomain` - The DNS domain where etcd hostnames are created.
+
+`EtcdMode` - The mode in which etcd runs, either `stacked` or `external`.
+
+`Prefix` - The prefix for etcd hostnames. It is combined with the availability zone and `EtcdDomain` to define the FQDN of the host. For example, if `Prefix` is `etcd`, `MyAZ` is `us-east-1a`, and `EtcdDomain` is `cloudboss.local`, the etcd hostname for that availability zone would be `etcd-us-east-1a.cloudboss.local`.
+
+`APIServer` - The DNS name of the Kubernetes API server.
+
+`APIPort` - The port of the Kubernetes API server.
+
+`PodSubnet` - The subnet from which pod IPs are assigned.
+
+`ServiceSubnet` - The subnet from which service IPs are assigned.
+
+`ClusterDNS` - The IP address of the internal cluster DNS server.
+
+`NodeName` - The hostname of the current machine.
+
+`Token` - The token for bootstrapping the kubelet.
+
+`ImageRepository` - The image repository from which control plane images are pulled.
+
+`KubernetesVersion` - The version of Kubernetes.
+
+`AZs` - The list of availability zones in which etcd is running.
+
+`MyAZ` - The availability zone of the current machine.
+
+`MyIP` - The IP address of the current machine.
+
+## Kubeadm join
+
+The file defined in `kubeadm_join_config_template` will have the following variables available:
+
+`APIServer` - The DNS name of the Kubernetes API server.
+
+`APIServerPort` - The port of the Kubernetes API server.
+
+`Token` - The token for bootstrapping the kubelet.
+
+`CACertHash` - The sha256 hash of the cluster CA certificate.
+
+`ImageRepository` - The image repository from which control plane images are pulled.
+
+`NodeLabels` - A list of node labels in `key=value` form.
+
+`NodeName` - The hostname of the current machine.
 
 # Example Playbook
 

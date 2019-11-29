@@ -10,6 +10,7 @@ Type=oneshot
 # Environment=KEIGHTS_APISERVER_PORT=
 # Environment=KEIGHTS_IMAGE_REPOSITORY=
 # Environment=KEIGHTS_NODE_LABELS=
+Environment=KEIGHTS_KUBEADM_JOIN_CONFIG_TEMPLATE=/usr/share/keights/kubeadm-join-config.yaml.template
 ExecStart=/bin/sh -c ' \
     while true; do \
       [ -f /run/kubernetes/bootstrap-token ] && break; \
@@ -25,7 +26,7 @@ ExecStart=/bin/sh -c ' \
             --retry-delay 2 \
             http://169.254.169.254/latest/meta-data/local-hostname` && \
     /usr/bin/keights template \
-      -t /usr/share/keights/kubeadm-join-config.yaml.template \
+      -t ${KEIGHTS_KUBEADM_JOIN_CONFIG_TEMPLATE} \
       -D /var/lib/kubeadm/config.yaml \
       -v APIServer=${KEIGHTS_APISERVER} \
       -v APIServerPort=${KEIGHTS_APISERVER_PORT} \
