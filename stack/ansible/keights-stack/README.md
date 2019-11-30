@@ -18,7 +18,7 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `vpc_id`: (Required, type *string*) - Amazon VPC ID.
 
-`kms_key_id`: (Required, type *string*) - ID of KMS key used for encrypting certificates.
+`kms_key_id`: (Conditional, type *string*, required if `create_iam_resources` is `true`) - ID of KMS key used for encrypting certificates.
 
 `kms_key_alias`: (Required, type *string*) - Alias of KMS key given above.
 
@@ -50,6 +50,16 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `lookup_image`: (Optional, type *bool*, default `true`) - This may be set to `false` if not using `image` at all. In this case, `image_id` must be specified for the masters and all node groups.
 
+`create_iam_resources`: (Optional, type *bool*, default `true`) - Whether or not to create IAM roles and policies for the cluster. If `false`, then IAM roles will need to be created another way and passed as parameters to the remaining stacks.
+
+`instattr_lambda_role_arn`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The ARN of the IAM role for the InstAttr lambda.
+
+`auto_namer_lambda_role_arn`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The ARN of the IAM role for the AutoNamer lambda.
+
+`kube_ca_lambda_role_arn`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The ARN of the IAM role for the KubeCA lambda.
+
+`subnet_to_az_lambda_role_arn`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The ARN of the IAM role for the SubnetToAZ lambda.
+
 `masters`: (Required, type *dict*) - A dictionary of variables for Kubernetes masters, described below.
 
 `etcd`: (Optional, type *dict*) - A dictionary of variables used when `etcd_mode` is `external`, described below.
@@ -67,6 +77,8 @@ All role variables go under a top level dictionary `keights_stack`.
 `instance_type`: (Required, type *string*) - Type of EC2 instance, e.g. `m4.large`.
 
 `keypair`: (Required, type *string*) - SSH keypair assigned to EC2 instances.
+
+`instance_profile`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The name of the IAM instance profile assigned to EC2 instances.
 
 `load_balancer_scheme`: (Required, choice of `internal` or `internet-facing`) - Scheme assigned to Kubernetes API load balancer.
 
@@ -98,6 +110,8 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `keypair`: (Required, type *string*) - SSH keypair assigned to EC2 instances.
 
+`instance_profile`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The name of the IAM instance profile assigned to EC2 instances.
+
 `extra_security_groups`: (Optional, type *list* of *string*, default `[]`) - Additional security groups that may be assigned to etcd instances.
 
 `volume_size`: (Optional, type *int*, default `10`) - Size of etcd volume in gigabytes.
@@ -107,6 +121,8 @@ All role variables go under a top level dictionary `keights_stack`.
 `image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which docker image is pulled.
 
 `docker_options`: (Optional, type *dict*, default `{"ip-masq": false, "iptables": false, "log-driver": "journald", "storage-driver": "overlay2"}`) - Options to write to `/etc/docker/daemon.json`, which should follow [documentation for docker](https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file).
+
+`instance_profile`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The name of the IAM instance profile assigned to EC2 instances.
 
 ### node_groups
 
@@ -123,6 +139,8 @@ All role variables go under a top level dictionary `keights_stack`.
 `instance_type`: (Required, type *string*) - Type of EC2 instance, e.g. `m4.large`.
 
 `keypair`: (Required, type *string*) - SSH keypair assigned to EC2 instances.
+
+`instance_profile`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The name of the IAM instance profile assigned to EC2 instances.
 
 `image_id`: (Optional, type *string*) - EC2 AMI ID, will override `keights_stack.image`.
 

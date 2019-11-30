@@ -5,6 +5,7 @@
     k8s_version: '{{ keights_stack.k8s_version | default(keights_version.split("-")[0]) }}'
     default_image: 'debian-buster-k8s-hvm-amd64-{{ keights_version }}'
     cache_dir: '{{ playbook_dir }}/.cache'
+    create_iam_resources: '{{ keights_stack.create_iam_resources | default(true) }}'
     default_docker_options:
       'ip-masq': false
       'iptables': false
@@ -34,21 +35,59 @@
   register: ami
   when: keights_stack.lookup_image | default(lookup_image)
 
-- name: assert valid value for etcd_mode
-  assert:
-    that: etcd_mode in ('stacked', 'external')
-    msg: "keights_stack.etcd_mode must be one of 'stacked' or 'external'"
-
 - name: assert that at least one ami is found
   assert:
     that: ami.images | length > 0
     msg: 'expected to find at least one ami with name {{ keights_stack.image | default(default_image) }}'
   when: keights_stack.lookup_image | default(lookup_image)
 
+- name: assert valid value for etcd_mode
+  assert:
+    that: etcd_mode in ('stacked', 'external')
+    msg: "keights_stack.etcd_mode must be one of 'stacked' or 'external'"
+
 - name: assert the correct number of master subnet ids
   assert:
     that: keights_stack.masters.subnet_ids | length in (1, 3)
     msg: 'expected to be given 1 or 3 master subnet ids, got {{ keights_stack.masters.subnet_ids | length }}'
+
+- name: assert valid value for create_iam_resources
+  assert:
+    that: create_iam_resources in (true, false)
+    msg: keights_stack.create_iam_resources must be a boolean true or false value
+
+- name: assert that kms key id is defined when creating iam resources
+  assert:
+    that: keights_stack.kms_key_id is defined
+  when: create_iam_resources
+
+- name: assert that iam role arns are defined for lambdas
+  assert:
+    that:
+    - keights_stack.instattr_lambda_role_arn is defined
+    - keights_stack.auto_namer_lambda_role_arn is defined
+    - keights_stack.kube_ca_lambda_role_arn is defined
+    - keights_stack.subnet_to_az_lambda_role_arn is defined
+    msg: iam role arns for lambdas must be defined when create_iam_resources is false
+  when: not create_iam_resources
+
+- name: assert that instance profiles are defined for masters
+  assert:
+    that: keights_stack.masters.instance_profile is defined
+    msg: keights_stack.masters.instance_profile must be defined when create_iam_resources is false
+  when: not create_iam_resources
+
+- name: assert that instance profiles are defined for etcd
+  assert:
+    that: keights_stack.etcd.instance_profile is defined
+    msg: keights_stack.etcd.instance_profile must be defined when create_iam_resources is false
+  when: 'not create_iam_resources and etcd_mode == "external"'
+
+- name: assert that instance profiles are defined for nodes
+  assert:
+    that: (keights_stack.node_groups | map(attribute='instance_profile') | list | length) == (keights_stack.node_groups | length)
+    msg: instance_profile must be defined for each node group when create_iam_resources is false
+  when: not create_iam_resources
 
 - name: set image id
   set_fact:
@@ -99,10 +138,12 @@
     template_parameters:
       VpcId: '{{ keights_stack.vpc_id }}'
       ClusterName: '{{ keights_stack.cluster_name }}'
+      CreateIamResources: '{{ create_iam_resources | lower }}'
+      InstAttrLambdaRoleArn: '{{ keights_stack.instattr_lambda_role_arn | default("") }}'
       EtcdMode: '{{ etcd_mode }}'
       EtcdDomain: '{{ keights_stack.etcd_domain | default(default_etcd_domain) }}'
       EtcdHostedZoneId: '{{ keights_stack.etcd_hosted_zone_id | default("") }}'
-      KmsKeyId: '{{ keights_stack.kms_key_id }}'
+      KmsKeyId: '{{ keights_stack.kms_key_id | default("") }}'
       ApiAccessCidr: '{{ keights_stack.api_access_cidr }}'
       # TODO: give masters and nodes separate ssh_access_cidr
       SshAccessCidr: '{{ keights_stack.ssh_access_cidr }}'
@@ -117,6 +158,18 @@
   tags:
     - common
 
+- name: set iam variables
+  set_fact:
+    master_instance_profile: '{{ common_stack.stack_outputs.MasterInstanceProfile | default(keights_stack.masters.instance_profile) }}'
+    auto_namer_lambda_role_arn: '{{ common_stack.stack_outputs.AutoNamerLambdaRoleArn | default(keights_stack.auto_namer_lambda_role_arn) }}'
+    kube_ca_lambda_role_arn: '{{ common_stack.stack_outputs.KubeCaLambdaRoleArn | default(keights_stack.kube_ca_lambda_role_arn) }}'
+    subnet_to_az_lambda_role_arn: '{{ common_stack.stack_outputs.SubnetToAzLambdaRoleArn | default(keights_stack.subnet_to_az_lambda_role_arn) }}'
+
+- name: set etcd iam instance profile
+  set_fact:
+    etcd_instance_profile: '{{ common_stack.stack_outputs.EtcdInstanceProfile | default(keights_stack.etcd.instance_profile) }}'
+  when: 'etcd_mode == "external"'
+
 - name: build etcd stack
   cloudformation:
     stack_name: '{{ keights_stack.cluster_name }}-etcd'
@@ -130,11 +183,11 @@
       ImageId: '{{ keights_stack.etcd.image_id if keights_stack.etcd.image_id is defined else image_id }}'
       InstanceType: '{{ keights_stack.etcd.instance_type }}'
       KeyPair: '{{ keights_stack.etcd.keypair }}'
-      InstanceProfile: '{{ common_stack.stack_outputs.EtcdInstanceProfile }}'
+      InstanceProfile: '{{ etcd_instance_profile }}'
       SecurityGroups: '{{ ([common_stack.stack_outputs.EtcdSecurityGroup] + keights_stack.etcd.extra_security_groups | default([])) | join(",") }}'
-      AutoNamerLambdaRoleArn: '{{ common_stack.stack_outputs.AutoNamerLambdaRoleArn }}'
-      KubeCaLambdaRoleArn: '{{ common_stack.stack_outputs.KubeCaLambdaRoleArn }}'
-      SubnetToAzLambdaRoleArn: '{{ common_stack.stack_outputs.SubnetToAzLambdaRoleArn }}'
+      AutoNamerLambdaRoleArn: '{{ auto_namer_lambda_role_arn }}'
+      KubeCaLambdaRoleArn: '{{ kube_ca_lambda_role_arn }}'
+      SubnetToAzLambdaRoleArn: '{{ subnet_to_az_lambda_role_arn }}'
       KmsKeyId: '{{ keights_stack.kms_key_alias }}'
       HostedZoneId: '{{ common_stack.stack_outputs.HostedZoneId | default(keights_stack.etcd_hosted_zone_id) }}'
       Domain: '{{ keights_stack.etcd_domain | default(default_etcd_domain) }}'
@@ -170,7 +223,7 @@
       ImageId: '{{ keights_stack.masters.image_id if keights_stack.masters.image_id is defined else image_id }}'
       InstanceType: '{{ keights_stack.masters.instance_type }}'
       KeyPair: '{{ keights_stack.masters.keypair }}'
-      InstanceProfile: '{{ common_stack.stack_outputs.MasterInstanceProfile }}'
+      InstanceProfile: '{{ master_instance_profile }}'
       LoadBalancerScheme: '{{ keights_stack.masters.load_balancer_scheme }}'
       LoadBalancerSecurityGroup: '{{ common_stack.stack_outputs.LoadBalancerSecurityGroup }}'
       LoadBalancerIdleTimeout: '{{ keights_stack.masters.load_balancer_idle_timeout | default(600) }}'
@@ -213,14 +266,14 @@
       ImageId: '{{ keights_stack.masters.image_id if keights_stack.masters.image_id is defined else image_id }}'
       InstanceType: '{{ keights_stack.masters.instance_type }}'
       KeyPair: '{{ keights_stack.masters.keypair }}'
-      MasterInstanceProfile: '{{ common_stack.stack_outputs.MasterInstanceProfile }}'
+      MasterInstanceProfile: '{{ master_instance_profile }}'
       LoadBalancerScheme: '{{ keights_stack.masters.load_balancer_scheme }}'
       LoadBalancerSecurityGroup: '{{ common_stack.stack_outputs.LoadBalancerSecurityGroup }}'
       LoadBalancerIdleTimeout: '{{ keights_stack.masters.load_balancer_idle_timeout | default(600) }}'
       MasterSecurityGroups: '{{ ([common_stack.stack_outputs.MasterSecurityGroup] + keights_stack.masters.extra_security_groups | default([])) | join(",") }}'
-      AutoNamerLambdaRoleArn: '{{ common_stack.stack_outputs.AutoNamerLambdaRoleArn }}'
-      KubeCaLambdaRoleArn: '{{ common_stack.stack_outputs.KubeCaLambdaRoleArn }}'
-      SubnetToAzLambdaRoleArn: '{{ common_stack.stack_outputs.SubnetToAzLambdaRoleArn }}'
+      AutoNamerLambdaRoleArn: '{{ auto_namer_lambda_role_arn }}'
+      KubeCaLambdaRoleArn: '{{ kube_ca_lambda_role_arn }}'
+      SubnetToAzLambdaRoleArn: '{{ subnet_to_az_lambda_role_arn }}'
       InstanceAttributeFunctionArn: '{{ common_stack.stack_outputs.InstanceAttributeFunctionArn }}'
       KmsKeyId: '{{ keights_stack.kms_key_alias }}'
       PodCidr: '{{ keights_stack.masters.pod_cidr }}'
@@ -266,7 +319,7 @@
       ImageId: '{{ item.image_id if item.image_id is defined else image_id }}'
       InstanceType: '{{ item.instance_type }}'
       KeyPair: '{{ item.keypair }}'
-      NodeInstanceProfile: '{{ common_stack.stack_outputs.NodeInstanceProfile }}'
+      NodeInstanceProfile: '{{ common_stack.stack_outputs.NodeInstanceProfile | default(item.instance_profile) }}'
       NodeSecurityGroups: '{{ ([common_stack.stack_outputs.NodeSecurityGroup] + item.extra_security_groups | default([])) | join(",") }}'
       InstanceAttributeFunctionArn: '{{ common_stack.stack_outputs.InstanceAttributeFunctionArn }}'
       ClusterDns: '{{ cluster_dns }}'
