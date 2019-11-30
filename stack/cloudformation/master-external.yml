@@ -111,6 +111,14 @@ Parameters:
         "log-driver": "journald",
         "storage-driver": "overlay2"
       }
+  KubeadmInitConfigTemplate:
+    Description: >-
+      Template for kubeadm init config file.
+    Type: String
+    Default: '""'
+
+Conditions:
+  HasKubeadmInitConfigTemplate: !Not [!Equals [!Ref KubeadmInitConfigTemplate, '""']]
 
 Resources:
   InstanceAttributeEventsRule:
@@ -202,6 +210,11 @@ Resources:
           - |
             #cloud-config
             write_files:
+              - path: /etc/keights/kubeadm-init-config.yaml.template
+                owner: root:root
+                permissions: '0644'
+                content: ${KubeadmInitConfigTemplate}
+
               - path: /etc/docker/daemon.json
                 owner: root:root
                 permissions: '0644'
@@ -233,6 +246,7 @@ Resources:
                   Environment=KEIGHTS_IMAGE_REPOSITORY=${ImageRepository}
                   Environment=KEIGHTS_KUBERNETES_VERSION=${KubernetesVersion}
                   Environment=KEIGHTS_AZS=${AvailabilityZones},
+                  ${KubeadmInitConfigTemplateEnv}
 
               - path: /etc/systemd/system/keights-controller-signal.service.d/environment.conf
                 owner: root:root
@@ -249,7 +263,11 @@ Resources:
               - systemctl start --no-block keights-kubeadm-init-external.service
               - systemctl start --no-block keights-controller-signal.service
 
-          - { AvailabilityZones: !Join [',', !Ref EtcdAvailabilityZones] }
+          - AvailabilityZones: !Join [',', !Ref EtcdAvailabilityZones]
+            KubeadmInitConfigTemplateEnv: !If
+              - HasKubeadmInitConfigTemplate
+              - Environment=KEIGHTS_KUBEADM_INIT_CONFIG_TEMPLATE=/etc/keights/kubeadm-init-config.yaml.template
+              - ''
 
 Outputs:
   LoadBalancerDnsName:
