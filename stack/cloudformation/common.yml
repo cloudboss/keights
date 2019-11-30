@@ -9,6 +9,19 @@ Parameters:
   ClusterName:
     Description: Name of Kubernetes cluster
     Type: String
+  CreateIamResources:
+    Description: >-
+      Whether or not to create IAM roles and policies for the
+      cluster. If false, then IAM roles will need to be created
+      another way and passed as parameters to the remaining stacks.
+    AllowedValues: ['true', 'false']
+    Default: 'true'
+    Type: String
+  InstAttrLambdaRoleArn:
+    Description: >-
+      ARN of role for InstAttr lambda, when CreateIamResources is false.
+    Default: ''
+    Type: String
   EtcdMode:
     Description: >-
       Mode for running etcd. If 'stacked', then etcd runs on
@@ -30,8 +43,10 @@ Parameters:
     Type: String
     Default: ''
   KmsKeyId:
-    Description: KMS key used to manage secrets
+    Description: >-
+      KMS key used to manage secrets, required when CreateIamResources is true.
     Type: String
+    Default: ''
   ApiAccessCidr:
     Description: CIDR block given API access to cluster
     Default: 0.0.0.0/0
@@ -52,10 +67,14 @@ Parameters:
     Type: String
 
 Conditions:
+  HasIamResources: !Equals [!Ref CreateIamResources, 'true']
   HasExternalEtcd: !Equals [!Ref EtcdMode, 'external']
+  HasIamExternalEtcd: !And [{Condition: HasIamResources}, {Condition: HasExternalEtcd}]
   HasStackedEtcd: !Equals [!Ref EtcdMode, 'stacked']
   HasManagedHostedZone: !Equals [!Ref EtcdHostedZoneId, '']
+  HasIamManagedHostedZone: !And [{Condition: HasIamResources}, {Condition: HasManagedHostedZone}]
   HasUnmanagedHostedZone: !Not [!Equals [!Ref EtcdHostedZoneId, '']]
+  HasIamUnmanagedHostedZone: !And [{Condition: HasIamResources}, {Condition: HasUnmanagedHostedZone}]
   AllowsNodePortAccess: !Not [!Equals [!Ref NodePortAccessCidr, '']]
 
 Resources:
@@ -331,7 +350,7 @@ Resources:
 
   EtcdAccess:
     Type: AWS::IAM::ManagedPolicy
-    Condition: HasExternalEtcd
+    Condition: HasIamExternalEtcd
     Properties:
       Roles: [!Ref EtcdRole]
       PolicyDocument:
@@ -357,6 +376,7 @@ Resources:
 
   K8sMasterAccess:
     Type: AWS::IAM::ManagedPolicy
+    Condition: HasIamResources
     Properties:
       Roles: [!Ref MasterRole]
       PolicyDocument:
@@ -443,6 +463,7 @@ Resources:
 
   K8sNodeAccess:
     Type: AWS::IAM::ManagedPolicy
+    Condition: HasIamResources
     Properties:
       Roles: [!Ref NodeRole]
       PolicyDocument:
@@ -474,6 +495,7 @@ Resources:
 
   CloudwatchLogsLambdaAccess:
     Type: AWS::IAM::ManagedPolicy
+    Condition: HasIamResources
     Properties:
       Roles:
         - !Ref AutoNamerLambdaRole
@@ -493,6 +515,7 @@ Resources:
 
   AutoNamerLambdaAccess:
     Type: AWS::IAM::ManagedPolicy
+    Condition: HasIamResources
     Properties:
       Roles: [!Ref AutoNamerLambdaRole]
       PolicyDocument:
@@ -506,7 +529,7 @@ Resources:
 
   AutoNamerLambdaRoute53ManagedAccess:
     Type: AWS::IAM::ManagedPolicy
-    Condition: HasManagedHostedZone
+    Condition: HasIamManagedHostedZone
     Properties:
       Roles: [!Ref AutoNamerLambdaRole]
       PolicyDocument:
@@ -520,7 +543,7 @@ Resources:
 
   AutoNamerLambdaRoute53UnmanagedAccess:
     Type: AWS::IAM::ManagedPolicy
-    Condition: HasUnmanagedHostedZone
+    Condition: HasIamUnmanagedHostedZone
     Properties:
       Roles: [!Ref AutoNamerLambdaRole]
       PolicyDocument:
@@ -534,6 +557,7 @@ Resources:
 
   InstAttrLambdaAccess:
     Type: AWS::IAM::ManagedPolicy
+    Condition: HasIamResources
     Properties:
       Roles: [!Ref InstAttrLambdaRole]
       PolicyDocument:
@@ -547,6 +571,7 @@ Resources:
 
   KubeCaLambdaAccess:
     Type: AWS::IAM::ManagedPolicy
+    Condition: HasIamResources
     Properties:
       Roles: [!Ref KubeCaLambdaRole]
       PolicyDocument:
@@ -572,6 +597,7 @@ Resources:
 
   SubnetToAzLambdaAccess:
     Type: AWS::IAM::ManagedPolicy
+    Condition: HasIamResources
     Properties:
       Roles: [!Ref SubnetToAzLambdaRole]
       PolicyDocument:
@@ -585,7 +611,7 @@ Resources:
 
   EtcdRole:
     Type: AWS::IAM::Role
-    Condition: HasExternalEtcd
+    Condition: HasIamExternalEtcd
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -597,12 +623,13 @@ Resources:
 
   EtcdInstanceProfile:
     Type: AWS::IAM::InstanceProfile
-    Condition: HasExternalEtcd
+    Condition: HasIamExternalEtcd
     Properties:
       Roles: [!Ref EtcdRole]
 
   MasterRole:
     Type: AWS::IAM::Role
+    Condition: HasIamResources
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -614,11 +641,13 @@ Resources:
 
   MasterInstanceProfile:
     Type: AWS::IAM::InstanceProfile
+    Condition: HasIamResources
     Properties:
       Roles: [!Ref MasterRole]
 
   NodeRole:
     Type: AWS::IAM::Role
+    Condition: HasIamResources
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -630,11 +659,13 @@ Resources:
 
   NodeInstanceProfile:
     Type: AWS::IAM::InstanceProfile
+    Condition: HasIamResources
     Properties:
       Roles: [!Ref NodeRole]
 
   AutoNamerLambdaRole:
     Type: AWS::IAM::Role
+    Condition: HasIamResources
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -646,6 +677,7 @@ Resources:
 
   InstAttrLambdaRole:
     Type: AWS::IAM::Role
+    Condition: HasIamResources
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -657,6 +689,7 @@ Resources:
 
   KubeCaLambdaRole:
     Type: AWS::IAM::Role
+    Condition: HasIamResources
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -668,6 +701,7 @@ Resources:
 
   SubnetToAzLambdaRole:
     Type: AWS::IAM::Role
+    Condition: HasIamResources
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -686,7 +720,7 @@ Resources:
       Handler: instattr
       Runtime: go1.x
       Timeout: 30
-      Role: !GetAtt InstAttrLambdaRole.Arn
+      Role: !If [HasIamResources, !GetAtt InstAttrLambdaRole.Arn, !Ref InstAttrLambdaRoleArn]
 
 Outputs:
   EtcdSecurityGroup:
@@ -705,59 +739,75 @@ Outputs:
   EtcdInstanceProfile:
     Description: Instance profile for etcd nodes
     Value: !Ref EtcdInstanceProfile
-    Condition: HasExternalEtcd
+    Condition: HasIamExternalEtcd
   EtcdInstanceProfileArn:
     Description: Instance profile ARN for etcd nodes
     Value: !GetAtt EtcdInstanceProfile.Arn
-    Condition: HasExternalEtcd
+    Condition: HasIamExternalEtcd
   MasterInstanceProfile:
     Description: Instance profile for master nodes
     Value: !Ref MasterInstanceProfile
+    Condition: HasIamResources
   MasterInstanceProfileArn:
     Description: Instance profile ARN for master nodes
     Value: !GetAtt MasterInstanceProfile.Arn
+    Condition: HasIamResources
   MasterRole:
     Description: IAM role for master nodes
     Value: !Ref MasterRole
+    Condition: HasIamResources
   MasterRoleArn:
     Description: IAM role ARN for master nodes
     Value: !GetAtt MasterRole.Arn
+    Condition: HasIamResources
   NodeInstanceProfile:
     Description: Instance profile for nodes
     Value: !Ref NodeInstanceProfile
+    Condition: HasIamResources
   NodeInstanceProfileArn:
     Description: Instance profile ARN for nodes
     Value: !GetAtt NodeInstanceProfile.Arn
+    Condition: HasIamResources
   NodeRole:
     Description: IAM role for nodes
     Value: !Ref NodeRole
+    Condition: HasIamResources
   NodeRoleArn:
     Description: IAM role ARN for nodes
     Value: !GetAtt NodeRole.Arn
+    Condition: HasIamResources
   AutoNamerLambdaRole:
     Description: IAM role for AutoNamer Lambda
     Value: !Ref AutoNamerLambdaRole
+    Condition: HasIamResources
   AutoNamerLambdaRoleArn:
     Description: IAM role ARN for AutoNamer Lambda
     Value: !GetAtt AutoNamerLambdaRole.Arn
+    Condition: HasIamResources
   InstAttrLambdaRole:
     Description: IAM role for InstAttr Lambda
     Value: !Ref InstAttrLambdaRole
+    Condition: HasIamResources
   InstAttrLambdaRoleArn:
     Description: IAM role ARN for InstAttr Lambda
     Value: !GetAtt InstAttrLambdaRole.Arn
+    Condition: HasIamResources
   KubeCaLambdaRole:
     Description: IAM role for KubeCa Lambda
     Value: !Ref KubeCaLambdaRole
+    Condition: HasIamResources
   KubeCaLambdaRoleArn:
     Description: IAM role ARN for KubeCa Lambda
     Value: !GetAtt KubeCaLambdaRole.Arn
+    Condition: HasIamResources
   SubnetToAzLambdaRole:
     Description: IAM role for SubnetToAz Lambda
     Value: !Ref SubnetToAzLambdaRole
+    Condition: HasIamResources
   SubnetToAzLambdaRoleArn:
     Description: IAM role ARN for SubnetToAz Lambda
     Value: !GetAtt SubnetToAzLambdaRole.Arn
+    Condition: HasIamResources
   HostedZoneId:
     Description: ID of Route53 DNS hosted zone
     Value: !Ref HostedZone
