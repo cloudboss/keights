@@ -7,7 +7,7 @@
   loop: '{{ keights_stack.node_groups }}'
 
 - name: find master asg instances
-  ec2_asg_facts:
+  ec2_asg_info:
     name: '{{ keights_stack.cluster_name }}-master'
   register: master_asg
   when: 'etcd_mode == "stacked"'
@@ -20,7 +20,7 @@
   when: 'etcd_mode == "external"'
 
 - name: find etcd ebs volumes
-  ec2_vol_facts:
+  ec2_vol_info:
     filters:
       tag:Name: '{{ keights_stack.cluster_name }}'
       tag:etcd:instance: '*'
@@ -31,7 +31,7 @@
     etcd_volume_ids: '{{ etcd_volumes.volumes | map(attribute="id") | list }}'
 
 - name: find etcd asg instances
-  ec2_asg_facts:
+  ec2_asg_info:
     name: '{{ keights_stack.cluster_name }}-etcd'
   register: etcd_asg
   when: 'etcd_mode == "external"'
@@ -44,7 +44,7 @@
   ec2:
     instance_ids: '{{ item.instances | map(attribute="instance_id") | list }}'
     state: absent
-  # ec2_asg_facts results is a list, so loop even though there is only one asg.
+  # ec2_asg_info results is a list, so loop even though there is only one asg.
   loop: '{{ instances_to_terminate.results }}'
 
 - name: detach etcd volumes
@@ -69,7 +69,7 @@
   when: 'etcd_mode == "external"'
 
 - name: find route53 zone for etcd
-  route53_facts:
+  route53_info:
     query: hosted_zone
     hosted_zone_method: list_by_name
     dns_name: '{{ keights_stack.etcd_domain | default(default_etcd_domain) }}'
@@ -83,7 +83,7 @@
   when: hosted_zone_query.HostedZones.0.Name[:-1] == (keights_stack.etcd_domain | default(default_etcd_domain))
 
 - name: find route53 records for etcd
-  route53_facts:
+  route53_info:
     query: record_sets
     hosted_zone_id: '{{ etcd_hosted_zone_id }}'
   register: etcd_record_query

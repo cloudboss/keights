@@ -28,7 +28,7 @@
     state: directory
 
 - name: find ami
-  ec2_ami_facts:
+  ec2_ami_info:
     owners: '{{ keights_stack.image_owner | default("256008164056") }}'
     filters:
       name: '{{ keights_stack.image | default(default_image) }}'
@@ -352,11 +352,11 @@
   when: '"subnet_tags" in item'
 
 - name: collect subnet facts
-  ec2_vpc_subnet_facts:
+  ec2_vpc_subnet_info:
     filters:
       subnet-id: '{{ item.key }}'
   loop: '{{ subnet_tag_map | dict2items }}'
-  register: node_subnet_facts
+  register: node_subnet_info
 
 - name: tag node subnets
   ec2_vpc_subnet:
@@ -365,4 +365,4 @@
     map_public: '{{ item.subnets.0.map_public_ip_on_launch }}'
     tags: '{{ item.item.value }}'
     purge_tags: false
-  loop: '{{ node_subnet_facts.results }}'
+  loop: '{{ node_subnet_info.results }}'
