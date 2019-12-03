@@ -137,11 +137,11 @@ Parameters:
     Description: >-
       Template for kubeadm init config file.
     Type: String
-    Default: '""'
+    Default: ''
 
 Conditions:
   HasThreeMasters: !Equals [!Ref NumInstances, 3]
-  HasKubeadmInitConfigTemplate: !Not [!Equals [!Ref KubeadmInitConfigTemplate, '""']]
+  HasKubeadmInitConfigTemplate: !Not [!Equals [!Ref KubeadmInitConfigTemplate, '']]
 
 Resources:
   SubnetToAzFunction:
@@ -357,7 +357,7 @@ Resources:
               - path: /etc/keights/kubeadm-init-config.yaml.template
                 owner: root:root
                 permissions: '0644'
-                content: ${KubeadmInitConfigTemplate}
+                content: ${KubeadmInitConfigTemplateContents}
 
               - path: /etc/docker/daemon.json
                 owner: root:root
@@ -430,6 +430,10 @@ Resources:
                 - HasKubeadmInitConfigTemplate
                 - Environment=KEIGHTS_KUBEADM_INIT_CONFIG_TEMPLATE=/etc/keights/kubeadm-init-config.yaml.template
                 - ''
+              KubeadmInitConfigTemplateContents: !If
+                - HasKubeadmInitConfigTemplate
+                - !Ref KubeadmInitConfigTemplate
+                - '""'
 
 Outputs:
   LoadBalancerDnsName:

@@ -244,7 +244,7 @@
       ResourceBucket: '{{ keights_stack.resource_bucket }}'
       HostedZoneId: '{{ common_stack.stack_outputs.HostedZoneId | default(keights_stack.etcd_hosted_zone_id) }}'
       DockerOptions: '{{ keights_stack.masters.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
-      KubeadmInitConfigTemplate: '{{ keights_stack.masters.kubeadm_init_config_template | default("") | to_json }}'
+      KubeadmInitConfigTemplate: '{{ keights_stack.masters.kubeadm_init_config_template | to_json if keights_stack.masters.kubeadm_init_config_template is defined else "" }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'
@@ -292,7 +292,7 @@
       ResourceBucket: '{{ keights_stack.resource_bucket }}'
       HostedZoneId: '{{ common_stack.stack_outputs.HostedZoneId | default(keights_stack.etcd_hosted_zone_id) }}'
       DockerOptions: '{{ keights_stack.masters.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
-      KubeadmInitConfigTemplate: '{{ keights_stack.masters.kubeadm_init_config_template | default("") | to_json }}'
+      KubeadmInitConfigTemplate: '{{ keights_stack.masters.kubeadm_init_config_template | to_json if keights_stack.masters.kubeadm_init_config_template is defined else "" }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'
@@ -329,7 +329,7 @@
       LoadBalancerDnsName: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
       ImageRepository: '{{ item.image_repository | default("k8s.gcr.io") }}'
       DockerOptions: '{{ item.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
-      KubeadmJoinConfigTemplate: '{{ item.kubeadm_join_config_template | default("") | to_json }}'
+      KubeadmJoinConfigTemplate: '{{ item.kubeadm_join_config_template | to_json if item.kubeadm_join_config_template is defined else "" }}'
       OnDemandPercentage: '{{ item.spot.on_demand_percentage | default(omit) }}'
       SpotAllocationStrategy: '{{ item.spot.allocation_strategy | default(omit) }}'
       SpotInstancePools: '{{ item.spot.instance_pools | default(omit) }}'

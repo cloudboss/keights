@@ -219,7 +219,7 @@ Resources:
               - path: /etc/keights/kubeadm-join-config.yaml.template
                 owner: root:root
                 permissions: '0644'
-                content: ${KubeadmJoinConfigTemplate}
+                content: ${KubeadmJoinConfigTemplateContents}
 
               - path: /etc/docker/daemon.json
                 owner: root:root
@@ -264,6 +264,10 @@ Resources:
                 - HasKubeadmJoinConfigTemplate
                 - Environment=KEIGHTS_KUBEADM_JOIN_CONFIG_TEMPLATE=/etc/keights/kubeadm-join-config.yaml.template
                 - ''
+              KubeadmJoinConfigTemplateContents: !If
+                - HasKubeadmJoinConfigTemplate
+                - !Ref KubeadmJoinConfigTemplate
+                - '""'
 
 Outputs:
   AutoScalingGroup:
