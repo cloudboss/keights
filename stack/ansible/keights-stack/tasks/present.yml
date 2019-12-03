@@ -68,6 +68,7 @@
     - keights_stack.auto_namer_lambda_role_arn is defined
     - keights_stack.kube_ca_lambda_role_arn is defined
     - keights_stack.subnet_to_az_lambda_role_arn is defined
+    - keights_stack.basic_lambda_role_arn is defined
     msg: iam role arns for lambdas must be defined when create_iam_resources is false
   when: not create_iam_resources
 
@@ -164,6 +165,7 @@
     auto_namer_lambda_role_arn: '{{ common_stack.stack_outputs.AutoNamerLambdaRoleArn | default(keights_stack.auto_namer_lambda_role_arn) }}'
     kube_ca_lambda_role_arn: '{{ common_stack.stack_outputs.KubeCaLambdaRoleArn | default(keights_stack.kube_ca_lambda_role_arn) }}'
     subnet_to_az_lambda_role_arn: '{{ common_stack.stack_outputs.SubnetToAzLambdaRoleArn | default(keights_stack.subnet_to_az_lambda_role_arn) }}'
+    basic_lambda_role_arn: '{{ common_stack.stack_outputs.BasicLambdaRoleArn | default(keights_stack.basic_lambda_role_arn) }}'
 
 - name: set etcd iam instance profile
   set_fact:
@@ -317,7 +319,7 @@
       VpcId: '{{ keights_stack.vpc_id }}'
       SubnetIds: '{{ item.subnet_ids | join(",") }}'
       ImageId: '{{ item.image_id if item.image_id is defined else image_id }}'
-      InstanceType: '{{ item.instance_type }}'
+      InstanceTypes: '{{ (([item.instance_type] if item.instance_type is defined else []) + item.instance_types | default([])) | unique | join(",") }}'
       KeyPair: '{{ item.keypair }}'
       NodeInstanceProfile: '{{ common_stack.stack_outputs.NodeInstanceProfile | default(item.instance_profile) }}'
       NodeSecurityGroups: '{{ ([common_stack.stack_outputs.NodeSecurityGroup] + item.extra_security_groups | default([])) | join(",") }}'
@@ -328,6 +330,11 @@
       ImageRepository: '{{ item.image_repository | default("k8s.gcr.io") }}'
       DockerOptions: '{{ item.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
       KubeadmJoinConfigTemplate: '{{ item.kubeadm_join_config_template | default("") | to_json }}'
+      OnDemandPercentage: '{{ item.spot.on_demand_percentage | default(omit) }}'
+      SpotAllocationStrategy: '{{ item.spot.allocation_strategy | default(omit) }}'
+      SpotInstancePools: '{{ item.spot.instance_pools | default(omit) }}'
+      SpotMaxPrice: '{{ item.spot.max_price | default(omit) }}'
+      BasicLambdaRoleArn: '{{ basic_lambda_role_arn }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'

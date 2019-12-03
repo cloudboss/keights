@@ -502,6 +502,7 @@ Resources:
         - !Ref InstAttrLambdaRole
         - !Ref KubeCaLambdaRole
         - !Ref SubnetToAzLambdaRole
+        - !Ref BasicLambdaRole
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -711,6 +712,18 @@ Resources:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
 
+  BasicLambdaRole:
+    Type: AWS::IAM::Role
+    Condition: HasIamResources
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+
   InstanceAttributeFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -807,6 +820,10 @@ Outputs:
   SubnetToAzLambdaRoleArn:
     Description: IAM role ARN for SubnetToAz Lambda
     Value: !GetAtt SubnetToAzLambdaRole.Arn
+    Condition: HasIamResources
+  BasicLambdaRoleArn:
+    Description: IAM role ARN for Basic Lambda
+    Value: !GetAtt BasicLambdaRole.Arn
     Condition: HasIamResources
   HostedZoneId:
     Description: ID of Route53 DNS hosted zone
