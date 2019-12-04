@@ -60,6 +60,8 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `subnet_to_az_lambda_role_arn`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The ARN of the IAM role for the SubnetToAZ lambda.
 
+`basic_lambda_role_arn`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The ARN of an IAM role for lambdas which do not need AWS credentials (aside from CloudWatch access for logging).
+
 `masters`: (Required, type *dict*) - A dictionary of variables for Kubernetes masters, described below.
 
 `etcd`: (Optional, type *dict*) - A dictionary of variables used when `etcd_mode` is `external`, described below.
@@ -136,7 +138,9 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `subnet_ids`: (Required, type *list* of *string*) - Subnet IDs in which nodes will live.
 
-`instance_type`: (Required, type *string*) - Type of EC2 instance, e.g. `m4.large`.
+`instance_type`: (Conditional, type *string*, required if `instance_types` is undefined) - Type of EC2 instance, e.g. `m4.large`.
+
+`instance_types`: (Optional, type *list* of *string*) - Types of EC2 instances, e.g. `m4.large`. If all instances are on-demand, this may be a list of one item. If a mix of on-demand and spot instances are used, the instance type at the beginning of the list will be used for on-demand instances. If both `instance_type` and `instance_types` are defined, the value of `instance_type` will be the first item on the `instance_types` list.
 
 `keypair`: (Required, type *string*) - SSH keypair assigned to EC2 instances.
 
@@ -155,6 +159,18 @@ All role variables go under a top level dictionary `keights_stack`.
 `kubeadm_join_config_template`: (Optional, type *string*, default `''`) - A kubeadm join [configuration file](https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-join/#config-file) as a Go template string. If not defined, a default one will be used which is built into the AMI. See [Kubeadm join](#kubeadm-join) below for a description of the variables that will be available within the template. Due to CloudFormation parameter limitations, this string must not be over 4kb.
 
 `subnet_tags`: (Optional, type *dict*, default `{}`) - A dictionary of tags to add to node subnets. For example `{'kubernetes.io/cluster/cb': 'shared', 'kubernetes.io/role/internal-elb': '1'}`, where `cb` is the name of the cluster; this would allow the `cb` cluster to create internal ELBs in the node subnets. This is documented fully in the [EKS documentation](https://docs.aws.amazon.com/eks/latest/userguide/network_reqs.html#vpc-subnet-tagging), though it is not specific to EKS.
+
+`spot`: (Optional, type *dict*, default `{}`) - A dictionary of options pertaining to spot instances, described below.
+
+### spot
+
+`on_demand_percentage`: (Optional, type *int*, default `100`) - The percentage of on-demand instances to use in the autoscaling group.
+
+`allocation_strategy`: (Optional, choice of `lowest-price` or `capacity-optimized`, default `lowest-price`) - Allocation strategy for spot instances.
+
+`instance_pools`: (Optional, type *int*, default `2`) - The number of pools of instance types for allocating spot instances.
+
+`max_price`: (Optional, type *string*, default undefined) - The maximum price to pay for spot instances, defaulting to the on-demand price.
 
 # Kubeadm Configuration Templates
 

@@ -93,6 +93,28 @@
   no_log: true
   changed_when: false
 
+# In Ansible 2.9, calico CRDs cannot be in the same manifest file
+# as the resources which are created from them, so they are created
+# separately here. In older versions, it would apply what it could
+# and then a retry would apply the remaining resources.
+- name: expand calico crd manifest template
+  template:
+    src: templates/manifests/calico-crd.yml.j2
+    dest: '{{ cache_dir.path }}/calico-crd.yml'
+  when: 'keights_system.network.plugin == "calico"'
+
+- name: apply calico crd manifest
+  k8s:
+    # kubeconfig is used instead of other authentication arguments,
+    # to ensure an existing ~/.kube/config does not take precedence.
+    kubeconfig: '{{ cache_dir.path }}/kubeconfig'
+    src: '{{ cache_dir.path }}/calico-crd.yml'
+  register: apply_calico_crd_manifest
+  until: apply_calico_crd_manifest is succeeded
+  retries: 6
+  delay: 10
+  when: 'keights_system.network.plugin == "calico"'
+
 - name: expand k8s manifest templates
   template:
     src: '{{ item.src }}'
@@ -109,9 +131,7 @@
   register: k8s_manifests
 
 - name: apply k8s manifests
-  k8s_raw:
-    # kubeconfig is used instead of other authentication arguments,
-    # to ensure an existing ~/.kube/config does not take precedence.
+  k8s:
     kubeconfig: '{{ cache_dir.path }}/kubeconfig'
     src: '{{ item.item.dest }}'
   loop: '{{ k8s_manifests.results }}'
@@ -121,13 +141,13 @@
   delay: 10
 
 - name: wait for network to come up
-  k8s_facts:
+  k8s_info:
     kubeconfig: '{{ cache_dir.path }}/kubeconfig'
     kind: Pod
     namespace: kube-system
     label_selectors:
-    - k8s-app in (calico-node, calico-typha, kube-router)
+    - k8s-app in (calico-node, calico-typha, calico-kube-controllers, kube-dns, kube-router)
   register: pods
-  until: pods | json_query('resources[].status.containerStatuses[].state | map(&keys(@)[?@ != `running`], @)[]') == []
+  until: pods | json_query('resources[].status.containerStatuses[] | [?ready==`false`]') == []
   retries: 60
   delay: 10

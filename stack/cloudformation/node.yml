@@ -27,9 +27,11 @@ Parameters:
   ImageId:
     Description: ID of AMI used for instances
     Type: AWS::EC2::Image::Id
-  InstanceType:
-    Description: Type of EC2 instance
-    Type: String
+  InstanceTypes:
+    Description: >-
+      A list of instance types for the autoscaling group. If all instances
+      are on-demand, this may be a list of one item.
+    Type: CommaDelimitedList
   KeyPair:
     Description: SSH keypair assigned to instances
     Type: AWS::EC2::KeyPair::KeyName
@@ -74,15 +76,72 @@ Parameters:
         "storage-driver": "overlay2"
       }
   KubeadmJoinConfigTemplate:
-    Description: >-
-      Template for kubeadm join config file.
+    Description: Template for kubeadm join config file.
     Type: String
-    Default: '""'
+    Default: ''
+  OnDemandPercentage:
+    Description: The percentage of on-demand instances to use in the autoscaling group.
+    Type: Number
+    Default: 100
+  SpotAllocationStrategy:
+    Description: Allocation strategy for spot instances.
+    Type: String
+    AllowedValues:
+    - lowest-price
+    - capacity-optimized
+    Default: lowest-price
+  SpotInstancePools:
+    Description: >-
+      The number of pools of instance types for allocating spot instances.
+    Type: Number
+    Default: 2
+  SpotMaxPrice:
+    Description: >-
+      The maximum price to pay for spot instances, defaulting to the on-demand price.
+    Type: String
+    Default: ''
+  BasicLambdaRoleArn:
+    Description: >-
+      ARN of role for InstanceTypeFormatter lambda.
+    Type: String
+    Default: ''
 
 Conditions:
-  HasKubeadmJoinConfigTemplate: !Not [!Equals [!Ref KubeadmJoinConfigTemplate, '""']]
+  HasKubeadmJoinConfigTemplate: !Not [!Equals [!Ref KubeadmJoinConfigTemplate, '']]
+  HasLowestPriceSpotAllocationStrategy: !Equals [!Ref SpotAllocationStrategy, lowest-price]
+  HasSpotMaxPrice: !Not [!Equals [!Ref SpotMaxPrice, '']]
 
 Resources:
+  InstanceTypeFormatterFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Runtime: python3.7
+      Role: !Ref BasicLambdaRoleArn
+      Code:
+        ZipFile: |
+          import cfnresponse
+          def handler(event, context):
+              data = {}
+              if event['RequestType'] in ('Create', 'Update'):
+                  instance_types = event['ResourceProperties']['InstanceTypes']
+                  data = {
+                      'InstanceTypes': [
+                          {'InstanceType': it} for it in instance_types
+                      ]
+                  }
+              cfnresponse.send(
+                  event, context, cfnresponse.SUCCESS,
+                  data, context.log_stream_name
+              )
+
+  InstanceTypeFormatter:
+    Type: Custom::InstanceTypeFormatter
+    DependsOn: InstanceTypeFormatterFunction
+    Properties:
+      ServiceToken: !GetAtt InstanceTypeFormatterFunction.Arn
+      InstanceTypes: !Ref InstanceTypes
+
   InstanceAttributeEventsRule:
     Type: AWS::Events::Rule
     Properties:
@@ -112,7 +171,17 @@ Resources:
         Timeout: PT15M
     Properties:
       AutoScalingGroupName: !Ref AWS::StackName
-      LaunchConfigurationName: !Ref LaunchConfiguration
+      MixedInstancesPolicy:
+        InstancesDistribution:
+          OnDemandPercentageAboveBaseCapacity: !Ref OnDemandPercentage
+          SpotAllocationStrategy: !Ref SpotAllocationStrategy
+          SpotInstancePools: !If [HasLowestPriceSpotAllocationStrategy, !Ref SpotInstancePools, !Ref 'AWS::NoValue']
+          SpotMaxPrice: !If [HasSpotMaxPrice, !Ref SpotMaxPrice, !Ref 'AWS::NoValue']
+        LaunchTemplate:
+          LaunchTemplateSpecification:
+            LaunchTemplateId: !Ref LaunchTemplate
+            Version: !GetAtt LaunchTemplate.LatestVersionNumber
+          Overrides: !GetAtt InstanceTypeFormatter.InstanceTypes
       MinSize: !Ref MinInstances
       MaxSize: !Ref MaxInstances
       VPCZoneIdentifier: !Ref SubnetIds
@@ -132,25 +201,25 @@ Resources:
           - AlarmNotification
           - ScheduledActions
 
-  LaunchConfiguration:
-    Type: AWS::AutoScaling::LaunchConfiguration
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
     Properties:
-      IamInstanceProfile: !Ref NodeInstanceProfile
-      ImageId: !Ref ImageId
-      InstanceType: !Ref InstanceType
-      KeyName: !Ref KeyPair
-      PlacementTenancy: default
-      SecurityGroups: !Ref NodeSecurityGroups
-      UserData:
-        Fn::Base64:
-          !Sub
-          - |
-            #cloud-config
-            write_files:
+      LaunchTemplateData:
+        IamInstanceProfile:
+          Name: !Ref NodeInstanceProfile
+        ImageId: !Ref ImageId
+        KeyName: !Ref KeyPair
+        SecurityGroupIds: !Ref NodeSecurityGroups
+        UserData:
+          Fn::Base64:
+            !Sub
+            - |
+              #cloud-config
+              write_files:
               - path: /etc/keights/kubeadm-join-config.yaml.template
                 owner: root:root
                 permissions: '0644'
-                content: ${KubeadmJoinConfigTemplate}
+                content: ${KubeadmJoinConfigTemplateContents}
 
               - path: /etc/docker/daemon.json
                 owner: root:root
@@ -185,16 +254,21 @@ Resources:
                   Environment=KEIGHTS_STACK_NAME=${AWS::StackName}
                   Environment=KEIGHTS_RESOURCE=AutoScalingGroup
 
-            runcmd:
+              runcmd:
               - systemctl daemon-reload
               - systemctl enable kubelet.service
               - systemctl start --no-block keights-kubeadm-join.service
               - systemctl start --no-block keights-node-signal.service
 
-          - KubeadmJoinConfigTemplateEnv: !If
-              - HasKubeadmJoinConfigTemplate
-              - Environment=KEIGHTS_KUBEADM_JOIN_CONFIG_TEMPLATE=/etc/keights/kubeadm-join-config.yaml.template
-              - ''
+            - KubeadmJoinConfigTemplateEnv: !If
+                - HasKubeadmJoinConfigTemplate
+                - Environment=KEIGHTS_KUBEADM_JOIN_CONFIG_TEMPLATE=/etc/keights/kubeadm-join-config.yaml.template
+                - ''
+              KubeadmJoinConfigTemplateContents: !If
+                - HasKubeadmJoinConfigTemplate
+                - !Ref KubeadmJoinConfigTemplate
+                - '""'
+
 Outputs:
   AutoScalingGroup:
     Description: Name of autoscaling group

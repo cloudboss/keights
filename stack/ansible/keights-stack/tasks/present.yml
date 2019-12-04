@@ -28,7 +28,7 @@
     state: directory
 
 - name: find ami
-  ec2_ami_facts:
+  ec2_ami_info:
     owners: '{{ keights_stack.image_owner | default("256008164056") }}'
     filters:
       name: '{{ keights_stack.image | default(default_image) }}'
@@ -68,6 +68,7 @@
     - keights_stack.auto_namer_lambda_role_arn is defined
     - keights_stack.kube_ca_lambda_role_arn is defined
     - keights_stack.subnet_to_az_lambda_role_arn is defined
+    - keights_stack.basic_lambda_role_arn is defined
     msg: iam role arns for lambdas must be defined when create_iam_resources is false
   when: not create_iam_resources
 
@@ -164,6 +165,7 @@
     auto_namer_lambda_role_arn: '{{ common_stack.stack_outputs.AutoNamerLambdaRoleArn | default(keights_stack.auto_namer_lambda_role_arn) }}'
     kube_ca_lambda_role_arn: '{{ common_stack.stack_outputs.KubeCaLambdaRoleArn | default(keights_stack.kube_ca_lambda_role_arn) }}'
     subnet_to_az_lambda_role_arn: '{{ common_stack.stack_outputs.SubnetToAzLambdaRoleArn | default(keights_stack.subnet_to_az_lambda_role_arn) }}'
+    basic_lambda_role_arn: '{{ common_stack.stack_outputs.BasicLambdaRoleArn | default(keights_stack.basic_lambda_role_arn) }}'
 
 - name: set etcd iam instance profile
   set_fact:
@@ -242,7 +244,7 @@
       ResourceBucket: '{{ keights_stack.resource_bucket }}'
       HostedZoneId: '{{ common_stack.stack_outputs.HostedZoneId | default(keights_stack.etcd_hosted_zone_id) }}'
       DockerOptions: '{{ keights_stack.masters.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
-      KubeadmInitConfigTemplate: '{{ keights_stack.masters.kubeadm_init_config_template | default("") | to_json }}'
+      KubeadmInitConfigTemplate: '{{ keights_stack.masters.kubeadm_init_config_template | to_json if keights_stack.masters.kubeadm_init_config_template is defined else "" }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'
@@ -290,7 +292,7 @@
       ResourceBucket: '{{ keights_stack.resource_bucket }}'
       HostedZoneId: '{{ common_stack.stack_outputs.HostedZoneId | default(keights_stack.etcd_hosted_zone_id) }}'
       DockerOptions: '{{ keights_stack.masters.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
-      KubeadmInitConfigTemplate: '{{ keights_stack.masters.kubeadm_init_config_template | default("") | to_json }}'
+      KubeadmInitConfigTemplate: '{{ keights_stack.masters.kubeadm_init_config_template | to_json if keights_stack.masters.kubeadm_init_config_template is defined else "" }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'
@@ -317,7 +319,7 @@
       VpcId: '{{ keights_stack.vpc_id }}'
       SubnetIds: '{{ item.subnet_ids | join(",") }}'
       ImageId: '{{ item.image_id if item.image_id is defined else image_id }}'
-      InstanceType: '{{ item.instance_type }}'
+      InstanceTypes: '{{ (([item.instance_type] if item.instance_type is defined else []) + item.instance_types | default([])) | unique | join(",") }}'
       KeyPair: '{{ item.keypair }}'
       NodeInstanceProfile: '{{ common_stack.stack_outputs.NodeInstanceProfile | default(item.instance_profile) }}'
       NodeSecurityGroups: '{{ ([common_stack.stack_outputs.NodeSecurityGroup] + item.extra_security_groups | default([])) | join(",") }}'
@@ -327,7 +329,12 @@
       LoadBalancerDnsName: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
       ImageRepository: '{{ item.image_repository | default("k8s.gcr.io") }}'
       DockerOptions: '{{ item.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
-      KubeadmJoinConfigTemplate: '{{ item.kubeadm_join_config_template | default("") | to_json }}'
+      KubeadmJoinConfigTemplate: '{{ item.kubeadm_join_config_template | to_json if item.kubeadm_join_config_template is defined else "" }}'
+      OnDemandPercentage: '{{ item.spot.on_demand_percentage | default(omit) }}'
+      SpotAllocationStrategy: '{{ item.spot.allocation_strategy | default(omit) }}'
+      SpotInstancePools: '{{ item.spot.instance_pools | default(omit) }}'
+      SpotMaxPrice: '{{ item.spot.max_price | default(omit) }}'
+      BasicLambdaRoleArn: '{{ basic_lambda_role_arn }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'
@@ -345,11 +352,11 @@
   when: '"subnet_tags" in item'
 
 - name: collect subnet facts
-  ec2_vpc_subnet_facts:
+  ec2_vpc_subnet_info:
     filters:
       subnet-id: '{{ item.key }}'
   loop: '{{ subnet_tag_map | dict2items }}'
-  register: node_subnet_facts
+  register: node_subnet_info
 
 - name: tag node subnets
   ec2_vpc_subnet:
@@ -358,4 +365,4 @@
     map_public: '{{ item.subnets.0.map_public_ip_on_launch }}'
     tags: '{{ item.item.value }}'
     purge_tags: false
-  loop: '{{ node_subnet_facts.results }}'
+  loop: '{{ node_subnet_info.results }}'

@@ -137,11 +137,11 @@ Parameters:
     Description: >-
       Template for kubeadm init config file.
     Type: String
-    Default: '""'
+    Default: ''
 
 Conditions:
   HasThreeMasters: !Equals [!Ref NumInstances, 3]
-  HasKubeadmInitConfigTemplate: !Not [!Equals [!Ref KubeadmInitConfigTemplate, '""']]
+  HasKubeadmInitConfigTemplate: !Not [!Equals [!Ref KubeadmInitConfigTemplate, '']]
 
 Resources:
   SubnetToAzFunction:
@@ -274,7 +274,9 @@ Resources:
     Properties:
       AutoScalingGroupName: !Ref AWS::StackName
       DesiredCapacity: !Ref NumInstances
-      LaunchConfigurationName: !Ref LaunchConfiguration
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
       MaxSize: !Ref NumInstances
       MinSize: !Ref NumInstances
       VPCZoneIdentifier: !Ref SubnetIds
@@ -336,25 +338,26 @@ Resources:
         - Key: etcd:instance
           Value: 3
 
-  LaunchConfiguration:
-    Type: AWS::AutoScaling::LaunchConfiguration
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
     Properties:
-      IamInstanceProfile: !Ref MasterInstanceProfile
-      ImageId: !Ref ImageId
-      InstanceType: !Ref InstanceType
-      KeyName: !Ref KeyPair
-      PlacementTenancy: default
-      SecurityGroups: !Ref MasterSecurityGroups
-      UserData:
-        Fn::Base64:
-          !Sub
-          - |
-            #cloud-config
-            write_files:
+      LaunchTemplateData:
+        IamInstanceProfile:
+          Name: !Ref MasterInstanceProfile
+        ImageId: !Ref ImageId
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyPair
+        SecurityGroupIds: !Ref MasterSecurityGroups
+        UserData:
+          Fn::Base64:
+            !Sub
+            - |
+              #cloud-config
+              write_files:
               - path: /etc/keights/kubeadm-init-config.yaml.template
                 owner: root:root
                 permissions: '0644'
-                content: ${KubeadmInitConfigTemplate}
+                content: ${KubeadmInitConfigTemplateContents}
 
               - path: /etc/docker/daemon.json
                 owner: root:root
@@ -415,18 +418,22 @@ Resources:
                   Environment=KEIGHTS_STACK_NAME=${AWS::StackName}
                   Environment=KEIGHTS_MASTER=true
 
-            runcmd:
+              runcmd:
               - systemctl daemon-reload
               - systemctl enable var-lib-etcd.mount
               - systemctl enable kubelet.service
               - systemctl start --no-block keights-kubeadm-init-stacked.service
               - systemctl start --no-block keights-controller-signal.service
 
-          - AvailabilityZones: !GetAtt SubnetToAz.AvailabilityZones
-            KubeadmInitConfigTemplateEnv: !If
-              - HasKubeadmInitConfigTemplate
-              - Environment=KEIGHTS_KUBEADM_INIT_CONFIG_TEMPLATE=/etc/keights/kubeadm-init-config.yaml.template
-              - ''
+            - AvailabilityZones: !GetAtt SubnetToAz.AvailabilityZones
+              KubeadmInitConfigTemplateEnv: !If
+                - HasKubeadmInitConfigTemplate
+                - Environment=KEIGHTS_KUBEADM_INIT_CONFIG_TEMPLATE=/etc/keights/kubeadm-init-config.yaml.template
+                - ''
+              KubeadmInitConfigTemplateContents: !If
+                - HasKubeadmInitConfigTemplate
+                - !Ref KubeadmInitConfigTemplate
+                - '""'
 
 Outputs:
   LoadBalancerDnsName:
