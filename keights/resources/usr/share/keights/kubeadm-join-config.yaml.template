@@ -1,4 +1,5 @@
 apiVersion: kubeadm.k8s.io/v1beta2
+caCertPath: /etc/kubernetes/pki/ca.crt
 discovery:
   bootstrapToken:
     apiServerEndpoint: {{ .APIServer }}:{{ .APIServerPort }}
@@ -12,6 +13,6 @@ nodeRegistration:
   criSocket: /var/run/dockershim.sock
   kubeletExtraArgs:
     cloud-provider: aws
-    pod-infra-container-image: {{ .ImageRepository }}/pause:3.1
     node-labels: {{ range $label := .NodeLabels }}{{ $label }},{{ end }}
+    pod-infra-container-image: {{ .ImageRepository }}/pause:3.1
   name: {{ .NodeName }}
