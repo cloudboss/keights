@@ -187,8 +187,7 @@
         apt-get clean && \
         systemctl disable kubelet.service && \
         systemctl disable apt-daily.timer && \
-        systemctl disable apt-daily-upgrade.timer && \
-        update-alternatives --set iptables /usr/sbin/iptables-legacy
+        systemctl disable apt-daily-upgrade.timer
         EOF
       args:
         creates: /mnt/usr/bin/keights
