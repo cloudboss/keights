@@ -38,11 +38,6 @@ controllerManager:
     cloud-provider: aws
     configure-cloud-routes: "false"
     flex-volume-plugin-dir: /var/lib/kubelet/plugins/volume/exec
-  extraVolumes:
-  - name: var-lib-kubelet-plugins-volume-exec
-    hostPath: /var/lib/kubelet/plugins/volume/exec
-    mountPath: /var/lib/kubelet/plugins/volume/exec
-    readOnly: true
 dns:
   type: CoreDNS
 {{- if eq .EtcdMode "stacked" }}
