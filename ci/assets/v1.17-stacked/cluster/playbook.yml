@@ -11,6 +11,7 @@
       kms_key_alias: '{{ kms_key_alias }}'
       api_access_cidr: '{{ api_access_cidr }}'
       ssh_access_cidr: '{{ ssh_access_cidr }}'
+      node_port_access_cidr: '{{ node_port_access_cidr }}'
       keights_version: '{{ keights_version }}'
       resource_bucket: '{{ resource_bucket }}'
       masters:
@@ -30,4 +31,6 @@
       cluster_apiserver: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
       network:
         plugin: kube-router
+        # Let the masters act as route reflectors for CI clusters
+        rr_node_label: node-role.kubernetes.io/master
     when: 'state == "present"'

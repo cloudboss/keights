@@ -10,6 +10,7 @@ bootstrapTokens:
 kind: InitConfiguration
 localAPIEndpoint:
   advertiseAddress: {{ .MyIP }}
+  bindPort: 6443
 nodeRegistration:
   criSocket: /var/run/dockershim.sock
   kubeletExtraArgs:
@@ -29,17 +30,14 @@ apiServer:
     external-hostname: {{ .APIServer }}
   timeoutForControlPlane: 4m0s
 apiVersion: kubeadm.k8s.io/v1beta2
+certificatesDir: /etc/kubernetes/pki
+clusterName: kubernetes
 controlPlaneEndpoint: {{ .APIServer }}:{{ .APIPort }}
 controllerManager:
   extraArgs:
     cloud-provider: aws
     configure-cloud-routes: "false"
     flex-volume-plugin-dir: /var/lib/kubelet/plugins/volume/exec
-  extraVolumes:
-  - name: var-lib-kubelet-plugins-volume-exec
-    hostPath: /var/lib/kubelet/plugins/volume/exec
-    mountPath: /var/lib/kubelet/plugins/volume/exec
-    readOnly: true
 dns:
   type: CoreDNS
 {{- if eq .EtcdMode "stacked" }}
@@ -47,22 +45,22 @@ etcd:
   local:
     dataDir: /var/lib/etcd
     extraArgs:
-      name: {{ .Prefix }}-{{ .MyAZ }}
+      advertise-client-urls: https://{{ .MyIP }}:2379
+      cert-file: /etc/kubernetes/pki/etcd/server.crt
+      client-cert-auth: "true"
       data-dir: /var/lib/etcd
+      initial-advertise-peer-urls: https://{{ .MyIP }}:2380
+      initial-cluster: {{ range $i, $az := .AZs }}{{ if $i }},{{end}}{{ $.Prefix }}-{{ $az }}=https://{{ $.Prefix }}-{{ $az }}.{{ $.EtcdDomain }}:2380{{ end }}
+      initial-cluster-token: {{ .EtcdDomain }}
+      key-file: /etc/kubernetes/pki/etcd/server.key
       listen-client-urls: https://127.0.0.1:2379,https://{{ .MyIP }}:2379
       listen-peer-urls: https://{{ .MyIP }}:2380
-      advertise-client-urls: https://{{ .MyIP }}:2379
-      initial-advertise-peer-urls: https://{{ .MyIP }}:2380
-      initial-cluster-token: {{ .EtcdDomain }}
-      initial-cluster: {{ range $i, $az := .AZs }}{{ if $i }},{{end}}{{ $.Prefix }}-{{ $az }}=https://{{ $.Prefix }}-{{ $az }}.{{ $.EtcdDomain }}:2380{{ end }}
-      cert-file: /etc/kubernetes/pki/etcd/server.crt
-      key-file: /etc/kubernetes/pki/etcd/server.key
+      name: {{ .Prefix }}-{{ .MyAZ }}
       peer-cert-file: /etc/kubernetes/pki/etcd/peer.crt
+      peer-client-cert-auth: "true"
       peer-key-file: /etc/kubernetes/pki/etcd/peer.key
-      trusted-ca-file: /etc/kubernetes/pki/etcd/ca.crt
       peer-trusted-ca-file: /etc/kubernetes/pki/etcd/ca.crt
-      client-cert-auth: 'true'
-      peer-client-cert-auth: 'true'
+      trusted-ca-file: /etc/kubernetes/pki/etcd/ca.crt
     peerCertSANs:
     - {{ .MyIP }}
     - {{ .Prefix }}-{{ .MyAZ }}.{{ .EtcdDomain }}
