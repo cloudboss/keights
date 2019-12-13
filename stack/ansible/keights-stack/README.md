@@ -74,6 +74,8 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `pod_cidr`: (Required, type *string*) - In-cluster CIDR block used for Kubernetes pods.
 
+`allocate_node_cidrs`: (Optional, type *bool*, default `true`) - Whether or not to let Kubernetes allocate CIDR blocks from `pod_cidr` to nodes. This should be set to `false` when the calico CNI plugin is used.
+
 `subnet_ids`: (Required, type *list* of *string*) - Subnet IDs in which masters will live. When `etcd_mode` is `stacked`, each subnet *must* be in a separate availability zone, and the number of subnet IDs will determine the number of masters. Either one or three subnets may be used for the masters when `etcd_mode` is `stacked`. When `etcd_mode` is `external`, there can be any number of subnet IDs in any availability zones.
 
 `instance_type`: (Required, type *string*) - Type of EC2 instance, e.g. `m4.large`.

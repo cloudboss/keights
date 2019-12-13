@@ -121,6 +121,15 @@ Parameters:
   HostedZoneId:
     Description: ID of Route53 DNS hosted zone
     Type: String
+  AllocateNodeCIDRs:
+    Description: >-
+      Whether or not to let Kubernetes allocate node CIDRs. Set
+      to false if using the calico CNI plugin.
+    Type: String
+    Default: "true"
+    AllowedValues:
+    - "true"
+    - "false"
   DockerOptions:
     Description: >-
       Options to write to /etc/docker/daemon.json, which should follow
@@ -407,6 +416,7 @@ Resources:
                   Environment=KEIGHTS_IMAGE_REPOSITORY=${ImageRepository}
                   Environment=KEIGHTS_KUBERNETES_VERSION=${KubernetesVersion}
                   Environment=KEIGHTS_AZS=${AvailabilityZones},
+                  Environment=KEIGHTS_ALLOCATE_NODE_CIDRS=${AllocateNodeCIDRs}
                   ${KubeadmInitConfigTemplateEnv}
 
               - path: /etc/systemd/system/keights-controller-signal.service.d/environment.conf
