@@ -118,7 +118,8 @@ Parameters:
         "ip-masq": false,
         "iptables": false,
         "log-driver": "journald",
-        "storage-driver": "overlay2"
+        "storage-driver": "overlay2",
+        "exec-opts": ["native.cgroupdriver=systemd"]
       }
   KubeadmInitConfigTemplate:
     Description: >-
