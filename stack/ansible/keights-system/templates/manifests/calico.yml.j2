@@ -1,6 +1,6 @@
 #jinja2: trim_blocks:False
-# Calico Version v3.9.1
-# https://docs.projectcalico.org/v3.9/introduction
+# Calico Version v3.10.2
+# https://docs.projectcalico.org/v3.10/introduction
 ---
 
 # Include a clusterrole for the calico-node DaemonSet,
@@ -294,9 +294,6 @@ spec:
       labels:
         k8s-app: calico-typha
       annotations:
-        # This, along with the CriticalAddonsOnly toleration below, marks the pod as a critical
-        # add-on, ensuring it gets priority scheduling and that its resources are reserved
-        # if it ever gets evicted.
         cluster-autoscaler.kubernetes.io/safe-to-evict: 'true'
     spec:
       nodeSelector:
@@ -310,8 +307,11 @@ spec:
       # as a host-networked pod.
       serviceAccountName: calico-node
       priorityClassName: system-cluster-critical
+      # fsGroup allows using projected serviceaccount tokens as described here kubernetes/kubernetes#82573
+      securityContext:
+        fsGroup: 65534
       containers:
-      - image: {{ keights_system.network.typha_image | default('calico/typha:v3.9.1') }}
+      - image: {{ keights_system.network.typha_image | default('calico/typha:v3.10.2') }}
         name: calico-typha
         ports:
         - containerPort: 5473
@@ -341,6 +341,9 @@ spec:
             host: localhost
           periodSeconds: 30
           initialDelaySeconds: 30
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
         readinessProbe:
           httpGet:
             path: /readiness
@@ -411,12 +414,10 @@ spec:
         # This container adds a route reflector cluster ID to
         # a node if one of its labels matches `RR_NODE_LABEL`.
         - name: update-node
-          image: {{ keights_system.network.calico_ctl_image | default('calico/ctl:v3.9.1') }}
+          image: {{ keights_system.network.calico_ctl_image | default('calico/ctl:v3.10.2') }}
           env:
             - name: DATASTORE_TYPE
               value: kubernetes
-            - name: RR_CLUSTER_ID
-              value: "{{ rr_cluster_id }}"
             - name: RR_NODE_LABEL
               value: "{{ keights_system.network.rr_node_label }}"
             - name: NODE_NAME
@@ -435,26 +436,15 @@ spec:
 
               [ -n "${label}" ] || exit 0
 
-              spec_bgp=`calicoctl get no ${NODE_NAME} \
-                  -o go-template='{% raw %}{{range .}}{{.Spec.BGP}}{{end}}{% endraw %}'`
-
-              if [ "${spec_bgp}" != "<nil>" ]; then
-                  rr_cluster_id=`calicoctl get no ${NODE_NAME} \
-                      -o go-template='{% raw %}{{range .}}{{.Spec.BGP.RouteReflectorClusterID}}{{end}}{% endraw %}'`
-                  # Route reflector cluster ID is already set.
-                  [ -z "${rr_cluster_id}" ] || exit 0
-              fi
-
-              calicoctl get node ${NODE_NAME} -o yaml --export | sed "s|spec: {}|spec:\n  bgp:|g" > node.yaml
-              echo "    routeReflectorClusterID: ${RR_CLUSTER_ID}" >> node.yaml
-              calicoctl apply -f node.yaml
+              calicoctl patch no ${NODE_NAME} \
+                  -p '{"spec":{"bgp":{"routeReflectorClusterID":"{{ rr_cluster_id }}"}}}'
         {% endif %}
 
         # This container performs upgrade from host-local IPAM to calico-ipam.
         # It can be deleted if this is a fresh installation, or if you have already
         # upgraded to use calico-ipam.
         - name: upgrade-ipam
-          image: {{ keights_system.network.cni_image | default('calico/cni:v3.9.1') }}
+          image: {{ keights_system.network.cni_image | default('calico/cni:v3.10.2') }}
           command: ["/opt/cni/bin/calico-ipam", "-upgrade"]
           env:
             - name: KUBERNETES_NODE_NAME
@@ -474,7 +464,7 @@ spec:
         # This container installs the CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
-          image: {{ keights_system.network.cni_image | default('calico/cni:v3.9.1') }}
+          image: {{ keights_system.network.cni_image | default('calico/cni:v3.10.2') }}
           command: ["/install-cni.sh"]
           env:
             # Name of the CNI config file to create.
@@ -508,7 +498,7 @@ spec:
         # Adds a Flex Volume Driver that creates a per-pod Unix Domain Socket to allow Dikastes
         # to communicate with Felix over the Policy Sync API.
         - name: flexvol-driver
-          image: {{ keights_system.network.pod2daemon_flexvol_image | default('calico/pod2daemon-flexvol:v3.9.1') }}
+          image: {{ keights_system.network.pod2daemon_flexvol_image | default('calico/pod2daemon-flexvol:v3.10.2') }}
           volumeMounts:
           - name: flexvol-driver-host
             mountPath: /host/driver
@@ -517,7 +507,7 @@ spec:
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: {{ keights_system.network.calico_node_image | default('calico/node:v3.9.1') }}
+          image: {{ keights_system.network.calico_node_image | default('calico/node:v3.10.2') }}
           env:
             # Use Kubernetes API as the backing datastore.
             - name: DATASTORE_TYPE
@@ -586,6 +576,7 @@ spec:
               command:
               - /bin/calico-node
               - -felix-live
+              - -bird-live
             periodSeconds: 10
             initialDelaySeconds: 10
             failureThreshold: 6
@@ -728,7 +719,7 @@ spec:
       priorityClassName: system-cluster-critical
       containers:
         - name: calico-kube-controllers
-          image: {{ keights_system.network.kube_controllers_image | default('calico/kube-controllers:v3.9.1') }}
+          image: {{ keights_system.network.kube_controllers_image | default('calico/kube-controllers:v3.10.2') }}
           env:
             # Choose which controllers to run.
             - name: ENABLED_CONTROLLERS
@@ -817,9 +808,11 @@ spec:
     metadata:
       labels:
         k8s-app: calico-typha-autoscaler
-      annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
+      priorityClassName: system-node-critical
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
       nodeSelector:
         beta.kubernetes.io/os: linux
       containers:
