@@ -18,6 +18,7 @@ Type=oneshot
 # Environment=KEIGHTS_IMAGE_REPOSITORY=
 # Environment=KEIGHTS_KUBERNETES_VERSION=
 # Environment=KEIGHTS_AZS=
+# Environment=KEIGHTS_ALLOCATE_NODE_CIDRS=
 Environment=KEIGHTS_KUBEADM_INIT_CONFIG_TEMPLATE=/usr/share/keights/kubeadm-init-config.yaml.template
 ExecStart=/bin/sh -c ' \
     while true; do \
@@ -56,4 +57,5 @@ ExecStart=/bin/sh -c ' \
       -v AZs=${KEIGHTS_AZS} \
       -v MyAZ=$${myaz} \
       -v MyIP=$${myip} \
+      -v AllocateNodeCIDRs=${KEIGHTS_ALLOCATE_NODE_CIDRS} \
 '

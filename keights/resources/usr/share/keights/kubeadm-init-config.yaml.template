@@ -38,6 +38,7 @@ controllerManager:
     cloud-provider: aws
     configure-cloud-routes: "false"
     flex-volume-plugin-dir: /var/lib/kubelet/plugins/volume/exec
+    allocate-node-cidrs: "{{ .AllocateNodeCIDRs }}"
 dns:
   type: CoreDNS
 {{- if eq .EtcdMode "stacked" }}
