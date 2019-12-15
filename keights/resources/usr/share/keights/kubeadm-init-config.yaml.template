@@ -102,6 +102,7 @@ authentication:
     enabled: true
   x509:
     clientCAFile: /etc/kubernetes/pki/ca.crt
+cgroupDriver: systemd
 clusterDNS:
 - {{ .ClusterDNS }}
 clusterDomain: {{ .ClusterDomain }}

@@ -25,6 +25,8 @@ docker_options:
   'iptables': false
   'log-driver': json-file
   'storage-driver': overlay2
+  'exec-opts':
+  - native.cgroupdriver=systemd
 node_groups:
 - name: app
   min_instances: 3

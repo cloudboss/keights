@@ -11,6 +11,8 @@
       'iptables': false
       'log-driver': journald
       'storage-driver': overlay2
+      'exec-opts':
+      - native.cgroupdriver=systemd
 
 - name: set etcd device
   set_fact:
