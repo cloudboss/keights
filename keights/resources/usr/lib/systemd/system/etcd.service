@@ -1,7 +1,7 @@
 [Unit]
 Description=etcd service
-Requires=var-lib-etcd.mount docker.service keights-templatize-etcd-env.service keights-kubeadm-etcd.service
-After=var-lib-etcd.mount docker.service keights-templatize-etcd-env.service keights-kubeadm-etcd.service
+Requires=docker.service keights-volumize.service keights-templatize-etcd-env.service keights-kubeadm-etcd.service
+After=docker.service keights-volumize.service keights-templatize-etcd-env.service keights-kubeadm-etcd.service
 Before=keights-etcd-signal.service
 
 [Service]

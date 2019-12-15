@@ -33,11 +33,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/cloudboss/keights/pkg/helpers"
+	"github.com/deniswernert/go-fstab"
 )
 
 const (
 	Blkid = "blkid"
 	Mkfs  = "mkfs"
+	Fstab = "/etc/fstab"
 )
 
 type Volumizer struct {
@@ -187,7 +189,38 @@ func NormalizeDevice(device string) string {
 	return device
 }
 
-func DoIt(device, volumeTag, fsType, clusterName string, minutes int) error {
+func PersistFilesystem(device, fsType, mountPoint, fstabPath string) error {
+	ourMount := &fstab.Mount{
+		Spec:    device,
+		File:    mountPoint,
+		VfsType: fsType,
+		MntOps: map[string]string{
+			"noatime": "",
+			"errors":  "remount-ro",
+		},
+	}
+	mounts, err := fstab.ParseFile(fstabPath)
+	if err != nil {
+		return err
+	}
+	for _, mount := range mounts {
+		if mount.Spec == device {
+			return nil
+		}
+	}
+	ourMountLine := []byte(ourMount.String() + "\n")
+	return helpers.AppendToFile(fstabPath, ourMountLine, 0644)
+}
+
+func EnsureFilesystemsMounted() error {
+	out := helpers.RunCommand("mount", "-a")
+	if out.ExitStatus != 0 {
+		return fmt.Errorf(out.Stderr)
+	}
+	return nil
+}
+
+func DoIt(device, volumeTag, fsType, mountPoint, clusterName string, minutes int) error {
 	device = NormalizeDevice(device)
 	sess := session.New()
 	metadata := ec2metadata.New(sess)
@@ -222,5 +255,11 @@ func DoIt(device, volumeTag, fsType, clusterName string, minutes int) error {
 			return err
 		}
 	}
-	return nil
+	if err = PersistFilesystem(device, fsType, mountPoint, Fstab); err != nil {
+		return err
+	}
+	if err = os.MkdirAll(mountPoint, 0755); err != nil {
+		return err
+	}
+	return EnsureFilesystemsMounted()
 }

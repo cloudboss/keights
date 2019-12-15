@@ -5,6 +5,7 @@ require (
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/aws/aws-lambda-go v1.6.0
 	github.com/aws/aws-sdk-go v1.25.18
+	github.com/deniswernert/go-fstab v0.0.0-20141204152952-eb4090f26517
 	github.com/docker/distribution v2.6.2+incompatible // indirect
 	github.com/emicklei/go-restful v2.6.0+incompatible // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect

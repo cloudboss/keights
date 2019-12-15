@@ -1,6 +1,5 @@
 [Unit]
 Description=keights-volumize service
-Before=var-lib-etcd.mount
 
 [Service]
 # Environment=AWS_REGION=

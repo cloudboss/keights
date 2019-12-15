@@ -28,13 +28,14 @@ import (
 var (
 	device      string
 	fsType      string
+	mountPoint  string
 	clusterName string
 	minutes     int
 	volumizeCmd = &cobra.Command{
 		Use:   "volumize",
 		Short: "Attach and format EBS volumes",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return volumize.DoIt(device, volumeTag, fsType, clusterName, minutes)
+			return volumize.DoIt(device, volumeTag, fsType, mountPoint, clusterName, minutes)
 		},
 	}
 )
@@ -45,6 +46,8 @@ func init() {
 		"/dev/xvdg", "Name of device for EBS volume")
 	volumizeCmd.Flags().StringVarP(&fsType, "fstype", "f",
 		"ext4", "Type of filesystem to format volume")
+	volumizeCmd.Flags().StringVarP(&mountPoint, "mount-point", "p",
+		"/var/lib/etcd", "Filesystem path on which to mount volume")
 	volumizeCmd.Flags().StringVarP(&volumeTag, "volume-tag", "v",
 		"", "Tag to search on EBS volume")
 	volumizeCmd.Flags().StringVarP(&clusterName, "clusterName", "c",

@@ -280,13 +280,6 @@ Resources:
                   Environment=KEIGHTS_VOLUME_TAG=etcd:instance
                   Environment=KEIGHTS_VOLUME_DEVICE=${Device}
 
-              - path: /etc/systemd/system/var-lib-etcd.mount.d/mount.conf
-                owner: root:root
-                permissions: '0644'
-                content: |
-                  [Mount]
-                  What=${Device}
-
               - path: /etc/systemd/system/keights-whisper-etcd.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
@@ -331,7 +324,6 @@ Resources:
 
               runcmd:
               - systemctl daemon-reload
-              - systemctl enable var-lib-etcd.mount
               - systemctl enable etcd.service
               - systemctl start --no-block etcd.service
               - systemctl start --no-block keights-etcd-signal.service
