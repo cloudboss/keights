@@ -384,13 +384,6 @@ Resources:
                   Environment=KEIGHTS_VOLUME_TAG=etcd:instance
                   Environment=KEIGHTS_VOLUME_DEVICE=${EtcdDevice}
 
-              - path: /etc/systemd/system/var-lib-etcd.mount.d/mount.conf
-                owner: root:root
-                permissions: '0644'
-                content: |
-                  [Mount]
-                  What=${EtcdDevice}
-
               - path: /etc/systemd/system/keights-whisper-controller.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
@@ -431,7 +424,6 @@ Resources:
 
               runcmd:
               - systemctl daemon-reload
-              - systemctl enable var-lib-etcd.mount
               - systemctl enable kubelet.service
               - systemctl start --no-block keights-kubeadm-init-stacked.service
               - systemctl start --no-block keights-controller-signal.service

@@ -1,7 +1,7 @@
 [Unit]
 Description=keights-kubeadm-init-stacked service
-Requires=var-lib-etcd.mount keights-whisper-controller.service keights-templatize-kubeadm-init-config.service
-After=var-lib-etcd.mount keights-whisper-controller.service keights-templatize-kubeadm-init-config.service
+Requires=keights-volumize.service keights-whisper-controller.service keights-templatize-kubeadm-init-config.service
+After=keights-volumize.service keights-whisper-controller.service keights-templatize-kubeadm-init-config.service
 Before=keights-controller-signal.service
 ConditionPathExists=!/var/lib/kubeadm/initialized
 

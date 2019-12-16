@@ -92,6 +92,20 @@ func WriteIfChanged(path string, contents []byte, mode os.FileMode) error {
 	return AtomicWrite(path, contents, mode)
 }
 
+func AppendToFile(path string, extraContent []byte, mode os.FileMode) error {
+	contents, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(contents, []byte("")) &&
+		!bytes.Equal(extraContent, []byte("")) &&
+		!bytes.HasSuffix(contents, []byte("\n")) {
+		contents = append(contents, []byte("\n")...)
+	}
+	contents = append(contents, extraContent...)
+	return AtomicWrite(path, contents, mode)
+}
+
 func MapKeys(mapping map[string]string) []string {
 	keys := []string{}
 	for key := range mapping {
