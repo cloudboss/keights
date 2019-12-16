@@ -13,6 +13,11 @@ nodeRegistration:
   criSocket: /var/run/dockershim.sock
   kubeletExtraArgs:
     cloud-provider: aws
-    node-labels: {{ range $label := .NodeLabels }}{{ $label }},{{ end }}
+    {{- if .NodeLabels }}
+    node-labels: {{ range $i, $label := .NodeLabels }}{{ if $i }},{{ end }}{{ $label }}{{ end }}
+    {{- end }}
+    {{- if .NodeTaints }}
+    register-with-taints: {{ range $i, $taint := .NodeTaints }}{{ if $i }},{{ end }}{{ $taint }}{{ end }}
+    {{- end }}
     pod-infra-container-image: {{ .ImageRepository }}/pause:3.1
   name: {{ .NodeName }}
