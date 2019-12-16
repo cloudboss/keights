@@ -56,6 +56,12 @@ Parameters:
       key=value pairs, for example env=prod,size=large
     Type: String
     Default: ''
+  NodeTaints:
+    Description: >-
+      Kubernetes node taints as a comma separated list of
+      key=value:effect pairs, for example k1=v1:NoSchedule,k1=v1:NoExecute
+    Type: String
+    Default: ''
   LoadBalancerDnsName:
     Description: DNS name of kubernetes apiserver load balancer
     Type: String
@@ -244,6 +250,7 @@ Resources:
                   Environment=KEIGHTS_APISERVER_PORT=443
                   Environment=KEIGHTS_IMAGE_REPOSITORY=${ImageRepository}
                   Environment=KEIGHTS_NODE_LABELS=${NodeLabels},
+                  Environment=KEIGHTS_NODE_TAINTS=${NodeTaints},
                   ${KubeadmJoinConfigTemplateEnv}
 
               - path: /etc/systemd/system/keights-node-signal.service.d/environment.conf

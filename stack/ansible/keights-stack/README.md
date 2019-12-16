@@ -154,6 +154,8 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `node_labels`: (Optional, type *dict*, default `{}`) - A dictionary of key/value pairs used to assign Kubernetes labels to nodes.
 
+`node_taints`: (Optional, type *dict*, default `{}`) - A dictionary of key/value pairs used to assign Kubernetes taints to nodes, for example `{'key1': 'value1:NoSchedule', 'key1': 'value1:NoExecute'}`.
+
 `image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which Kubernetes component docker images are pulled.
 
 `docker_options`: (Optional, type *dict*, default `{"ip-masq": false, "iptables": false, "log-driver": "journald", "storage-driver": "overlay2"}`) - Options to write to `/etc/docker/daemon.json`, which should follow [documentation for docker](https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file).
