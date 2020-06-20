@@ -180,7 +180,6 @@
           openssh-server \
           docker-ce={{ docker_version }} \
           docker-ce-cli={{ docker_version }} \
-          kubernetes-cni={{ cni_version }}-00 \
           kubectl={{ k8s_version_no_v }}-00 \
           kubeadm={{ k8s_version_no_v }}-00 \
           kubelet={{ k8s_version_no_v }}-00 && \
