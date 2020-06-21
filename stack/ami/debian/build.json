@@ -9,7 +9,6 @@
     "var-log-vol": "xvdf",
     "docker-version": "5:18.09.9~3-0~debian-buster",
     "k8s-version": "",
-    "cni-version": "0.7.5",
     "share-accounts": "all",
     "base-ami-pattern": "debian-stretch-hvm-x86_64-gp2-*",
     "base-ami-owner": "379101102735",
@@ -90,8 +89,7 @@
       "os:version": "debian-{{ user `debian-release` }}",
       "docker:version": "{{ user `docker-version` }}",
       "k8s:version": "{{ user `k8s-version` }}",
-      "keights:version": "{{ user `keights-version` }}",
-      "cni:version": "{{ user `cni-version` }}"
+      "keights:version": "{{ user `keights-version` }}"
     },
 
     "run_tags": {
@@ -121,7 +119,6 @@
 	"-e", "docker_version={{ user `docker-version` }}",
 	"-e", "k8s_version={{ user `k8s-version` }}",
 	"-e", "keights_version={{ user `keights-version` }}",
-	"-e", "cni_version={{ user `cni-version` }}",
 	"-e", "debian_release={{ user `debian-release` }}"
       ]
     }
