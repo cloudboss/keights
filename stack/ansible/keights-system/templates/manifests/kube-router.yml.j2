@@ -49,9 +49,10 @@ spec:
         args:
         - --run-router=true
         - --run-firewall=true
-        - --run-service-proxy=false
+        - --run-service-proxy={{ keights_system.network.replace_kube_proxy | default(false) | to_json }}
         - --disable-source-dest-check=false
         - --bgp-graceful-restart
+        - --kubeconfig=/kube-router/kubeconfig
         env:
         - name: NODE_NAME
           valueFrom:
@@ -75,13 +76,53 @@ spec:
           readOnly: true
         - name: cni-conf-dir
           mountPath: /etc/cni/net.d
+        - name: kube-router
+          mountPath: /kube-router
       initContainers:
+      - name: write-kubeconfig
+        image: {{ keights_system.network.busybox_image | default('busybox:1.30.1') }}
+        command:
+        - /bin/sh
+        - -xec
+        - |
+          # Borrow the kubelet's kubeconfig to get the apiserver's public DNS,
+          # to be able to connect before the internal network is up.
+          # See https://github.com/cloudnativelabs/kube-router/issues/859.
+          apiserver=`awk '/ server: https:/{print $2}' /etc/kubernetes/kubelet.conf`
+          cat > /kube-router/kubeconfig <<EOF
+          apiVersion: v1
+          kind: Config
+          clusters:
+          - cluster:
+              certificate-authority: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              server: ${apiserver}
+            name: default
+          contexts:
+          - context:
+              cluster: default
+              namespace: default
+              user: default
+            name: default
+          current-context: default
+          users:
+          - name: default
+            user:
+              tokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+          EOF
+        volumeMounts:
+        - name: kubelet-conf
+          mountPath: /etc/kubernetes/kubelet.conf
+          readOnly: true
+        - name: kube-router
+          mountPath: /kube-router
       {% if keights_system.network.rr_node_label | default('') %}
       # Label a node so you can annotate a node...
       - name: annotate-node
         image: {{ keights_system.network.kubectl_image | default('k8s.gcr.io/hyperkube:{}'.format(k8s_version)) }}
         imagePullPolicy: IfNotPresent
         env:
+        - name: KUBECONFIG
+          value: /kube-router/kubeconfig
         - name: RR_NODE_LABEL
           value: "{{ keights_system.network.rr_node_label }}"
         - name: NODE_NAME
@@ -104,6 +145,9 @@ spec:
                   --patch '{"metadata":{"annotations":{"kube-router.io/rr.client":"{{ rr_cluster_id }}"}}}'
           fi
       {% endif %}
+        volumeMounts:
+        - name: kube-router
+          mountPath: /kube-router
       - name: install-cni
         image: {{ keights_system.network.busybox_image | default('busybox:1.30.1') }}
         imagePullPolicy: IfNotPresent
@@ -140,6 +184,12 @@ spec:
       - name: kube-router-cfg
         configMap:
           name: kube-router-cfg
+      - name: kubelet-conf
+        hostPath:
+          path: /etc/kubernetes/kubelet.conf
+      - name: kube-router
+        emptyDir:
+          medium: Memory
   updateStrategy:
     type: RollingUpdate
 

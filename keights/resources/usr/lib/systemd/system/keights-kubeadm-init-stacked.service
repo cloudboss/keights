@@ -7,11 +7,12 @@ ConditionPathExists=!/var/lib/kubeadm/initialized
 
 [Service]
 Type=simple
+# Environment=KEIGHTS_KUBEADM_INIT_SKIP_PHASES=
 ExecStart=/bin/sh -c ' \
     /usr/bin/kubeadm init \
       --config=/var/lib/kubeadm/config.yaml \
       --ignore-preflight-errors=all \
-      --skip-token-print && \
+      --skip-token-print ${KEIGHTS_KUBEADM_INIT_SKIP_PHASES} && \
     touch /var/lib/kubeadm/initialized \
 '
 Restart=on-failure

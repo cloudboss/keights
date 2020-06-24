@@ -248,6 +248,7 @@
       AllocateNodeCIDRs: '{{ keights_stack.masters.allocate_node_cidrs | default(true) | to_json }}'
       DockerOptions: '{{ keights_stack.masters.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
       KubeadmInitConfigTemplate: '{{ keights_stack.masters.kubeadm_init_config_template | to_json if keights_stack.masters.kubeadm_init_config_template is defined else "" }}'
+      EnableKubeProxy: '{{ keights_stack.enable_kube_proxy | default(true) | to_json }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'
@@ -297,6 +298,7 @@
       AllocateNodeCIDRs: '{{ keights_stack.masters.allocate_node_cidrs | default(true) | to_json }}'
       DockerOptions: '{{ keights_stack.masters.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
       KubeadmInitConfigTemplate: '{{ keights_stack.masters.kubeadm_init_config_template | to_json if keights_stack.masters.kubeadm_init_config_template is defined else "" }}'
+      EnableKubeProxy: '{{ keights_stack.enable_kube_proxy | default(true) | to_json }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'

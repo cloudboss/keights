@@ -68,6 +68,8 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `node_groups`: (Optional, type *list* of *dict*, default `[]`) - A list of dictionaries, each one defining a group of Kubernetes nodes, described below.
 
+`enable_kube_proxy`: (Optional, type *bool*, default `true`) - Whether or not kube-proxy should be enabled. This may be set to `false` to allow the CNI plugin to replace kube-proxy.
+
 ### masters
 
 `service_cidr`: (Required, type *string*) - In-cluster CIDR block used for Kubernetes services.
