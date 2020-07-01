@@ -34,8 +34,7 @@ run:
     cd repo-release
     rel_ref=`git log --no-merges --format=%H -n 1`
 
-    cd ../repo-pr
-    pr_ref=`git rev-parse HEAD`
+    pr_ref=`cat ../repo-pr/.git/resource/head_sha`
 
     if [ "${rel_ref}" != "${pr_ref}" ]; then
         echo "Tagged version does not match tested PR, aborting release"
