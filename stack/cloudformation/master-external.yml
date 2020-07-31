@@ -126,9 +126,14 @@ Parameters:
       Template for kubeadm init config file.
     Type: String
     Default: ''
+  EnableKubeProxy:
+    Description: Whether or not kube-proxy should be enabled.
+    Type: String
+    Default: 'true'
 
 Conditions:
   HasKubeadmInitConfigTemplate: !Not [!Equals [!Ref KubeadmInitConfigTemplate, '']]
+  HasKubeProxy: !Equals [!Ref EnableKubeProxy, 'true']
 
 Resources:
   InstanceAttributeEventsRule:
@@ -241,6 +246,13 @@ Resources:
                   Environment=AWS_REGION=${AWS::Region}
                   Environment=KEIGHTS_CLUSTER_NAME=${ClusterName}
 
+              - path: /etc/systemd/system/keights-kubeadm-init-external.service.d/environment.conf
+                owner: root:root
+                permissions: '0644'
+                content: |
+                  [Service]
+                  Environment=KEIGHTS_KUBEADM_INIT_SKIP_PHASES=${KubeadmInitSkipPhases}
+
               - path: /etc/systemd/system/keights-templatize-kubeadm-init-config.service.d/environment.conf
                 owner: root:root
                 permissions: '0644'
@@ -286,6 +298,10 @@ Resources:
                 - HasKubeadmInitConfigTemplate
                 - !Ref KubeadmInitConfigTemplate
                 - '""'
+              KubeadmInitSkipPhases: !If
+                - HasKubeProxy
+                - ''
+                - --skip-phases=addon/kube-proxy
 
 Outputs:
   LoadBalancerDnsName:
