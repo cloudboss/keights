@@ -19,6 +19,7 @@ params:
   KUBECTL_URL: https://storage.googleapis.com/kubernetes-release/release/v1.17.0/bin/linux/amd64/kubectl
   KUBECONFIG: artifacts-in/kubeconfig
   CNI_PLUGIN_DAEMONSET: kube-router
+  KUBE_CONFORMANCE_IMAGE_VERSION: v1.17.9
 
 run:
   path: /bin/sh
@@ -50,7 +51,10 @@ run:
 
     echo "Running sonobuoy `sonobuoy version --short`"
 
-    sonobuoy run --wait=180 --mode certified-conformance
+    sonobuoy run \
+        --wait=180 \
+        --mode=certified-conformance \
+        --kube-conformance-image-version=${KUBE_CONFORMANCE_IMAGE_VERSION}
 
     echo -n 'Checking e2e results...'
     results=`sonobuoy retrieve artifacts-out`
