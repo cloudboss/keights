@@ -56,7 +56,7 @@ If `plugin` is `kube-router`, you may set the following keys. These will have no
 
 `busybox_image`: (Optional, type *string*, default `busybox:1.30.1`) - The busybox docker image.
 
-`kubectl_image`: (Optional, type *string*, default `k8s.gcr.io/hyperkube:${k8s_version}`) - The kubectl docker image.
+`kubectl_image`: (Optional, type *string*, default `bitnami/kubectl:1.18.8`) - The kubectl docker image.
 
 `replace_kube_proxy`: (Optional, type *bool*, default `false`) - Whether or not kube-router should replace kube-proxy. If `true`, this requires setting `keights_stack.enable_kube_proxy` to `false` in the `keights-stack` Ansible role.
 
