@@ -16,7 +16,9 @@ All role variables go under a top level dictionary `keights_system`.
 
 `cluster_apiserver`: (Required, type *string*) - Hostname or IP address of Kubernetes APIserver, may use optional port.
 
-`kubernetes_dashboard_image`: (Optional, type *string*, default `k8s.gcr.io/kubernetes-dashboard-amd64:v1.10.1`) - The Kubernetes dashboard docker image.
+`kubernetes_dashboard_image`: (Optional, type *string*, default `kubernetesui/dashboard:v2.0.3`) - The Kubernetes dashboard docker image.
+
+`kubernetes_dashboard_metrics_image`: (Optional, type _string_, default `kubernetesui/metrics-scraper:v1.0.4`) - The metrics scraper image used by Kubernetes dashboard.
 
 `network`: (Required, type *dict*) - A dictionary to configure the network plugin, see below.
 
