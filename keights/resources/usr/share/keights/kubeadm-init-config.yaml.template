@@ -15,7 +15,6 @@ nodeRegistration:
   criSocket: /var/run/dockershim.sock
   kubeletExtraArgs:
     cloud-provider: aws
-    volume-plugin-dir: /var/lib/kubelet/plugins/volume/exec
   name: {{ .NodeName }}
   taints:
   - effect: NoSchedule
@@ -111,3 +110,4 @@ enforceNodeAllocatable:
 kind: KubeletConfiguration
 rotateCertificates: true
 staticPodPath: /etc/kubernetes/manifests
+volumePluginDir: /var/lib/kubelet/plugins/volume/exec
