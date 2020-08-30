@@ -334,7 +334,6 @@
       NodeLabels: '{% set j = joiner(",") %}{% for k, v in (item.node_labels | default({})).items() %}{{ j() }}{{ k }}={{ v }}{% endfor %}'
       NodeTaints: '{% set j = joiner(",") %}{% for k, v in (item.node_taints | default({})).items() %}{{ j() }}{{ k }}={{ v }}{% endfor %}'
       LoadBalancerDnsName: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
-      ImageRepository: '{{ item.image_repository | default("k8s.gcr.io") }}'
       DockerOptions: '{{ item.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
       KubeadmJoinConfigTemplate: '{{ item.kubeadm_join_config_template | to_json if item.kubeadm_join_config_template is defined else "" }}'
       OnDemandPercentage: '{{ item.spot.on_demand_percentage | default(omit) }}'
