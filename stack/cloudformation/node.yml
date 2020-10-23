@@ -65,10 +65,6 @@ Parameters:
   LoadBalancerDnsName:
     Description: DNS name of kubernetes apiserver load balancer
     Type: String
-  ImageRepository:
-    Description: Repository for core Kubernetes Docker images
-    Type: String
-    Default: k8s.gcr.io
   DockerOptions:
     Description: >-
       Options to write to /etc/docker/daemon.json, which should follow
@@ -248,7 +244,6 @@ Resources:
                   [Service]
                   Environment=KEIGHTS_APISERVER=${LoadBalancerDnsName}
                   Environment=KEIGHTS_APISERVER_PORT=443
-                  Environment=KEIGHTS_IMAGE_REPOSITORY=${ImageRepository}
                   Environment=KEIGHTS_NODE_LABELS=${NodeLabels},
                   Environment=KEIGHTS_NODE_TAINTS=${NodeTaints},
                   ${KubeadmJoinConfigTemplateEnv}

@@ -134,7 +134,7 @@ spec:
       {% if keights_system.network.rr_node_label | default('') %}
       # Label a node so you can annotate a node...
       - name: annotate-node
-        image: {{ keights_system.network.kubectl_image | default('k8s.gcr.io/hyperkube:{}'.format(k8s_version)) }}
+        image: {{ keights_system.network.kubectl_image | default('bitnami/kubectl:1.18.8') }}
         imagePullPolicy: IfNotPresent
         env:
         - name: KUBECONFIG

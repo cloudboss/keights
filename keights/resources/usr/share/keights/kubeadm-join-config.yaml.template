@@ -19,5 +19,4 @@ nodeRegistration:
     {{- if .NodeTaints }}
     register-with-taints: {{ range $i, $taint := .NodeTaints }}{{ if $i }},{{ end }}{{ $taint }}{{ end }}
     {{- end }}
-    pod-infra-container-image: {{ .ImageRepository }}/pause:3.1
   name: {{ .NodeName }}

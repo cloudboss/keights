@@ -8,7 +8,6 @@ ConditionPathExists=!/var/lib/kubeadm/initialized
 Type=oneshot
 # Environment=KEIGHTS_APISERVER=
 # Environment=KEIGHTS_APISERVER_PORT=
-# Environment=KEIGHTS_IMAGE_REPOSITORY=
 # Environment=KEIGHTS_NODE_LABELS=
 # Environment=KEIGHTS_NODE_TAINTS=
 Environment=KEIGHTS_KUBEADM_JOIN_CONFIG_TEMPLATE=/usr/share/keights/kubeadm-join-config.yaml.template
@@ -33,7 +32,6 @@ ExecStart=/bin/sh -c ' \
       -v APIServerPort=${KEIGHTS_APISERVER_PORT} \
       -v Token=$${token} \
       -v CACertHash=$${ca_cert_hash} \
-      -v ImageRepository=${KEIGHTS_IMAGE_REPOSITORY} \
       -v NodeLabels=${KEIGHTS_NODE_LABELS} \
       -v NodeTaints=${KEIGHTS_NODE_TAINTS} \
       -v NodeName=$${node_name} \

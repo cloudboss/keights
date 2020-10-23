@@ -15,7 +15,6 @@ nodeRegistration:
   criSocket: /var/run/dockershim.sock
   kubeletExtraArgs:
     cloud-provider: aws
-    volume-plugin-dir: /var/lib/kubelet/plugins/volume/exec
   name: {{ .NodeName }}
   taints:
   - effect: NoSchedule
@@ -39,6 +38,22 @@ controllerManager:
     configure-cloud-routes: "false"
     flex-volume-plugin-dir: /var/lib/kubelet/plugins/volume/exec
     allocate-node-cidrs: "{{ .AllocateNodeCIDRs }}"
+  extraVolumes:
+  - name: bin-sh
+    hostPath: /bin/sh
+    mountPath: /bin/sh
+    readOnly: true
+    pathType: File
+  - name: libc-so-6
+    hostPath: /lib/x86_64-linux-gnu/libc.so.6
+    mountPath: /lib/x86_64-linux-gnu/libc.so.6
+    readOnly: true
+    pathType: File
+  - name: ld-linux-so-2
+    hostPath: /lib64/ld-linux-x86-64.so.2
+    mountPath: /lib64/ld-linux-x86-64.so.2
+    readOnly: true
+    pathType: File
 dns:
   type: CoreDNS
 {{- if eq .EtcdMode "stacked" }}
@@ -111,3 +126,4 @@ enforceNodeAllocatable:
 kind: KubeletConfiguration
 rotateCertificates: true
 staticPodPath: /etc/kubernetes/manifests
+volumePluginDir: /var/lib/kubelet/plugins/volume/exec

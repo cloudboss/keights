@@ -8,6 +8,7 @@ resource_types:
 resources:
 - name: version-snap
   type: semver
+  icon: numeric-2-box-multiple
   source:
     driver: git
     uri: git@github.com:cloudboss/cicd.git
@@ -18,6 +19,7 @@ resources:
   type: pull-request
   check_every: 12h
   webhook_token: ((github-keights-webhook-token))
+  icon: github
   source:
     access_token: ((github-access-token))
     base_branch: ((git-branch))
@@ -27,6 +29,7 @@ resources:
   type: git
   check_every: 12h
   webhook_token: ((github-keights-webhook-token))
+  icon: git
   source:
     uri: git@github.com:cloudboss/keights.git
     private_key: ((github-deploy-key-keights))
