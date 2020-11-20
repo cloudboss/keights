@@ -1,5 +1,7 @@
 module github.com/cloudboss/keights
 
+go 1.15
+
 require (
 	github.com/PuerkitoBio/purell v1.1.0 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
@@ -50,5 +52,3 @@ require (
 	k8s.io/kube-openapi v0.0.0-20180216212618-50ae88d24ede // indirect
 	k8s.io/kubernetes v1.9.7
 )
-
-go 1.13
