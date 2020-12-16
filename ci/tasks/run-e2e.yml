@@ -4,7 +4,7 @@ platform: linux
 image_resource:
   type: docker-image
   source:
-    repository: alpine
+    repository: cloudboss.jfrog.io/containers/alpine
     tag: '3.8'
 
 inputs:
@@ -15,8 +15,8 @@ outputs:
 - name: artifacts-out
 
 params:
-  SONOBUOY_URL: https://github.com/vmware-tanzu/sonobuoy/releases/download/v0.19.0/sonobuoy_0.19.0_linux_amd64.tar.gz
-  KUBECTL_URL: https://storage.googleapis.com/kubernetes-release/release/v1.19.0/bin/linux/amd64/kubectl
+  SONOBUOY_URL: https://github.com/vmware-tanzu/sonobuoy/releases/download/v0.20.0/sonobuoy_0.20.0_linux_amd64.tar.gz
+  KUBECTL_URL: https://storage.googleapis.com/kubernetes-release/release/v1.20.0/bin/linux/amd64/kubectl
   KUBECONFIG: artifacts-in/kubeconfig
   CNI_PLUGIN_DAEMONSET: kube-router
 
@@ -45,7 +45,7 @@ run:
 
     echo "Waiting for network..."
     kubectl apply -f repo/ci/assets/verify-network.yml
-    kubectl wait --for=condition=complete --timeout=600s job/verify-network
+    kubectl wait --for=condition=complete --timeout=900s job/verify-network
     kubectl delete job verify-network
 
     echo "Running sonobuoy `sonobuoy version --short`"
