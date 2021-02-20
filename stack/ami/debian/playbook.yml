@@ -169,7 +169,7 @@
 
     - name: install and configure additional packages in chroot
       shell: |
-        chroot /mnt sh -s<<' EOF'
+        chroot /mnt sh -s <<EOF
         debconf-set-selections /tmp/debconf-selections && \
         apt-get update && \
         apt-get upgrade -y && \
