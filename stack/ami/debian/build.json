@@ -111,6 +111,7 @@
       "playbook_file": "./playbook.yml",
       "user": "admin",
       "use_proxy": false,
+      "keep_inventory_file": true,
       "extra_arguments": [
         "-e", "root_vol={{ user `root-vol` }}",
         "-e", "usr_vol={{ user `usr-vol` }}",
