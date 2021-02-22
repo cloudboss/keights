@@ -110,16 +110,18 @@
       "type": "ansible",
       "playbook_file": "./playbook.yml",
       "user": "admin",
+      "use_proxy": false,
+      "keep_inventory_file": true,
       "extra_arguments": [
-	"-e", "root_vol={{ user `root-vol` }}",
-	"-e", "usr_vol={{ user `usr-vol` }}",
-	"-e", "var_vol={{ user `var-vol` }}",
-	"-e", "var_lib_docker_vol={{ user `var-lib-docker-vol` }}",
-	"-e", "var_log_vol={{ user `var-log-vol` }}",
-	"-e", "docker_version={{ user `docker-version` }}",
-	"-e", "k8s_version={{ user `k8s-version` }}",
-	"-e", "keights_version={{ user `keights-version` }}",
-	"-e", "debian_release={{ user `debian-release` }}"
+        "-e", "root_vol={{ user `root-vol` }}",
+        "-e", "usr_vol={{ user `usr-vol` }}",
+        "-e", "var_vol={{ user `var-vol` }}",
+        "-e", "var_lib_docker_vol={{ user `var-lib-docker-vol` }}",
+        "-e", "var_log_vol={{ user `var-log-vol` }}",
+        "-e", "docker_version={{ user `docker-version` }}",
+        "-e", "k8s_version={{ user `k8s-version` }}",
+        "-e", "keights_version={{ user `keights-version` }}",
+        "-e", "debian_release={{ user `debian-release` }}"
       ]
     }
   ]

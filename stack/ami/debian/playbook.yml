@@ -169,7 +169,7 @@
 
     - name: install and configure additional packages in chroot
       shell: |
-        chroot /mnt sh -s<<' EOF'
+        chroot /mnt sh -s <<EOF
         debconf-set-selections /tmp/debconf-selections && \
         apt-get update && \
         apt-get upgrade -y && \
@@ -183,6 +183,8 @@
           kubectl={{ k8s_version_no_v }}-00 \
           kubeadm={{ k8s_version_no_v }}-00 \
           kubelet={{ k8s_version_no_v }}-00 && \
+        grub-install --force /dev/{{ root_vol }} && \
+        update-grub && \
         dpkg -i /tmp/keights.deb && \
         apt-get clean && \
         systemctl disable kubelet.service && \
