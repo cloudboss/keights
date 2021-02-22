@@ -113,16 +113,17 @@ jobs:
       path: keights-pr
       status: failure
   ensure:
-    task: delete-cluster
-    file: keights-pr/ci/tasks/delete-cluster.yml
-    attempts: 3
-    input_mapping:
-      repo: keights-pr
-      version: version-snap
-    params:
-      CLUSTER: pipe-((git-branch))-ex-1
-      KEIGHTS_BRANCH: ((git-branch))
-      ETCD_MODE: external
+    try:
+      task: delete-cluster
+      file: keights-pr/ci/tasks/delete-cluster.yml
+      attempts: 3
+      input_mapping:
+        repo: keights-pr
+        version: version-snap
+      params:
+        CLUSTER: pipe-((git-branch))-ex-1
+        KEIGHTS_BRANCH: ((git-branch))
+        ETCD_MODE: external
 
 - name: upgrade-cluster-external-etcd
   public: true
@@ -181,16 +182,17 @@ jobs:
       path: keights-pr
       status: failure
   ensure:
-    task: delete-cluster
-    file: keights-pr/ci/tasks/delete-cluster.yml
-    attempts: 3
-    input_mapping:
-      repo: keights-pr
-      version: version-snap
-    params:
-      CLUSTER: pipe-((git-branch))-ex-2
-      KEIGHTS_BRANCH: ((git-branch))
-      ETCD_MODE: external
+    try:
+      task: delete-cluster
+      file: keights-pr/ci/tasks/delete-cluster.yml
+      attempts: 3
+      input_mapping:
+        repo: keights-pr
+        version: version-snap
+      params:
+        CLUSTER: pipe-((git-branch))-ex-2
+        KEIGHTS_BRANCH: ((git-branch))
+        ETCD_MODE: external
 
 - name: build-cluster-stacked-etcd
   public: true
@@ -236,16 +238,17 @@ jobs:
       path: keights-pr
       status: failure
   ensure:
-    task: delete-cluster
-    file: keights-pr/ci/tasks/delete-cluster.yml
-    attempts: 3
-    input_mapping:
-      repo: keights-pr
-      version: version-snap
-    params:
-      CLUSTER: pipe-((git-branch))-st-1
-      KEIGHTS_BRANCH: ((git-branch))
-      ETCD_MODE: stacked
+    try:
+      task: delete-cluster
+      file: keights-pr/ci/tasks/delete-cluster.yml
+      attempts: 3
+      input_mapping:
+        repo: keights-pr
+        version: version-snap
+      params:
+        CLUSTER: pipe-((git-branch))-st-1
+        KEIGHTS_BRANCH: ((git-branch))
+        ETCD_MODE: stacked
 
 - name: upgrade-cluster-stacked-etcd
   public: true
@@ -304,16 +307,17 @@ jobs:
       path: keights-pr
       status: failure
   ensure:
-    task: delete-cluster
-    file: keights-pr/ci/tasks/delete-cluster.yml
-    attempts: 3
-    input_mapping:
-      repo: keights-pr
-      version: version-snap
-    params:
-      CLUSTER: pipe-((git-branch))-st-2
-      KEIGHTS_BRANCH: ((git-branch))
-      ETCD_MODE: stacked
+    try:
+      task: delete-cluster
+      file: keights-pr/ci/tasks/delete-cluster.yml
+      attempts: 3
+      input_mapping:
+        repo: keights-pr
+        version: version-snap
+      params:
+        CLUSTER: pipe-((git-branch))-st-2
+        KEIGHTS_BRANCH: ((git-branch))
+        ETCD_MODE: stacked
 
 - name: update-pull-request-status
   public: true
