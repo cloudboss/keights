@@ -27,6 +27,7 @@ apiServer:
     authorization-mode: Node,RBAC
     cloud-provider: aws
     external-hostname: {{ .APIServer }}
+    service-account-jwks-uri: https://kubernetes.default.svc.{{ .ClusterDomain }}/openid/v1/jwks
   timeoutForControlPlane: 4m0s
 apiVersion: kubeadm.k8s.io/v1beta2
 certificatesDir: /etc/kubernetes/pki
@@ -117,7 +118,6 @@ authentication:
     enabled: true
   x509:
     clientCAFile: /etc/kubernetes/pki/ca.crt
-cgroupDriver: systemd
 clusterDNS:
 - {{ .ClusterDNS }}
 clusterDomain: {{ .ClusterDomain }}
