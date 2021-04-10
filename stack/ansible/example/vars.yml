@@ -73,17 +73,10 @@ ssh_access_cidr: 0.0.0.0/0
 # CIDR which is given access to the API server
 api_access_cidr: 0.0.0.0/0
 
-# Define subnet tags so Kubernetes can build load balancers. The value
-# `internal-elb` can be changed to `elb` to allow internet facing load balancers.
-# The odd quoting is due to having the `cluster` variable in the key of a dictionary.
-cluster_tag_name: 'kubernetes.io/cluster/{{ cluster }}'
-subnet_tags: "{{ { cluster_tag_name: 'shared', 'kubernetes.io/role/internal-elb': '1' } }}"
-
 # A list of configurations for each node group. Add as many
 # node groups as you want to the list below.
 node_groups:
 - subnet_ids: '{{ node_subnet_ids }}'
-  subnet_tags: '{{ subnet_tags }}'
   # The name must be unique for each group
   name: app
   min_instances: 2
