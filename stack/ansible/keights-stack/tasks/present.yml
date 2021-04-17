@@ -104,14 +104,14 @@
     mode: geturl
   register: stackbots
   loop:
-    - auto_namer
-    - instattr
-    - kube_ca
-    - subnet_to_az
+  - auto_namer
+  - instattr
+  - kube_ca
+  - subnet_to_az
   changed_when: false
   failed_when: false
   tags:
-    - lambda
+  - lambda
 
 - name: download lambda archives releases
   ansible.builtin.get_url:
@@ -121,7 +121,7 @@
   when: |
     'url' not in item
   tags:
-    - lambda
+  - lambda
 
 - name: upload lambda archives to s3
   amazon.aws.aws_s3:
@@ -133,7 +133,7 @@
   when: |
     'url' not in item
   tags:
-    - lambda
+  - lambda
 
 - name: build common stack
   amazon.aws.cloudformation:
@@ -161,7 +161,7 @@
       keights:version: '{{ keights_version }}'
   register: common_stack
   tags:
-    - common
+  - common
 
 - name: set iam variables
   ansible.builtin.set_fact:
@@ -212,7 +212,7 @@
       keights:version: '{{ keights_version }}'
   register: etcd_stack
   tags:
-    - etcd
+  - etcd
   when: etcd_mode == 'external'
 
 - name: build master stack
@@ -257,7 +257,7 @@
       keights:version: '{{ keights_version }}'
   register: master_stack_external
   tags:
-    - master
+  - master
   when: etcd_mode == 'external'
 
 - name: build master stack
@@ -307,7 +307,7 @@
       keights:version: '{{ keights_version }}'
   register: master_stack_stacked
   tags:
-    - master
+  - master
   when: etcd_mode == 'stacked'
 
 - name: set master stack
@@ -349,7 +349,7 @@
       keights:version: '{{ keights_version }}'
   loop: '{{ keights_stack.node_groups }}'
   tags:
-    - nodes
+  - nodes
 
 - name: map node subnets to tags
   ansible.builtin.set_fact:
