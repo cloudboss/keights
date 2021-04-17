@@ -10,14 +10,14 @@
   ec2_asg_info:
     name: '{{ keights_stack.cluster_name }}-master'
   register: master_asg
-  when: 'etcd_mode == "stacked"'
+  when: etcd_mode == 'stacked'
 
 - name: delete master stack
   cloudformation:
     stack_name: '{{ keights_stack.cluster_name }}-master'
     state: absent
     role_arn: '{{ keights_stack.cfn_role_arn | default(omit) }}'
-  when: 'etcd_mode == "external"'
+  when: etcd_mode == 'external'
 
 - name: find etcd ebs volumes
   ec2_vol_info:
@@ -34,7 +34,7 @@
   ec2_asg_info:
     name: '{{ keights_stack.cluster_name }}-etcd'
   register: etcd_asg
-  when: 'etcd_mode == "external"'
+  when: etcd_mode == 'external'
 
 - name: set instances to terminate
   set_fact:
@@ -61,14 +61,14 @@
     stack_name: '{{ keights_stack.cluster_name }}-master'
     state: absent
     role_arn: '{{ keights_stack.cfn_role_arn | default(omit) }}'
-  when: 'etcd_mode == "stacked"'
+  when: etcd_mode == 'stacked'
 
 - name: delete etcd stack
   cloudformation:
     stack_name: '{{ keights_stack.cluster_name }}-etcd'
     state: absent
     role_arn: '{{ keights_stack.cfn_role_arn | default(omit) }}'
-  when: 'etcd_mode == "external"'
+  when: etcd_mode == 'external'
 
 - name: find route53 zone for etcd
   route53_info:
