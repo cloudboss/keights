@@ -17,12 +17,12 @@
 - name: set etcd device
   set_fact:
     etcd_device: '{{ keights_stack.etcd.device | default("/dev/xvdg") }}'
-  when: 'etcd_mode == "external"'
+  when: etcd_mode == 'external'
 
 - name: set etcd device
   set_fact:
     etcd_device: '{{ keights_stack.masters.etcd_device | default("/dev/xvdg") }}'
-  when: 'etcd_mode == "stacked"'
+  when: etcd_mode == 'stacked'
 
 - name: ensure cache directory
   file:
@@ -84,7 +84,7 @@
   assert:
     that: keights_stack.etcd.instance_profile is defined
     msg: keights_stack.etcd.instance_profile must be defined when create_iam_resources is false
-  when: 'not create_iam_resources and etcd_mode == "external"'
+  when: not create_iam_resources and etcd_mode == 'external'
 
 - name: assert that instance profiles are defined for nodes
   assert:
@@ -118,7 +118,8 @@
     url: https://github.com/cloudboss/keights/releases/download/{{ keights_version }}/{{ item.item }}-{{ keights_version }}.zip
     dest: '{{ cache_dir }}'
   loop: '{{ stackbots.results }}'
-  when: '"url" not in item'
+  when: |
+    'url' not in item
   tags:
     - lambda
 
@@ -129,7 +130,8 @@
     mode: put
     src: '{{ cache_dir }}/{{ item.item }}-{{ keights_version }}.zip'
   loop: '{{ stackbots.results }}'
-  when: '"url" not in item'
+  when: |
+    'url' not in item
   tags:
     - lambda
 
@@ -172,7 +174,7 @@
 - name: set etcd iam instance profile
   set_fact:
     etcd_instance_profile: '{{ common_stack.stack_outputs.EtcdInstanceProfile | default(keights_stack.etcd.instance_profile) }}'
-  when: 'etcd_mode == "external"'
+  when: etcd_mode == 'external'
 
 - name: build etcd stack
   cloudformation:
@@ -211,7 +213,7 @@
   register: etcd_stack
   tags:
     - etcd
-  when: 'etcd_mode == "external"'
+  when: etcd_mode == 'external'
 
 - name: build master stack
   cloudformation:
@@ -256,7 +258,7 @@
   register: master_stack_external
   tags:
     - master
-  when: 'etcd_mode == "external"'
+  when: etcd_mode == 'external'
 
 - name: build master stack
   cloudformation:
@@ -306,7 +308,7 @@
   register: master_stack_stacked
   tags:
     - master
-  when: 'etcd_mode == "stacked"'
+  when: etcd_mode == 'stacked'
 
 - name: set master stack
   set_fact:
@@ -355,7 +357,8 @@
   loop: '{{ keights_stack.node_groups }}'
   loop_control:
     index_var: idx
-  when: '"subnet_tags" in item'
+  when: |
+    'subnet_tags' in item
 
 - name: collect subnet facts
   ec2_vpc_subnet_info:
