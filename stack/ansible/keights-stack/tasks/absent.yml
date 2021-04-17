@@ -1,77 +1,77 @@
 ---
 - name: delete node stack
-  cloudformation:
+  amazon.aws.cloudformation:
     stack_name: '{{ keights_stack.cluster_name }}-node-{{ item.name }}'
     state: absent
     role_arn: '{{ keights_stack.cfn_role_arn | default(omit) }}'
   loop: '{{ keights_stack.node_groups }}'
 
 - name: find master asg instances
-  ec2_asg_info:
+  community.aws.ec2_asg_info:
     name: '{{ keights_stack.cluster_name }}-master'
   register: master_asg
   when: etcd_mode == 'stacked'
 
 - name: delete master stack
-  cloudformation:
+  amazon.aws.cloudformation:
     stack_name: '{{ keights_stack.cluster_name }}-master'
     state: absent
     role_arn: '{{ keights_stack.cfn_role_arn | default(omit) }}'
   when: etcd_mode == 'external'
 
 - name: find etcd ebs volumes
-  ec2_vol_info:
+  amazon.aws.ec2_vol_info:
     filters:
       tag:Name: '{{ keights_stack.cluster_name }}'
       tag:etcd:instance: '*'
   register: etcd_volumes
 
 - name: set etcd ebs volume ids
-  set_fact:
+  ansible.builtin.set_fact:
     etcd_volume_ids: '{{ etcd_volumes.volumes | map(attribute="id") | list }}'
 
 - name: find etcd asg instances
-  ec2_asg_info:
+  community.aws.ec2_asg_info:
     name: '{{ keights_stack.cluster_name }}-etcd'
   register: etcd_asg
   when: etcd_mode == 'external'
 
 - name: set instances to terminate
-  set_fact:
+  ansible.builtin.set_fact:
     instances_to_terminate: '{{ master_asg if etcd_mode == "stacked" else etcd_asg }}'
 
 - name: suspend autoscaling processes to prevent etcd volumes from reattaching
-  ec2_asg:
+  community.aws.ec2_asg:
     name: '{{ keights_stack.cluster_name }}-{{ "master" if etcd_mode == "stacked" else "etcd" }}'
     suspend_processes:
     - HealthCheck
     - ReplaceUnhealthy
 
 - name: terminate instances for detaching etcd volumes
-  ec2:
+  amazon.aws.ec2:
     instance_ids: '{{ item.instances | map(attribute="instance_id") | list }}'
     state: absent
     wait: true
     wait_timeout: 600
-  # ec2_asg_info results is a list, so loop even though there is only one asg.
+  # community.aws.ec2_asg_info results is a list, so loop even though there is only one asg.
   loop: '{{ instances_to_terminate.results }}'
 
 - name: delete master stack
-  cloudformation:
+  amazon.aws.cloudformation:
     stack_name: '{{ keights_stack.cluster_name }}-master'
     state: absent
     role_arn: '{{ keights_stack.cfn_role_arn | default(omit) }}'
   when: etcd_mode == 'stacked'
 
 - name: delete etcd stack
-  cloudformation:
+  amazon.aws.cloudformation:
     stack_name: '{{ keights_stack.cluster_name }}-etcd'
     state: absent
     role_arn: '{{ keights_stack.cfn_role_arn | default(omit) }}'
   when: etcd_mode == 'external'
 
 - name: find route53 zone for etcd
-  route53_info:
+  community.aws.route53_info:
     query: hosted_zone
     hosted_zone_method: list_by_name
     dns_name: '{{ keights_stack.etcd_domain | default(default_etcd_domain) }}'
@@ -80,19 +80,19 @@
   when: not keights_stack.etcd_hosted_zone_id | default('')
 
 - name: set etcd hosted zone id
-  set_fact:
+  ansible.builtin.set_fact:
     etcd_hosted_zone_id: '{{ keights_stack.etcd_hosted_zone_id | default(hosted_zone_query.HostedZones.0.Id.split("/")[-1]) }}'
   when: hosted_zone_query.HostedZones.0.Name[:-1] == (keights_stack.etcd_domain | default(default_etcd_domain))
 
 - name: find route53 records for etcd
-  route53_info:
+  community.aws.route53_info:
     query: record_sets
     hosted_zone_id: '{{ etcd_hosted_zone_id }}'
   register: etcd_record_query
   when: etcd_hosted_zone_id is defined
 
 - name: get route53 record details for etcd
-  route53:
+  community.aws.route53:
     record: '{{ item }}'
     type: A
     zone: '{{ keights_stack.etcd_domain | default(default_etcd_domain) }}'
@@ -102,7 +102,7 @@
   loop: '{{ etcd_record_query | json_query("ResourceRecordSets[?Type == `A`].Name") if etcd_record_query.ResourceRecordSets is defined else [] }}'
 
 - name: delete route53 records for etcd
-  route53:
+  community.aws.route53:
     record: '{{ item.set.record }}'
     value: '{{ item.set.value }}'
     type: '{{ item.set.type }}'
@@ -113,13 +113,13 @@
   loop: '{{ etcd_record_details.results | default([]) }}'
 
 - name: delete common stack
-  cloudformation:
+  amazon.aws.cloudformation:
     stack_name: '{{ keights_stack.cluster_name }}-common'
     state: absent
     role_arn: '{{ keights_stack.cfn_role_arn | default(omit) }}'
 
 - name: delete ssm parameters
-  aws_ssm_parameter_store:
+  community.aws.aws_ssm_parameter_store:
     name: '{{ item }}'
     state: absent
   loop:
