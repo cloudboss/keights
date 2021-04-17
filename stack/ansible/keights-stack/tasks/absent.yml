@@ -40,19 +40,21 @@
   set_fact:
     instances_to_terminate: '{{ master_asg if etcd_mode == "stacked" else etcd_asg }}'
 
+- name: suspend autoscaling processes to prevent etcd volumes from reattaching
+  ec2_asg:
+    name: '{{ keights_stack.cluster_name }}-{{ "master" if etcd_mode == "stacked" else "etcd" }}'
+    suspend_processes:
+    - HealthCheck
+    - ReplaceUnhealthy
+
 - name: terminate instances for detaching etcd volumes
   ec2:
     instance_ids: '{{ item.instances | map(attribute="instance_id") | list }}'
     state: absent
+    wait: true
+    wait_timeout: 600
   # ec2_asg_info results is a list, so loop even though there is only one asg.
   loop: '{{ instances_to_terminate.results }}'
-
-- name: detach etcd volumes
-  ec2_vol:
-    id: '{{ item }}'
-    instance: None
-    state: present
-  loop: '{{ etcd_volume_ids }}'
 
 - name: delete master stack
   cloudformation:
