@@ -3,7 +3,7 @@
   set_fact:
     keights_version: '{{ item }}'
   with_file:
-    - '{{ role_path }}/version'
+  - '{{ role_path }}/version'
 
 - name: set default values
   set_fact:
