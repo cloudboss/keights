@@ -16,7 +16,7 @@ All role variables go under a top level dictionary `keights_system`.
 
 `cluster_apiserver`: (Required, type *string*) - Hostname or IP address of Kubernetes APIserver, may use optional port.
 
-`kubernetes_dashboard_image`: (Optional, type *string*, default `kubernetesui/dashboard:v2.0.3`) - The Kubernetes dashboard docker image.
+`kubernetes_dashboard_image`: (Optional, type *string*, default `kubernetesui/dashboard:v2.0.3`) - The Kubernetes dashboard container image.
 
 `kubernetes_dashboard_metrics_image`: (Optional, type _string_, default `kubernetesui/metrics-scraper:v1.0.4`) - The metrics scraper image used by Kubernetes dashboard.
 
@@ -36,27 +36,27 @@ If `plugin` is `calico`, you may set the following keys. These will have no effe
 
 `pod_cidr`: (Required, type *string*) - Kubernetes cluster pod CIDR, which must match what was given to the `keights-stack` Ansible role.
 
-`cni_image`: (Optional, type *string*, default `calico/cni:v3.9.1`) - The CNI docker image.
+`cni_image`: (Optional, type *string*, default `calico/cni:v3.9.1`) - The CNI container image.
 
-`calico_node_image`: (Optional, type *string*, default `calico/node:v3.9.1`) - The Calico node docker image.
+`calico_node_image`: (Optional, type *string*, default `calico/node:v3.9.1`) - The Calico node container image.
 
-`calico_ctl_image`: (Optional, type *string*, default `calico/ctl:v3.9.1`) - The Calico ctl docker image.
+`calico_ctl_image`: (Optional, type *string*, default `calico/ctl:v3.9.1`) - The Calico ctl container image.
 
-`pod2daemon_flexvol_image`: (Optional, type *string*, default `calico/pod2daemon-flexvol:v3.9.1`) - The Calico flex volume driver docker image.
+`pod2daemon_flexvol_image`: (Optional, type *string*, default `calico/pod2daemon-flexvol:v3.9.1`) - The Calico flex volume driver container image.
 
-`kube_controllers_image`: (Optional, type *string*, default `calico/kube-controllers:v3.9.1`) - The Calico kube controllers docker image.
+`kube_controllers_image`: (Optional, type *string*, default `calico/kube-controllers:v3.9.1`) - The Calico kube controllers container image.
 
-`typha_image`: (Optional, type *string*, default `calico/typha:v3.9.1`) - The [Typha](https://github.com/projectcalico/typha) docker image.
+`typha_image`: (Optional, type *string*, default `calico/typha:v3.9.1`) - The [Typha](https://github.com/projectcalico/typha) container image.
 
-`typha_autoscaler_image` (Optional, type *string*, default `k8s.gcr.io/cluster-proportional-autoscaler-amd64:1.7.1`) - The Typha autoscaler docker image.
+`typha_autoscaler_image` (Optional, type *string*, default `k8s.gcr.io/cluster-proportional-autoscaler-amd64:1.7.1`) - The Typha autoscaler container image.
 
 If `plugin` is `kube-router`, you may set the following keys. These will have no effect if `plugin` is `calico`.
 
-`kube_router_image`: (Optional, type *string*, default `cloudnativelabs/kube-router:v1.2.1`) - The kube-router docker image.
+`kube_router_image`: (Optional, type *string*, default `cloudnativelabs/kube-router:v1.2.1`) - The kube-router container image.
 
-`busybox_image`: (Optional, type *string*, default `busybox:1.30.1`) - The busybox docker image.
+`busybox_image`: (Optional, type *string*, default `busybox:1.30.1`) - The busybox container image.
 
-`kubectl_image`: (Optional, type *string*, default `bitnami/kubectl:1.18.8`) - The kubectl docker image.
+`kubectl_image`: (Optional, type *string*, default `bitnami/kubectl:1.18.8`) - The kubectl container image.
 
 `replace_kube_proxy`: (Optional, type *bool*, default `false`) - Whether or not kube-router should replace kube-proxy. If `true`, this requires setting `keights_stack.enable_kube_proxy` to `false` in the `keights-stack` Ansible role.
 

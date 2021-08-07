@@ -10,7 +10,7 @@ discovery:
   tlsBootstrapToken: {{ .Token }}
 kind: JoinConfiguration
 nodeRegistration:
-  criSocket: /var/run/dockershim.sock
+  criSocket: /run/containerd/containerd.sock
   kubeletExtraArgs:
     cloud-provider: aws
     {{- if .NodeLabels }}

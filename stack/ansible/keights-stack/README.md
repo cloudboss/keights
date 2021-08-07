@@ -100,9 +100,9 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `etcd_device`: (Optional, type *string*, default `/dev/xvdg`) - Name of etcd EBS volume device.
 
-`image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which Kubernetes component docker images are pulled.
+`image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which Kubernetes component container images are pulled.
 
-`docker_options`: (Optional, type *dict*, default `{"ip-masq": false, "iptables": false, "log-driver": "journald", "storage-driver": "overlay2"}`) - Options to write to `/etc/docker/daemon.json`, which should follow [documentation for docker](https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file).
+`containerd_options`: (Optional, type *string*, default `[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]\n  runtime_type = "io.containerd.runc.v2"\n  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]\n    SystemdCgroup = true`) - Options to write to `/etc/containerd/config.toml`.
 
 `kubeadm_init_config_template`: (Optional, type *string*, default `''`) - A kubeadm init [configuration file](https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-init/#config-file) as a Go template string. If not defined, a default one will be used which is built into the AMI. See [Kubeadm init](#kubeadm-init) below for a description of the variables that will be available within the template. Due to CloudFormation parameter limitations, this string must not be over 4kb.
 
@@ -124,9 +124,9 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `device`: (Optional, type *string*, default `/dev/xvdg`) - Name of etcd EBS volume device.
 
-`image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which docker image is pulled.
+`image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which container image is pulled.
 
-`docker_options`: (Optional, type *dict*, default `{"ip-masq": false, "iptables": false, "log-driver": "journald", "storage-driver": "overlay2"}`) - Options to write to `/etc/docker/daemon.json`, which should follow [documentation for docker](https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file).
+`containerd_options`: (Optional, type *string*, default `[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]\n  runtime_type = "io.containerd.runc.v2"\n  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]\n    SystemdCgroup = true`) - Options to write to `/etc/containerd/config.toml`.
 
 `instance_profile`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The name of the IAM instance profile assigned to EC2 instances.
 
@@ -158,7 +158,7 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `node_taints`: (Optional, type *dict*, default `{}`) - A dictionary of key/value pairs used to assign Kubernetes taints to nodes, for example `{'key1': 'value1:NoSchedule', 'key1': 'value1:NoExecute'}`.
 
-`docker_options`: (Optional, type *dict*, default `{"ip-masq": false, "iptables": false, "log-driver": "journald", "storage-driver": "overlay2"}`) - Options to write to `/etc/docker/daemon.json`, which should follow [documentation for docker](https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file).
+`containerd_options`: (Optional, type *string*, default `[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]\n  runtime_type = "io.containerd.runc.v2"\n  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]\n    SystemdCgroup = true`) - Options to write to `/etc/containerd/config.toml`.
 
 `kubeadm_join_config_template`: (Optional, type *string*, default `''`) - A kubeadm join [configuration file](https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-join/#config-file) as a Go template string. If not defined, a default one will be used which is built into the AMI. See [Kubeadm join](#kubeadm-join) below for a description of the variables that will be available within the template. Due to CloudFormation parameter limitations, this string must not be over 4kb.
 

@@ -65,19 +65,16 @@ Parameters:
   LoadBalancerDnsName:
     Description: DNS name of kubernetes apiserver load balancer
     Type: String
-  DockerOptions:
+  ContainerdOptions:
     Description: >-
-      Options to write to /etc/docker/daemon.json, which should follow
-      https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file.
+      Options to write to /etc/containerd/config.toml, which should follow
+      https://containerd.io/docs/getting-started.
     Type: String
     Default: |
-      {
-        "ip-masq": false,
-        "iptables": false,
-        "log-driver": "journald",
-        "storage-driver": "overlay2",
-        "exec-opts": ["native.cgroupdriver=systemd"]
-      }
+      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+        runtime_type = "io.containerd.runc.v2"
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+          SystemdCgroup = true
   KubeadmJoinConfigTemplate:
     Description: Template for kubeadm join config file.
     Type: String
@@ -224,10 +221,10 @@ Resources:
                 permissions: '0644'
                 content: ${KubeadmJoinConfigTemplateContents}
 
-              - path: /etc/docker/daemon.json
+              - path: /etc/containerd/config.toml
                 owner: root:root
                 permissions: '0644'
-                content: ${DockerOptions}
+                content: ${ContainerdOptions}
 
               - path: /etc/systemd/system/keights-whisper-node.service.d/environment.conf
                 owner: root:root

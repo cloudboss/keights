@@ -10,6 +10,7 @@ Type=simple
 ExecStart=/bin/sh -c ' \
     /usr/bin/kubeadm init phase certs etcd-server --config=/var/lib/kubeadm/config.yaml && \
     /usr/bin/kubeadm init phase certs etcd-peer --config=/var/lib/kubeadm/config.yaml && \
+    /usr/bin/kubeadm init phase certs etcd-healthcheck-client --config=/var/lib/kubeadm/config.yaml && \
     touch /var/lib/kubeadm/initialized \
 '
 Restart=on-failure

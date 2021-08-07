@@ -7,8 +7,19 @@ Description=keights-etcd-signal service
 # Environment=KEIGHTS_RESOURCE=
 Type=oneshot
 ExecStart=/bin/sh -c ' \
+    myip=`curl -s \
+            --retry 10 \
+            --retry-delay 2 \
+            http://169.254.169.254/latest/meta-data/local-ipv4`; \
     while true; do \
-        docker logs etcd 2>&1 | grep "etcdmain: etcd Version" && break; \
+        http_code=`curl -s \
+            -o /dev/null \
+            -w "%{http_code}" \
+            --cacert /etc/pki/etcd/ca.crt \
+            --cert /etc/pki/etcd/healthcheck-client.crt \
+            --key /etc/pki/etcd/healthcheck-client.key \
+            https://$${myip}:2379/health`; \
+        [ "$${http_code}" = 200 ] && break; \
         sleep 5; \
     done; \
     /usr/bin/keights signal \

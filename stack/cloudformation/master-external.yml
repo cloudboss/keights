@@ -84,7 +84,7 @@ Parameters:
     Description: Availability zones where etcd is located.
     Type: CommaDelimitedList
   ImageRepository:
-    Description: Repository for core Kubernetes Docker images
+    Description: Repository for core Kubernetes container images
     Type: String
     Default: k8s.gcr.io
   KubernetesVersion:
@@ -108,19 +108,16 @@ Parameters:
     AllowedValues:
     - "true"
     - "false"
-  DockerOptions:
+  ContainerdOptions:
     Description: >-
-      Options to write to /etc/docker/daemon.json, which should follow
-      https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file.
+      Options to write to /etc/containerd/config.toml, which should follow
+      https://containerd.io/docs/getting-started.
     Type: String
     Default: |
-      {
-        "ip-masq": false,
-        "iptables": false,
-        "log-driver": "journald",
-        "storage-driver": "overlay2",
-        "exec-opts": ["native.cgroupdriver=systemd"]
-      }
+      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+        runtime_type = "io.containerd.runc.v2"
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+          SystemdCgroup = true
   KubeadmInitConfigTemplate:
     Description: >-
       Template for kubeadm init config file.
@@ -233,10 +230,10 @@ Resources:
                 permissions: '0644'
                 content: ${KubeadmInitConfigTemplateContents}
 
-              - path: /etc/docker/daemon.json
+              - path: /etc/containerd/config.toml
                 owner: root:root
                 permissions: '0644'
-                content: ${DockerOptions}
+                content: ${ContainerdOptions}
 
               - path: /etc/systemd/system/keights-whisper-controller.service.d/environment.conf
                 owner: root:root
