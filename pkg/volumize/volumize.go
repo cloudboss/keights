@@ -158,10 +158,11 @@ func (v *Volumizer) WaitForDevice(device string) error {
 }
 
 func (v *Volumizer) HasFilesystem(device, fstype string) (bool, error) {
-	blkid := helpers.RunCommand(Blkid, "-p", "-s", "TYPE", "-o", "udev", device)
+	blkid := helpers.RunCommand(Blkid, "-s", "TYPE", "-o", "value", device)
 	if blkid.ExitStatus == 0 {
-		if !strings.HasPrefix(blkid.Stdout, fmt.Sprintf("ID_FS_TYPE=%v", fstype)) {
-			return false, fmt.Errorf("Unexpected error reading %s: %s", device, blkid.Stderr)
+		stdout := strings.TrimSpace(blkid.Stdout)
+		if stdout != fstype {
+			return false, fmt.Errorf("Expected filesystem type %s, got %s", fstype, stdout)
 		}
 		return true, nil
 	}
@@ -189,9 +190,18 @@ func NormalizeDevice(device string) string {
 	return device
 }
 
-func PersistFilesystem(device, fsType, mountPoint, fstabPath string) error {
+func GetUUID(device string) (string, error) {
+	blkid := helpers.RunCommand(Blkid, "-s", "UUID", "-o", "value", device)
+	if blkid.ExitStatus == 0 {
+		return strings.TrimSpace(blkid.Stdout), nil
+	}
+	return "", fmt.Errorf("Failed to get UUID of device %s: %s", device, blkid.Stderr)
+}
+
+func PersistFilesystem(uuid, fsType, mountPoint, fstabPath string) error {
+	spec := fmt.Sprintf("UUID=%s", uuid)
 	ourMount := &fstab.Mount{
-		Spec:    device,
+		Spec:    spec,
 		File:    mountPoint,
 		VfsType: fsType,
 		MntOps: map[string]string{
@@ -204,7 +214,7 @@ func PersistFilesystem(device, fsType, mountPoint, fstabPath string) error {
 		return err
 	}
 	for _, mount := range mounts {
-		if mount.Spec == device {
+		if mount.Spec == spec {
 			return nil
 		}
 	}
@@ -255,7 +265,11 @@ func DoIt(device, volumeTag, fsType, mountPoint, clusterName string, minutes int
 			return err
 		}
 	}
-	if err = PersistFilesystem(device, fsType, mountPoint, Fstab); err != nil {
+	uuid, err := GetUUID(device)
+	if err != nil {
+		return err
+	}
+	if err = PersistFilesystem(uuid, fsType, mountPoint, Fstab); err != nil {
 		return err
 	}
 	if err = os.MkdirAll(mountPoint, 0755); err != nil {
