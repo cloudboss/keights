@@ -36,19 +36,19 @@ If `plugin` is `calico`, you may set the following keys. These will have no effe
 
 `pod_cidr`: (Required, type *string*) - Kubernetes cluster pod CIDR, which must match what was given to the `keights-stack` Ansible role.
 
-`cni_image`: (Optional, type *string*, default `calico/cni:v3.9.1`) - The CNI container image.
+`cni_image`: (Optional, type *string*, default `docker.io/calico/cni:v3.20.0`) - The CNI container image.
 
-`calico_node_image`: (Optional, type *string*, default `calico/node:v3.9.1`) - The Calico node container image.
+`calico_node_image`: (Optional, type *string*, default `docker.io/calico/node:v3.20.0`) - The Calico node container image.
 
-`calico_ctl_image`: (Optional, type *string*, default `calico/ctl:v3.9.1`) - The Calico ctl container image.
+`calico_ctl_image`: (Optional, type *string*, default `docker.io/calico/ctl:v3.15.5`) - The Calico ctl container image.
 
-`pod2daemon_flexvol_image`: (Optional, type *string*, default `calico/pod2daemon-flexvol:v3.9.1`) - The Calico flex volume driver container image.
+`pod2daemon_flexvol_image`: (Optional, type *string*, default `docker.io/calico/pod2daemon-flexvol:v3.20.0`) - The Calico flex volume driver container image.
 
-`kube_controllers_image`: (Optional, type *string*, default `calico/kube-controllers:v3.9.1`) - The Calico kube controllers container image.
+`kube_controllers_image`: (Optional, type *string*, default `docker.io/calico/kube-controllers:v3.20.0`) - The Calico kube controllers container image.
 
-`typha_image`: (Optional, type *string*, default `calico/typha:v3.9.1`) - The [Typha](https://github.com/projectcalico/typha) container image.
+`typha_image`: (Optional, type *string*, default `docker.io/calico/typha:v3.20.0`) - The [Typha](https://github.com/projectcalico/typha) container image.
 
-`typha_autoscaler_image` (Optional, type *string*, default `k8s.gcr.io/cluster-proportional-autoscaler-amd64:1.7.1`) - The Typha autoscaler container image.
+`typha_autoscaler_image` (Optional, type *string*, default `k8s.gcr.io/cpa/cluster-proportional-autoscaler:1.8.4`) - The Typha autoscaler container image.
 
 If `plugin` is `kube-router`, you may set the following keys. These will have no effect if `plugin` is `calico`.
 

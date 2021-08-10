@@ -1,6 +1,6 @@
 #jinja2: trim_blocks:False
-# Calico Version v3.14.1
-# https://docs.projectcalico.org/v3.14/introduction
+# Calico Version v3.20.0
+# https://docs.projectcalico.org/archive/v3.20/about/about-calico
 ---
 
 # Include a clusterrole for the calico-node DaemonSet,
@@ -18,6 +18,14 @@ rules:
       - namespaces
     verbs:
       - get
+  # EndpointSlices are used for Service-based network policy rule
+  # enforcement.
+  - apiGroups: ["discovery.k8s.io"]
+    resources:
+      - endpointslices
+    verbs:
+      - watch
+      - list
   - apiGroups: [""]
     resources:
       - endpoints
@@ -150,12 +158,14 @@ rules:
       - watch
       - list
       - get
-  # Pods are queried to check for existence.
+  # Pods are watched to check for existence as part of IPAM controller.
   - apiGroups: [""]
     resources:
       - pods
     verbs:
       - get
+      - list
+      - watch
   # IPAM resources are manipulated when nodes are deleted.
   - apiGroups: ["crd.projectcalico.org"]
     resources:
@@ -173,6 +183,7 @@ rules:
       - create
       - update
       - delete
+      - watch
   # kube-controllers manages hostendpoints.
   - apiGroups: ["crd.projectcalico.org"]
     resources:
@@ -248,12 +259,12 @@ data:
   # Configure the backend to use.
   calico_backend: "bird"
 
-  # Configure the MTU to use for workload interfaces and the
-  # tunnels.  For IPIP, set to your network MTU - 20; for VXLAN
-  # set to your network MTU - 50.
-  veth_mtu: "1440"
+  # Configure the MTU to use for workload interfaces and tunnels.
+  # By default, MTU is auto-detected, and explicitly setting this field should not be required.
+  # You can override auto-detection by providing a non-zero value.
+  veth_mtu: "0"
 
-  # The CNI network configuration to install on each node.  The special
+  # The CNI network configuration to install on each node. The special
   # values in this config will be automatically populated.
   cni_network_config: |-
     {
@@ -332,7 +343,7 @@ spec:
         cluster-autoscaler.kubernetes.io/safe-to-evict: 'true'
     spec:
       nodeSelector:
-        beta.kubernetes.io/os: linux
+        kubernetes.io/os: linux
       hostNetwork: true
       tolerations:
         # Mark the pod as a critical add-on for rescheduling.
@@ -346,14 +357,14 @@ spec:
       securityContext:
         fsGroup: 65534
       containers:
-      - image: {{ keights_system.network.typha_image | default('calico/typha:v3.14.1') }}
+      - image: {{ keights_system.network.typha_image | default('docker.io/calico/typha:v3.20.0') }}
         name: calico-typha
         ports:
         - containerPort: 5473
           name: calico-typha
           protocol: TCP
         env:
-          # Enable "info" logging by default.  Can be set to "debug" to increase verbosity.
+          # Enable "info" logging by default. Can be set to "debug" to increase verbosity.
           - name: TYPHA_LOGSEVERITYSCREEN
             value: "info"
           # Disable logging to file and syslog since those don't make sense in Kubernetes.
@@ -376,6 +387,7 @@ spec:
             host: localhost
           periodSeconds: 30
           initialDelaySeconds: 30
+          timeoutSeconds: 10
         securityContext:
           runAsNonRoot: true
           allowPrivilegeEscalation: false
@@ -385,6 +397,7 @@ spec:
             port: 9098
             host: localhost
           periodSeconds: 10
+          timeoutSeconds: 10
 
 ---
 
@@ -449,7 +462,8 @@ spec:
         # This container adds a route reflector cluster ID to
         # a node if one of its labels matches `RR_NODE_LABEL`.
         - name: update-node
-          image: {{ keights_system.network.calico_ctl_image | default('calico/ctl:v3.14.1') }}
+          # Using v3.15.5 for the ctl image because they have removed the shell as of v3.16.0.
+          image: {{ keights_system.network.calico_ctl_image | default('docker.io/calico/ctl:v3.15.5') }}
           env:
             - name: DATASTORE_TYPE
               value: kubernetes
@@ -479,7 +493,7 @@ spec:
         # It can be deleted if this is a fresh installation, or if you have already
         # upgraded to use calico-ipam.
         - name: upgrade-ipam
-          image: {{ keights_system.network.cni_image | default('calico/cni:v3.14.1') }}
+          image: {{ keights_system.network.cni_image | default('docker.io/calico/cni:v3.20.0') }}
           command: ["/opt/cni/bin/calico-ipam", "-upgrade"]
           env:
             - name: KUBERNETES_NODE_NAME
@@ -501,8 +515,8 @@ spec:
         # This container installs the CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
-          image: {{ keights_system.network.cni_image | default('calico/cni:v3.14.1') }}
-          command: ["/install-cni.sh"]
+          image: {{ keights_system.network.cni_image | default('docker.io/calico/cni:v3.20.0') }}
+          command: ["/opt/cni/bin/install"]
           env:
             # Name of the CNI config file to create.
             - name: CNI_CONF_NAME
@@ -537,18 +551,18 @@ spec:
         # Adds a Flex Volume Driver that creates a per-pod Unix Domain Socket to allow Dikastes
         # to communicate with Felix over the Policy Sync API.
         - name: flexvol-driver
-          image: {{ keights_system.network.pod2daemon_flexvol_image | default('calico/pod2daemon-flexvol:v3.14.1') }}
+          image: {{ keights_system.network.pod2daemon_flexvol_image | default('docker.io/calico/pod2daemon-flexvol:v3.20.0') }}
           volumeMounts:
           - name: flexvol-driver-host
             mountPath: /host/driver
           securityContext:
             privileged: true
       containers:
-        # Runs calico-node container on each Kubernetes node.  This
+        # Runs calico-node container on each Kubernetes node. This
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: {{ keights_system.network.calico_node_image | default('calico/node:v3.14.1') }}
+          image: {{ keights_system.network.calico_node_image | default('docker.io/calico/node:v3.20.0') }}
           env:
             # Use Kubernetes API as the backing datastore.
             - name: DATASTORE_TYPE
@@ -597,6 +611,12 @@ spec:
                 configMapKeyRef:
                   name: calico-config
                   key: veth_mtu
+            # Set MTU for the Wireguard tunnel device.
+            - name: FELIX_WIREGUARDMTU
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: veth_mtu
             # The default IPv4 pool to create on startup if none exists. Pod IPs will be
             # chosen from this range. Changing this value after installation will have
             # no effect. This should fall within `--cluster-cidr`.
@@ -611,9 +631,6 @@ spec:
             # Disable IPv6 on Kubernetes.
             - name: FELIX_IPV6SUPPORT
               value: "false"
-            # Set Felix logging to "info"
-            - name: FELIX_LOGSEVERITYSCREEN
-              value: "info"
             - name: FELIX_HEALTHENABLED
               value: "true"
           securityContext:
@@ -630,6 +647,7 @@ spec:
             periodSeconds: 10
             initialDelaySeconds: 10
             failureThreshold: 6
+            timeoutSeconds: 10
           readinessProbe:
             exec:
               command:
@@ -637,7 +655,12 @@ spec:
               - -felix-ready
               - -bird-ready
             periodSeconds: 10
+            timeoutSeconds: 10
           volumeMounts:
+            # For maintaining CNI plugin API credentials.
+            - mountPath: /host/etc/cni/net.d
+              name: cni-net-dir
+              readOnly: false
             - mountPath: /lib/modules
               name: lib-modules
               readOnly: true
@@ -769,18 +792,28 @@ spec:
       priorityClassName: system-cluster-critical
       containers:
         - name: calico-kube-controllers
-          image: {{ keights_system.network.kube_controllers_image | default('calico/kube-controllers:v3.14.1') }}
+          image: {{ keights_system.network.kube_controllers_image | default('docker.io/calico/kube-controllers:v3.20.0') }}
           env:
             # Choose which controllers to run.
             - name: ENABLED_CONTROLLERS
               value: node
             - name: DATASTORE_TYPE
               value: kubernetes
+          livenessProbe:
+            exec:
+              command:
+              - /usr/bin/check-status
+              - -l
+            periodSeconds: 10
+            initialDelaySeconds: 10
+            failureThreshold: 6
+            timeoutSeconds: 10
           readinessProbe:
             exec:
               command:
               - /usr/bin/check-status
               - -r
+            periodSeconds: 10
 
 ---
 
@@ -866,7 +899,7 @@ spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
       containers:
-        - image: {{ keights_system.network.typha_autoscaler_image | default('k8s.gcr.io/cluster-proportional-autoscaler-amd64:1.7.1') }}
+        - image: {{ keights_system.network.typha_autoscaler_image | default('k8s.gcr.io/cpa/cluster-proportional-autoscaler:1.8.4') }}
           name: autoscaler
           command:
             - /cluster-proportional-autoscaler
@@ -920,3 +953,20 @@ subjects:
   - kind: ServiceAccount
     name: typha-cpha
     namespace: kube-system
+
+---
+
+# This manifest creates a Pod Disruption Budget for Controller to allow K8s Cluster Autoscaler to evict
+
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: calico-kube-controllers
+  namespace: kube-system
+  labels:
+    k8s-app: calico-kube-controllers
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      k8s-app: calico-kube-controllers
