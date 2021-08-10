@@ -6,13 +6,11 @@
     default_image: 'debian-buster-k8s-hvm-amd64-{{ keights_version }}'
     cache_dir: '{{ playbook_dir }}/.cache'
     create_iam_resources: '{{ keights_stack.create_iam_resources | default(true) }}'
-    default_docker_options:
-      'ip-masq': false
-      'iptables': false
-      'log-driver': journald
-      'storage-driver': overlay2
-      'exec-opts':
-      - native.cgroupdriver=systemd
+    default_containerd_options: |
+      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+        runtime_type = "io.containerd.runc.v2"
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+          SystemdCgroup = true
 
 - name: set etcd device
   ansible.builtin.set_fact:
@@ -52,6 +50,13 @@
   ansible.builtin.assert:
     that: keights_stack.masters.subnet_ids | length in (1, 3)
     msg: 'expected to be given 1 or 3 master subnet ids, got {{ keights_stack.masters.subnet_ids | length }}'
+  when: etcd_mode == 'stacked'
+
+- name: assert the correct number of etcd subnet ids
+  ansible.builtin.assert:
+    that: keights_stack.etcd.subnet_ids | length in (1, 3)
+    msg: 'expected to be given 1 or 3 etcd subnet ids, got {{ keights_stack.etcd.subnet_ids | length }}'
+  when: etcd_mode == 'external'
 
 - name: assert valid value for create_iam_resources
   ansible.builtin.assert:
@@ -204,8 +209,8 @@
       ImageRepository: '{{ keights_stack.etcd.image_repository | default("k8s.gcr.io") }}'
       KeightsVersion: '{{ keights_version }}'
       ResourceBucket: '{{ keights_stack.resource_bucket }}'
-      # Piping to_json twice escapes the json so it can be put on one line in the CloudFormation template.
-      DockerOptions: '{{ keights_stack.etcd.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
+      # Piping to_json escapes the string so it can be put on one line in the CloudFormation template.
+      ContainerdOptions: '{{ keights_stack.etcd.containerd_options | default(default_containerd_options) | to_json }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'
@@ -248,7 +253,7 @@
       ResourceBucket: '{{ keights_stack.resource_bucket }}'
       HostedZoneId: '{{ common_stack.stack_outputs.HostedZoneId | default(keights_stack.etcd_hosted_zone_id) }}'
       AllocateNodeCIDRs: '{{ keights_stack.masters.allocate_node_cidrs | default(true) | to_json }}'
-      DockerOptions: '{{ keights_stack.masters.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
+      ContainerdOptions: '{{ keights_stack.masters.containerd_options | default(default_containerd_options) | to_json }}'
       KubeadmInitConfigTemplate: '{{ keights_stack.masters.kubeadm_init_config_template | to_json if keights_stack.masters.kubeadm_init_config_template is defined else "" }}'
       EnableKubeProxy: '{{ keights_stack.enable_kube_proxy | default(true) | to_json }}'
     tags:
@@ -298,7 +303,7 @@
       ResourceBucket: '{{ keights_stack.resource_bucket }}'
       HostedZoneId: '{{ common_stack.stack_outputs.HostedZoneId | default(keights_stack.etcd_hosted_zone_id) }}'
       AllocateNodeCIDRs: '{{ keights_stack.masters.allocate_node_cidrs | default(true) | to_json }}'
-      DockerOptions: '{{ keights_stack.masters.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
+      ContainerdOptions: '{{ keights_stack.masters.containerd_options | default(default_containerd_options) | to_json }}'
       KubeadmInitConfigTemplate: '{{ keights_stack.masters.kubeadm_init_config_template | to_json if keights_stack.masters.kubeadm_init_config_template is defined else "" }}'
       EnableKubeProxy: '{{ keights_stack.enable_kube_proxy | default(true) | to_json }}'
     tags:
@@ -336,7 +341,7 @@
       NodeLabels: '{% set j = joiner(",") %}{% for k, v in (item.node_labels | default({})).items() %}{{ j() }}{{ k }}={{ v }}{% endfor %}'
       NodeTaints: '{% set j = joiner(",") %}{% for k, v in (item.node_taints | default({})).items() %}{{ j() }}{{ k }}={{ v }}{% endfor %}'
       LoadBalancerDnsName: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
-      DockerOptions: '{{ item.docker_options | default(default_docker_options) | to_nice_json | to_json }}'
+      ContainerdOptions: '{{ item.containerd_options | default(default_containerd_options) | to_json }}'
       KubeadmJoinConfigTemplate: '{{ item.kubeadm_join_config_template | to_json if item.kubeadm_join_config_template is defined else "" }}'
       OnDemandPercentage: '{{ item.spot.on_demand_percentage | default(omit) }}'
       SpotAllocationStrategy: '{{ item.spot.allocation_strategy | default(omit) }}'

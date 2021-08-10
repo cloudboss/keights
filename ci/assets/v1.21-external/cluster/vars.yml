@@ -20,13 +20,6 @@ ssh_access_cidr: 172.31.0.0/16
 api_access_cidr: 172.31.0.0/16
 # node_port_access_cidr is opened up for testing NodePorts on public IPs.
 node_port_access_cidr: 0.0.0.0/0
-docker_options:
-  'ip-masq': false
-  'iptables': false
-  'log-driver': json-file
-  'storage-driver': overlay2
-  'exec-opts':
-  - native.cgroupdriver=systemd
 node_groups:
 - name: app
   min_instances: 3
@@ -36,7 +29,6 @@ node_groups:
   instance_type: t3.medium
   keypair: '{{ keypair }}'
   ssh_access_cidr: '{{ ssh_access_cidr }}'
-  docker_options: '{{ docker_options }}'
   node_labels:
     class: app
     env: dev

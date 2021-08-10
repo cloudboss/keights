@@ -5,9 +5,9 @@
     "root-vol": "xvdb",
     "usr-vol": "xvdc",
     "var-vol": "xvdd",
-    "var-lib-docker-vol": "xvde",
+    "var-lib-containerd-vol": "xvde",
     "var-log-vol": "xvdf",
-    "docker-version": "5:18.09.9~3-0~debian-buster",
+    "containerd-version": "1.4.9-1",
     "k8s-version": "",
     "share-accounts": "all",
     "base-ami-pattern": "debian-stretch-hvm-x86_64-gp2-*",
@@ -65,7 +65,7 @@
         "volume_type": "gp2"
       },
       {
-        "device_name": "/dev/{{ user `var-lib-docker-vol` }}",
+        "device_name": "/dev/{{ user `var-lib-containerd-vol` }}",
         "delete_on_termination": true,
         "volume_size": 22,
         "volume_type": "gp2"
@@ -87,7 +87,7 @@
 
     "tags": {
       "os:version": "debian-{{ user `debian-release` }}",
-      "docker:version": "{{ user `docker-version` }}",
+      "containerd:version": "{{ user `containerd-version` }}",
       "k8s:version": "{{ user `k8s-version` }}",
       "keights:version": "{{ user `keights-version` }}"
     },
@@ -116,9 +116,9 @@
         "-e", "root_vol={{ user `root-vol` }}",
         "-e", "usr_vol={{ user `usr-vol` }}",
         "-e", "var_vol={{ user `var-vol` }}",
-        "-e", "var_lib_docker_vol={{ user `var-lib-docker-vol` }}",
+        "-e", "var_lib_containerd_vol={{ user `var-lib-containerd-vol` }}",
         "-e", "var_log_vol={{ user `var-log-vol` }}",
-        "-e", "docker_version={{ user `docker-version` }}",
+        "-e", "containerd_version={{ user `containerd-version` }}",
         "-e", "k8s_version={{ user `k8s-version` }}",
         "-e", "keights_version={{ user `keights-version` }}",
         "-e", "debian_release={{ user `debian-release` }}"

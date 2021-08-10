@@ -46,6 +46,7 @@
     suspend_processes:
     - HealthCheck
     - ReplaceUnhealthy
+  when: instances_to_terminate.results | length != 0
 
 - name: terminate instances for detaching etcd volumes
   amazon.aws.ec2:

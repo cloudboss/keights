@@ -72,7 +72,7 @@ Parameters:
     Description: Version of etcd
     Type: String
   ImageRepository:
-    Description: Repository for core Kubernetes Docker images
+    Description: Repository for core Kubernetes container images
     Type: String
     Default: k8s.gcr.io
   KeightsVersion:
@@ -81,19 +81,16 @@ Parameters:
   ResourceBucket:
     Description: Bucket used to store Lambda archives
     Type: String
-  DockerOptions:
+  ContainerdOptions:
     Description: >-
-      Options to write to /etc/docker/daemon.json, which should follow
-      https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file.
+      Options to write to /etc/containerd/config.toml, which should follow
+      https://containerd.io/docs/getting-started.
     Type: String
     Default: |
-      {
-        "ip-masq": false,
-        "iptables": false,
-        "log-driver": "journald",
-        "storage-driver": "overlay2",
-        "exec-opts": ["native.cgroupdriver=systemd"]
-      }
+      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+        runtime_type = "io.containerd.runc.v2"
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+          SystemdCgroup = true
 
 Conditions:
   HasThreeEtcdInstances: !Equals [!Ref NumInstances, 3]
@@ -265,10 +262,10 @@ Resources:
             - |
               #cloud-config
               write_files:
-              - path: /etc/docker/daemon.json
+              - path: /etc/containerd/config.toml
                 owner: root:root
                 permissions: '0644'
-                content: ${DockerOptions}
+                content: ${ContainerdOptions}
 
               - path: /etc/systemd/system/keights-volumize.service.d/environment.conf
                 owner: root:root

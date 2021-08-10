@@ -42,8 +42,8 @@
         mount: /var
         fstype: ext4
         mount_opts: rw,barrier=0,noatime,errors=remount-ro
-      - device: '/dev/{{ var_lib_docker_vol }}'
-        mount: /var/lib/docker
+      - device: '/dev/{{ var_lib_containerd_vol }}'
+        mount: /var/lib/containerd
         fstype: ext4
         mount_opts: rw,barrier=0,noatime,errors=remount-ro
       - device: '/dev/{{ var_log_vol }}'
@@ -55,6 +55,7 @@
       - wget
       - whiptail
     bootstrap_include:
+      - apparmor-utils
       - btrfs-progs
       - ca-certificates
       - curl
@@ -87,8 +88,13 @@
       filesystem:
         fstype: '{{ item.fstype }}'
         dev: '{{ item.device }}'
-        opts: '-L {{ item.mount }}'
       loop: '{{ volumes }}'
+
+    - name: get filesystem uuids
+      command: >-
+        lsblk -n -o uuid {{ item.device }}
+      loop: '{{ volumes }}'
+      register: filesystem_uuids
 
     - name: mount volumes
       mount:
@@ -141,6 +147,8 @@
       loop:
         - path: etc/apt/sources.list.d/kubernetes.list
           mode: '0644'
+        - path: etc/profile.d/crictl.sh
+          mode: '0644'
 
     - name: expand templates into chroot
       template:
@@ -178,8 +186,7 @@
           grub-pc \
           locales \
           openssh-server \
-          docker-ce={{ docker_version }} \
-          docker-ce-cli={{ docker_version }} \
+          containerd.io={{ containerd_version }} \
           kubectl={{ k8s_version_no_v }}-00 \
           kubeadm={{ k8s_version_no_v }}-00 \
           kubelet={{ k8s_version_no_v }}-00 && \
@@ -200,8 +207,6 @@
         state: directory
         mode: '{{ item.mode }}'
       loop:
-        - path: etc/systemd/system/docker.service.d
-          mode: '0755'
         - path: etc/modules-load.d
           mode: '0755'
 
@@ -219,8 +224,6 @@
           mode: '0644'
         - path: etc/sysctl.d/kubernetes.conf
           mode: '0644'
-        - path: etc/systemd/system/docker.service.d/cloudboss.conf
-          mode: '0644'
         - path: etc/systemd/timesyncd.conf
           mode: '0644'
         - path: etc/udev/rules.d/70-ec2-nvme-devices.rules
@@ -230,13 +233,13 @@
 
     - name: set fstab filesystem mounts
       mount:
-        src: 'LABEL={{ item.mount }}'
-        path: '{{ item.mount }}'
+        src: 'UUID={{ item.stdout }}'
+        path: '{{ item.item.mount }}'
         fstype: ext4
-        opts: '{{ item.mount_opts }}'
+        opts: '{{ item.item.mount_opts }}'
         fstab: /mnt/etc/fstab
         state: present
-      loop: '{{ volumes }}'
+      loop: '{{ filesystem_uuids.results }}'
 
     - name: clean up default fstab
       lineinfile:
@@ -282,6 +285,6 @@
         - mount: /mnt/proc
         - mount: /mnt/sys
         - mount: /mnt/var/log
-        - mount: /mnt/var/lib/docker
+        - mount: /mnt/var/lib/containerd
         - mount: /mnt/var
         - mount: /mnt/usr

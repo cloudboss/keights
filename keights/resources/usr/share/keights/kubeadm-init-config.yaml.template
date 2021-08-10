@@ -1,4 +1,4 @@
-apiVersion: kubeadm.k8s.io/v1beta2
+apiVersion: kubeadm.k8s.io/v1beta3
 bootstrapTokens:
 - groups:
   - system:bootstrappers:kubeadm:default-node-token
@@ -12,13 +12,11 @@ localAPIEndpoint:
   advertiseAddress: {{ .MyIP }}
   bindPort: 6443
 nodeRegistration:
-  criSocket: /var/run/dockershim.sock
+  criSocket: /run/containerd/containerd.sock
   kubeletExtraArgs:
     cloud-provider: aws
+  imagePullPolicy: IfNotPresent
   name: {{ .NodeName }}
-  taints:
-  - effect: NoSchedule
-    key: node-role.kubernetes.io/master
 ---
 apiServer:
   certSANs:
@@ -29,7 +27,7 @@ apiServer:
     external-hostname: {{ .APIServer }}
     service-account-jwks-uri: https://kubernetes.default.svc.{{ .ClusterDomain }}/openid/v1/jwks
   timeoutForControlPlane: 4m0s
-apiVersion: kubeadm.k8s.io/v1beta2
+apiVersion: kubeadm.k8s.io/v1beta3
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
 controlPlaneEndpoint: {{ .APIServer }}:{{ .APIPort }}
@@ -55,8 +53,6 @@ controllerManager:
     mountPath: /lib64/ld-linux-x86-64.so.2
     readOnly: true
     pathType: File
-dns:
-  type: CoreDNS
 {{- if eq .EtcdMode "stacked" }}
 etcd:
   local:

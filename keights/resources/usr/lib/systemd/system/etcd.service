@@ -1,22 +1,23 @@
 [Unit]
 Description=etcd service
-Requires=docker.service keights-volumize.service keights-templatize-etcd-env.service keights-kubeadm-etcd.service
-After=docker.service keights-volumize.service keights-templatize-etcd-env.service keights-kubeadm-etcd.service
+Requires=containerd.service keights-volumize.service keights-templatize-etcd-env.service keights-kubeadm-etcd.service
+After=containerd.service keights-volumize.service keights-templatize-etcd-env.service keights-kubeadm-etcd.service
 Before=keights-etcd-signal.service
 
 [Service]
 Type=simple
 # Environment=KEIGHTS_ETCD_IMAGE=
-ExecStartPre=-/usr/bin/docker stop etcd
-ExecStartPre=-/usr/bin/docker rm etcd
-ExecStart=/usr/bin/docker run -i --rm \
-    --name=etcd \
-    --network=host \
+ExecStartPre=-/usr/bin/ctr t kill etcd
+ExecStartPre=/usr/bin/ctr i pull ${KEIGHTS_ETCD_IMAGE}
+ExecStart=/usr/bin/ctr run \
+    --rm \
+    --net-host \
     --env-file=/etc/default/etcd \
-    -v /var/lib/etcd:/var/lib/etcd \
-    -v /etc/pki/etcd:/etc/pki/etcd \
-    ${KEIGHTS_ETCD_IMAGE} /usr/local/bin/etcd
-ExecStop=/usr/bin/docker stop etcd
+    --mount type=bind,src=/var/lib/etcd,dst=/var/lib/etcd,options=rbind:rw \
+    --mount type=bind,src=/etc/pki/etcd,dst=/etc/pki/etcd,options=rbind:ro \
+    ${KEIGHTS_ETCD_IMAGE} \
+    etcd /usr/local/bin/etcd
+ExecStop=/usr/bin/ctr t kill etcd
 Restart=always
 RestartSec=10s
 

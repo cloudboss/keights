@@ -15,7 +15,7 @@ outputs:
 - name: artifacts-out
 
 params:
-  SONOBUOY_URL: https://github.com/vmware-tanzu/sonobuoy/releases/download/v0.52.0/sonobuoy_0.52.0_linux_amd64.tar.gz
+  SONOBUOY_URL: https://github.com/vmware-tanzu/sonobuoy/releases/download/v0.53.0/sonobuoy_0.53.0_linux_amd64.tar.gz
   KUBECTL_URL: https://storage.googleapis.com/kubernetes-release/release/v1.20.0/bin/linux/amd64/kubectl
   KUBECONFIG: artifacts-in/kubeconfig
   CNI_PLUGIN_DAEMONSET: kube-router
