@@ -225,6 +225,11 @@ Resources:
             - |
               #cloud-config
               write_files:
+              - path: /etc/kubernetes/apiserver
+                owner: root:root
+                permissions: '0644'
+                content: ${LoadBalancer.DNSName}
+
               - path: /etc/keights/kubeadm-init-config.yaml.template
                 owner: root:root
                 permissions: '0644'
