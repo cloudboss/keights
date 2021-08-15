@@ -74,7 +74,7 @@ spec:
       serviceAccountName: kube-router
       containers:
       - name: kube-router
-        image: {{ keights_system.network.kube_router_image | default('cloudnativelabs/kube-router:v1.3.0') }}
+        image: {{ keights_system.network.kube_router_image | default('cloudnativelabs/kube-router:v1.3.1') }}
         imagePullPolicy: IfNotPresent
         args:
         - --run-router=true
