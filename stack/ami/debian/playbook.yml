@@ -252,6 +252,11 @@
         regexp: UNCONFIGURED FSTAB
         state: absent
 
+    - name: exit for dev mode
+      fail:
+        msg: exiting build
+      when: dev_mode | bool
+
     - name: find tmp files
       command: find /mnt/tmp -mindepth 1 -maxdepth 1
       register: tmp_files
