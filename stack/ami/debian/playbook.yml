@@ -148,7 +148,7 @@
       loop:
         - path: etc/apt/sources.list.d/kubernetes.list
           mode: '0644'
-        - path: etc/profile.d/crictl.sh
+        - path: etc/crictl.yaml
           mode: '0644'
 
     - name: expand templates into chroot
