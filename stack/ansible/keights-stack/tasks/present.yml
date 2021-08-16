@@ -7,10 +7,18 @@
     cache_dir: '{{ playbook_dir }}/.cache'
     create_iam_resources: '{{ keights_stack.create_iam_resources | default(true) }}'
     default_containerd_options: |
-      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
-        runtime_type = "io.containerd.runc.v2"
-        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
-          SystemdCgroup = true
+      version = 2
+      [plugins]
+        [plugins."io.containerd.grpc.v1.cri"]
+          sandbox_image = "k8s.gcr.io/pause:3.5"
+          [plugins."io.containerd.grpc.v1.cri".containerd]
+            default_runtime_name = "runc"
+            [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]
+            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+                runtime_type = "io.containerd.runc.v2"
+                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+                  SystemdCgroup = true
 
 - name: set etcd device
   ansible.builtin.set_fact:
