@@ -55,6 +55,7 @@
       - wget
       - whiptail
     bootstrap_include:
+      - arptables
       - btrfs-progs
       - ca-certificates
       - curl
@@ -189,7 +190,11 @@
         apt-get clean && \
         systemctl disable kubelet.service && \
         systemctl disable apt-daily.timer && \
-        systemctl disable apt-daily-upgrade.timer
+        systemctl disable apt-daily-upgrade.timer && \
+        update-alternatives --set arptables /usr/sbin/arptables-legacy && \
+        update-alternatives --set ebtables /usr/sbin/ebtables-legacy && \
+        update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy && \
+        update-alternatives --set iptables /usr/sbin/iptables-legacy
         EOF
       args:
         creates: /mnt/usr/bin/keights
