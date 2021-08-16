@@ -175,11 +175,12 @@ spec:
               rm -f ${oldconf}
           done
           configmap=/etc/kube-router/cni-conf.json
-          dest=/etc/cni/net.d/10-kuberouter.conflist
-          tmp=.${dest}
-          diff ${configmap} ${dest} >/dev/null 2>&1 || (
-              cp ${configmap} ${tmp}
-              mv ${tmp} ${dest}
+          netdir=/etc/cni/net.d
+          conflist=10-kuberouter.conflist
+          tmp=.${conflist}
+          diff ${configmap} ${netdir}/${conflist} >/dev/null 2>&1 || (
+              cp ${configmap} ${netdir}/${tmp}
+              mv ${netdir}/${tmp} ${netdir}/${conflist}
           )
         volumeMounts:
         - name: cni-conf-dir
