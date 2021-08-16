@@ -219,6 +219,11 @@ Resources:
             - |
               #cloud-config
               write_files:
+              - path: /etc/kubernetes/apiserver
+                owner: root:root
+                permissions: '0644'
+                content: ${LoadBalancerDnsName}
+
               - path: /etc/keights/kubeadm-join-config.yaml.template
                 owner: root:root
                 permissions: '0644'
