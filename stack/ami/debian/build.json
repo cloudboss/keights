@@ -1,7 +1,7 @@
 {
   "variables": {
     "keights-version": "",
-    "debian-release": "buster",
+    "debian-release": "bullseye",
     "root-vol": "xvdb",
     "usr-vol": "xvdc",
     "var-vol": "xvdd",

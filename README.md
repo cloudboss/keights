@@ -100,7 +100,7 @@ Before you start, you will need:
 
 * A KMS key with an alias - Keights does not touch your KMS keys. If you don't have one, you can create a new key in the IAM AWS console under "Encryption Keys" and give it an alias.
 
-* An AMI for the Keights version in your region - For each release, there is a public AMI published in the `us-east-1` region. If you are in another region, you will need to [copy it into your account and region](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/CopyingAMIs.html#ami-copy-steps). The published AMI can be found in the AWS console as a public image with owner `256008164056`, and is called `debian-buster-k8s-hvm-amd64-v${KeightsVersion}`, where `${KeightsVersion}` is replaced with the actual version. If you do copy the image to your account, keep the same name to make things easier.
+* An AMI for the Keights version in your region - For each release, there is a public AMI published in the `us-east-1` region. If you are in another region, you will need to [copy it into your account and region](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/CopyingAMIs.html#ami-copy-steps). The published AMI can be found in the AWS console as a public image with owner `256008164056`, and is called `debian-bullseye-k8s-hvm-amd64-v${KeightsVersion}`, where `${KeightsVersion}` is replaced with the actual version. If you do copy the image to your account, keep the same name to make things easier.
 
 * Python - Ansible will be installed into a [virtualenv](https://virtualenv.pypa.io/en/latest/), so you need either Python 3, or Python 2 with the `virtualenv` command installed.
 

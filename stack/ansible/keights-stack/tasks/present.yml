@@ -3,7 +3,7 @@
   ansible.builtin.set_fact:
     cluster_dns: '{{ keights_stack.masters.service_cidr.split(".")[:-1] | join(".") }}.10'
     k8s_version: '{{ keights_stack.k8s_version | default(keights_version.split("-")[0]) }}'
-    default_image: 'debian-buster-k8s-hvm-amd64-{{ keights_version }}'
+    default_image: 'debian-bullseye-k8s-hvm-amd64-{{ keights_version }}'
     cache_dir: '{{ playbook_dir }}/.cache'
     create_iam_resources: '{{ keights_stack.create_iam_resources | default(true) }}'
     default_containerd_options: |
