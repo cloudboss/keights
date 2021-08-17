@@ -25,16 +25,16 @@ run:
   - -e
   - -c
   - |
-    python3 -m venv /python
-    . /python/bin/activate
-    pip install awscli
-
     obj_path=artifacts-in/*.tar.gz
 
     if [ ! -f ${obj_path} ]; then
         echo "No results to upload"
         exit 0
     fi
+
+    python3 -m venv /python
+    . /python/bin/activate
+    pip install awscli
 
     obj=`basename ${obj_path}`
     version=`cat version/version`
