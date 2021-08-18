@@ -44,7 +44,7 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `k8s_version`: (Optional, type *string*) - Version of Kubernetes. This defaults to the version corresponding with the `keights-stack` version, for example if the `keights-stack` version is `1.10.7-3`, then `k8s_version` is `1.10.7`. Versions other than the default will not be tested.
 
-`image`: (Optional, type *string*) - The default AMI to use for both masters and nodes. This should be the name of the image, rather than an AMI ID. This defaults to `debian-buster-k8s-hvm-amd64-v<version>`, where `<version>` is the keights version. A public image with this name is available in `us-east-1`, so if you are not running there, you may copy it into your own region. If more than one image is found with the same name, the first one is used.
+`image`: (Optional, type *string*) - The default AMI to use for both masters and nodes. This should be the name of the image, rather than an AMI ID. This defaults to `debian-bullseye-k8s-hvm-amd64-v<version>`, where `<version>` is the keights version. A public image with this name is available in `us-east-1`, so if you are not running there, you may copy it into your own region. If more than one image is found with the same name, the first one is used.
 
 `image_owner`: (Optional, type *string*, default `256008164056`) - AWS account owning the AMI. Set this if using your own image.
 
@@ -102,7 +102,7 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which Kubernetes component container images are pulled.
 
-`containerd_options`: (Optional, type *string*, default `[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]\n  runtime_type = "io.containerd.runc.v2"\n  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]\n    SystemdCgroup = true`) - Options to write to `/etc/containerd/config.toml`.
+`containerd_options`: (Optional, type *string*, default `version = 2\n[plugins]\n  [plugins."io.containerd.grpc.v1.cri"]\n    sandbox_image = "k8s.gcr.io/pause:3.5"\n    [plugins."io.containerd.grpc.v1.cri".containerd]\n      default_runtime_name = "runc"\n      [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]\n      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]\n        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]\n          runtime_type = "io.containerd.runc.v2"\n          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]\n            SystemdCgroup = true\n`) - Options to write to `/etc/containerd/config.toml`.
 
 `kubeadm_init_config_template`: (Optional, type *string*, default `''`) - A kubeadm init [configuration file](https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-init/#config-file) as a Go template string. If not defined, a default one will be used which is built into the AMI. See [Kubeadm init](#kubeadm-init) below for a description of the variables that will be available within the template. Due to CloudFormation parameter limitations, this string must not be over 4kb.
 
@@ -126,7 +126,7 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which container image is pulled.
 
-`containerd_options`: (Optional, type *string*, default `[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]\n  runtime_type = "io.containerd.runc.v2"\n  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]\n    SystemdCgroup = true`) - Options to write to `/etc/containerd/config.toml`.
+`containerd_options`: (Optional, type *string*, default `version = 2\n[plugins]\n  [plugins."io.containerd.grpc.v1.cri"]\n    sandbox_image = "k8s.gcr.io/pause:3.5"\n    [plugins."io.containerd.grpc.v1.cri".containerd]\n      default_runtime_name = "runc"\n      [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]\n      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]\n        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]\n          runtime_type = "io.containerd.runc.v2"\n          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]\n            SystemdCgroup = true\n`) - Options to write to `/etc/containerd/config.toml`.
 
 `instance_profile`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The name of the IAM instance profile assigned to EC2 instances.
 
@@ -158,7 +158,7 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `node_taints`: (Optional, type *dict*, default `{}`) - A dictionary of key/value pairs used to assign Kubernetes taints to nodes, for example `{'key1': 'value1:NoSchedule', 'key1': 'value1:NoExecute'}`.
 
-`containerd_options`: (Optional, type *string*, default `[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]\n  runtime_type = "io.containerd.runc.v2"\n  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]\n    SystemdCgroup = true`) - Options to write to `/etc/containerd/config.toml`.
+`containerd_options`: (Optional, type *string*, default `version = 2\n[plugins]\n  [plugins."io.containerd.grpc.v1.cri"]\n    sandbox_image = "k8s.gcr.io/pause:3.5"\n    [plugins."io.containerd.grpc.v1.cri".containerd]\n      default_runtime_name = "runc"\n      [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]\n      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]\n        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]\n          runtime_type = "io.containerd.runc.v2"\n          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]\n            SystemdCgroup = true\n`) - Options to write to `/etc/containerd/config.toml`.
 
 `kubeadm_join_config_template`: (Optional, type *string*, default `''`) - A kubeadm join [configuration file](https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-join/#config-file) as a Go template string. If not defined, a default one will be used which is built into the AMI. See [Kubeadm join](#kubeadm-join) below for a description of the variables that will be available within the template. Due to CloudFormation parameter limitations, this string must not be over 4kb.
 

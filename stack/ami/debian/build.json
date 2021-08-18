@@ -1,7 +1,7 @@
 {
   "variables": {
     "keights-version": "",
-    "debian-release": "buster",
+    "debian-release": "bullseye",
     "root-vol": "xvdb",
     "usr-vol": "xvdc",
     "var-vol": "xvdd",
@@ -14,7 +14,9 @@
     "base-ami-owner": "379101102735",
     "ssh-interface": "public_ip",
     "vpc-id": "",
-    "subnet-id": ""
+    "subnet-id": "",
+    "dev-mode": "false",
+    "ami-name-suffix": ""
   },
 
   "builders": [{
@@ -100,8 +102,8 @@
       "Name": "ami-volume-{{ user `debian-release` }}"
     },
 
-    "ami_name": "debian-{{ user `debian-release` }}-k8s-hvm-amd64-{{ user `keights-version` }}",
-    "ami_description": "Cloudboss Kube Debian {{ user `debian-release` }}",
+    "ami_name": "debian-{{ user `debian-release` }}-k8s-hvm-amd64-{{ user `keights-version` }}{{ user `ami-name-suffix` }}",
+    "ami_description": "Cloudboss Keights Debian {{ user `debian-release` }}",
     "ami_virtualization_type": "hvm"
   }],
 
@@ -111,7 +113,7 @@
       "playbook_file": "./playbook.yml",
       "user": "admin",
       "use_proxy": false,
-      "keep_inventory_file": true,
+      "keep_inventory_file": "{{ user `dev_mode` }}",
       "extra_arguments": [
         "-e", "root_vol={{ user `root-vol` }}",
         "-e", "usr_vol={{ user `usr-vol` }}",
@@ -121,7 +123,8 @@
         "-e", "containerd_version={{ user `containerd-version` }}",
         "-e", "k8s_version={{ user `k8s-version` }}",
         "-e", "keights_version={{ user `keights-version` }}",
-        "-e", "debian_release={{ user `debian-release` }}"
+        "-e", "debian_release={{ user `debian-release` }}",
+        "-e", "dev_mode={{ user `dev-mode` }}"
       ]
     }
   ]
