@@ -30,10 +30,14 @@
       - name: google
         url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
     volumes:
-      - device: '/dev/{{ root_vol }}'
+      - device: '/dev/{{ root_vol }}2'
         mount: /
         fstype: ext4
         mount_opts: rw,barrier=0,noatime,errors=remount-ro
+      - device: '/dev/{{ root_vol }}1'
+        mount: /boot/efi
+        fstype: vfat
+        mount_opts: defaults
       - device: '/dev/{{ usr_vol }}'
         mount: /usr
         fstype: ext4
@@ -62,7 +66,7 @@
       - curl
       - dbus
       - isc-dhcp-client
-      - linux-image-amd64
+      - linux-image-cloud-amd64
       - logrotate
       - netbase
       - nfs-common
@@ -83,7 +87,34 @@
         name:
           - ca-certificates
           - debootstrap
+          - dosfstools
+          - parted
         update_cache: true
+
+    - name: make root disk partitions
+      parted:
+        device: '/dev/{{ root_vol }}'
+        flags: '{{ item.flags | default(omit) }}'
+        fs_type: '{{ item.fs_type }}'
+        label: gpt
+        name: '{{ item.name }}'
+        number: '{{ item.number }}'
+        part_start: '{{ item.start }}'
+        part_end: '{{ item.end }}'
+        state: present
+        unit: MiB
+      loop:
+        - name: EFI
+          number: 1
+          start: 0%
+          end: 100MiB
+          flags: [boot]
+          fs_type: fat16
+        - name: ROOT
+          number: 2
+          start: 100MiB
+          end: 100%
+          fs_type: ext4
 
     - name: make filesystems on volumes
       filesystem:
@@ -184,14 +215,15 @@
         apt-get upgrade -y && \
         DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
           cloud-init \
-          grub-pc \
+          grub-efi \
           locales \
           openssh-server \
           containerd.io={{ containerd_version }} \
           kubectl={{ k8s_version_no_v }}-00 \
           kubeadm={{ k8s_version_no_v }}-00 \
           kubelet={{ k8s_version_no_v }}-00 && \
-        grub-install --force /dev/{{ root_vol }} && \
+        grub-install --target=x86_64-efi --bootloader-id=BOOT && \
+        mv /boot/efi/EFI/BOOT/grubx64.efi /boot/efi/EFI/BOOT/BOOTX64.efi && \
         update-grub && \
         dpkg -i /tmp/keights.deb && \
         apt-get clean && \
@@ -240,7 +272,7 @@
       mount:
         src: 'UUID={{ item.stdout }}'
         path: '{{ item.item.mount }}'
-        fstype: ext4
+        fstype: '{{ item.item.fstype }}'
         opts: '{{ item.item.mount_opts }}'
         fstab: /mnt/etc/fstab
         state: present

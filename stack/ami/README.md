@@ -47,18 +47,19 @@ Pass the following variables to packer:
 
 `subnet-id`: The VPC subnet in which the build instance will be created.
 
-See `debian/build.json` for other variables that can be set.
+See `debian/build.pkr.hcl` for other variables that can be set.
 
 To build, run:
 
 ```
 cd debian
+packer init build.pkr.hcl
 packer build \
   -var k8s-version=1.8.2 \
   -var keights-version=0.4.0 \
   -var vpc-id=vpc-c71371be \
   -var subnet-id=subnet-37ef771b \
-  debian/build.json
+  build.pkr.hcl
 ```
 
 License
