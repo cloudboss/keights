@@ -20,7 +20,7 @@ params:
   AWS_REGION: us-east-1
   VPC_ID: vpc-c71371be
   SUBNET_ID: subnet-37ef771b
-  PACKER_URL: https://releases.hashicorp.com/packer/1.7.0/packer_1.7.0_linux_amd64.zip
+  PACKER_URL: https://releases.hashicorp.com/packer/1.7.9/packer_1.7.9_linux_amd64.zip
   VERSION_FILE: version/version
 
 run:
@@ -45,9 +45,10 @@ run:
     k8s_version=`echo ${version} | cut -d - -f 1 | cut -c 1-100`
 
     cd repo/stack/ami/debian
+    /opt/bin/packer init build.pkr.hcl
     /opt/bin/packer build \
         -var keights-version=${version} \
         -var k8s-version=${k8s_version} \
         -var vpc-id=${VPC_ID} \
         -var subnet-id=${SUBNET_ID} \
-        build.json
+        build.pkr.hcl
