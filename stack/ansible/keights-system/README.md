@@ -16,11 +16,75 @@ All role variables go under a top level dictionary `keights_system`.
 
 `cluster_apiserver`: (Required, type *string*) - Hostname or IP address of Kubernetes APIserver, may use optional port.
 
+`cert_manager`: (Optional, type *dict*) - A dictionary to configure cert-manager, see below.
+
+`csi_driver`: (Optional, type *dict*) - A dictionary to configure the [AWS EBS CSI driver](https://github.com/kubernetes-sigs/aws-ebs-csi-driver) plugin, see below.
+
 `kubernetes_dashboard_image`: (Optional, type *string*, default `kubernetesui/dashboard:v2.0.3`) - The Kubernetes dashboard container image.
 
 `kubernetes_dashboard_metrics_image`: (Optional, type _string_, default `kubernetesui/metrics-scraper:v1.0.4`) - The metrics scraper image used by Kubernetes dashboard.
 
 `network`: (Required, type *dict*) - A dictionary to configure the network plugin, see below.
+
+### cert_manager
+
+`enable`: (Optional, type *bool*, default `true`) - Whether or not to enable cert-manager. The CSI driver, if enabled with `keights_system.csi_driver.enable`, needs cert-manager to manage the certificate for the validation webhook.
+
+`cainjector_image`: (Optional, default `quay.io/jetstack/cert-manager-cainjector:v1.7.1`) - The cert-manager cainjector image.
+
+`cainjector_replicas`: (Optional, type *int*,  default `2`) - The number of cainjector replicas.
+
+`controller_extra_annotations`: (Optional, type *dict*, default `{}`) - Extra annotations to assign to the cert-manager controller pods.
+
+`controller_extra_args`: (Optional, type *list*, default `[]`) - Extra arguments to pass to the cert-manager controller pods.
+
+`controller_image`: (Optional, default `quay.io/jetstack/cert-manager-controller:v1.7.1`) - The cert-manager controller image.
+
+`controller_replicas`: (Optional, type *int*,  default `2`) - The number of controller replicas.
+
+`namespace`: (Optional, default `kube-system`) - The namespace used for cert-manager.
+
+`webhook_image`: (Optional, default `quay.io/jetstack/cert-manager-webhook:v1.7.1`) - The cert-manager webhook image.
+
+`webhook_replicas`: (Optional, type *int*,  default `2`) - The number of webhook replicas.
+
+### csi_driver
+
+This configures the [AWS EBS CSI driver](https://github.com/kubernetes-sigs/aws-ebs-csi-driver) and associated resources, such as the snapshot controller and validation webhook.
+
+`aws_ebs_csi_driver_affinity`: (Optional, type *dict*, default `{"nodeAffinity": {"requiredDuringSchedulingIgnoredDuringExecution": {"nodeSelectorTerms": [{"matchExpressions": [{"key": "node-role.kubernetes.io/control-plane", "operator": "Exists"}]}]}}}`) - Affinity for the AWS EBS CSI driver. The default value causes the driver to run on control plane nodes so it can use the permissions from the IAM instance profile. This can be disabled by setting the value to `{}` or `null`.
+
+`aws_ebs_csi_driver_extra_annotations`: (Optional, type *dict*, default `{}`) - Annotations to add to the AWS EBS CSI driver, such as for assigning an IAM role.
+
+`aws_ebs_csi_driver_image`: (Optional, type *string*, default `k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.4.0`) - The AWS EBS CSI driver container image.
+
+`aws_ebs_csi_driver_replicas`: (Optional, type *int*,  default `2`) - The number of AWS EBS CSI driver replicas. Set to `1` if `aws_ebs_csi_driver_affinity` schedules the driver on the control plane and there is a single control plane node.
+
+`csi_attacher_image`: (Optional, type *string*, default `k8s.gcr.io/sig-storage/csi-attacher:v3.1.0`) - The CSI attacher container image.
+
+`csi_node_driver_registrar_image` (Optional, type *string*, default `k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.1.0`) - The CSI node driver registrar container image.
+
+`csi_provisioner_image`: (Optional, type *string*, default `k8s.gcr.io/sig-storage/csi-provisioner:v2.1.1`) - The CSI provisioner container image.
+
+`csi_resizer` (Optional, type *string*, default `k8s.gcr.io/sig-storage/csi-resizer:v1.1.0`) - The CSI resizer container image.
+
+`csi_snapshotter_image`: (Optional, type *string*, default `k8s.gcr.io/sig-storage/csi-snapshotter:v3.0.3`) - The CSI snapshotter container image.
+
+`ebs_plugin_image`: (Optional, type *string*, default `k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.4.0`) - The EBS plugin container image.
+
+`enable`: (Optional, type *bool*, default `true`) - Whether or not to enable the EBS CSI driver.
+
+`livenessprobe_image`: (Optional, type *string*,  default `k8s.gcr.io/sig-storage/livenessprobe:v2.2.0`) - The liveness probe container image.
+
+`namespace`: (Optional, default `kube-system`) - The namespace used for csi driver.
+
+`snapshot_controller_image`: (Optional, type *string*, default `k8s.gcr.io/sig-storage/snapshot-controller:v5.0.0`) - The common snapshot controller container image.
+
+`snapshot_controller_replicas`: (Optional, type *int*,  default `2`) - The number of snapshot controller replicas.
+
+`snapshot_validation_image`: (Optional, type *string*, default `k8s.gcr.io/sig-storage/snapshot-validation-webhook:v5.0.1`) - The snapshot validation webhook container image.
+
+`snapshot_validation_replicas`: (Optional, type *int*,  default `2`) - The number of snapshot validation replicas.
 
 ### network
 
