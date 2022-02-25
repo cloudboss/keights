@@ -151,3 +151,76 @@
   until: pods | json_query('resources[].status.containerStatuses[] | [?ready==`false`]') == []
   retries: 60
   delay: 10
+
+- name: define cert-manager defaults
+  set_fact:
+    cert_manager_namespace_default: kube-system
+    cert_manager_replicas_default: 2
+
+- name: define cert-manager namespace
+  set_fact:
+    cert_manager_namespace: '{{ keights_system.cert_manager.namespace | default(cert_manager_namespace_default) }}'
+
+- name: expand cert-manager manifest templates
+  ansible.builtin.template:
+    src: templates/manifests/{{ item }}.yml.j2
+    dest: '{{ cache_dir.path }}/{{ item }}.yml'
+  loop:
+  - cert-manager-crd
+  - cert-manager
+  when: keights_system.cert_manager.enable | default(true)
+
+- name: apply cert-manager manifests
+  kubernetes.core.k8s:
+    kubeconfig: '{{ cache_dir.path }}/kubeconfig'
+    src: '{{ cache_dir.path }}/{{ item }}.yml'
+    # continue_on_error: true
+  register: apply_manifest
+  until: apply_manifest is succeeded
+  retries: 6
+  delay: 10
+  loop:
+  - cert-manager-crd
+  - cert-manager
+  when: keights_system.cert_manager.enable | default(true)
+
+- name: define csi driver defaults
+  set_fact:
+    csi_driver_namespace_default: kube-system
+    csi_driver_replicas_default: 2
+    csi_driver_aws_ebs_csi_driver_affinity_default:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+
+- name: define csi driver namespace
+  set_fact:
+    csi_driver_namespace: '{{ keights_system.csi_driver.namespace | default(csi_driver_namespace_default) }}'
+
+- name: expand csi driver manifest templates
+  ansible.builtin.template:
+    src: templates/manifests/{{ item }}.yml.j2
+    dest: '{{ cache_dir.path }}/{{ item }}.yml'
+  loop:
+  - external-snapshotter-crd
+  - snapshot-controller
+  - aws-ebs-csi-driver
+  when: keights_system.csi_driver.enable | default(true)
+
+- name: apply csi driver manifests
+  kubernetes.core.k8s:
+    kubeconfig: '{{ cache_dir.path }}/kubeconfig'
+    src: '{{ cache_dir.path }}/{{ item }}.yml'
+    # continue_on_error: true
+  register: apply_manifest
+  until: apply_manifest is succeeded
+  retries: 6
+  delay: 10
+  loop:
+  - external-snapshotter-crd
+  - snapshot-controller
+  - aws-ebs-csi-driver
+  when: keights_system.csi_driver.enable | default(true)
