@@ -174,10 +174,9 @@
   kubernetes.core.k8s:
     kubeconfig: '{{ cache_dir.path }}/kubeconfig'
     src: '{{ cache_dir.path }}/{{ item }}.yml'
-    # continue_on_error: true
   register: apply_manifest
   until: apply_manifest is succeeded
-  retries: 6
+  retries: 12
   delay: 10
   loop:
   - cert-manager-crd
@@ -214,10 +213,9 @@
   kubernetes.core.k8s:
     kubeconfig: '{{ cache_dir.path }}/kubeconfig'
     src: '{{ cache_dir.path }}/{{ item }}.yml'
-    # continue_on_error: true
   register: apply_manifest
   until: apply_manifest is succeeded
-  retries: 6
+  retries: 12
   delay: 10
   loop:
   - external-snapshotter-crd
