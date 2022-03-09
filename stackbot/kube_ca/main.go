@@ -1,4 +1,4 @@
-// Copyright 2019 Joseph Wright <joseph@cloudboss.co>
+// Copyright 2022 Joseph Wright <joseph@cloudboss.co>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@ package main
 
 import (
 	"context"
-	"crypto/rsa"
+	"crypto"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -35,10 +35,10 @@ import (
 	"github.com/cloudboss/keights/stackbot/whisperer"
 	"github.com/mitchellh/mapstructure"
 	certutil "k8s.io/client-go/util/cert"
+	"k8s.io/client-go/util/keyutil"
+	tokenutil "k8s.io/cluster-bootstrap/token/util"
 	kubeadmconstants "k8s.io/kubernetes/cmd/kubeadm/app/constants"
-	"k8s.io/kubernetes/cmd/kubeadm/app/phases/certs"
-	"k8s.io/kubernetes/cmd/kubeadm/app/phases/certs/pkiutil"
-	tokenutil "k8s.io/kubernetes/cmd/kubeadm/app/util/token"
+	"k8s.io/kubernetes/cmd/kubeadm/app/util/pkiutil"
 )
 
 const (
@@ -51,7 +51,7 @@ const (
 
 var (
 	certDecodeError = errors.New("could not decode CA certificate")
-	keyDecodeError  = errors.New("could not decode CA private key")
+	invalidKeyError = errors.New("private key is not in expected format")
 )
 
 type resourceProperties struct {
@@ -68,11 +68,11 @@ func pathFormatter(template, prefix string) func(string) *string {
 	}
 }
 
-func retrieveCA(whisp whisperer.Whisperer, certPath, keyPath *string) (*x509.Certificate, *rsa.PrivateKey, error) {
+func retrieveCA(whisp whisperer.Whisperer, certPath, keyPath *string) (*x509.Certificate, crypto.Signer, error) {
 	fmt.Printf("Retrieving CA via SSM parameters %s and %s\n", *certPath, *keyPath)
 
 	var caCert *x509.Certificate
-	var caKey *rsa.PrivateKey
+	var caKey crypto.Signer
 
 	certString, err := whisp.GetParameter(certPath)
 	if err != nil {
@@ -90,28 +90,42 @@ func retrieveCA(whisp whisperer.Whisperer, certPath, keyPath *string) (*x509.Cer
 	if err != nil {
 		return nil, nil, err
 	}
-	keyBlock, _ := pem.Decode([]byte(*keyString))
-	if keyBlock == nil {
-		return nil, nil, keyDecodeError
-	}
-	caKey, err = x509.ParsePKCS1PrivateKey(keyBlock.Bytes)
-	return caCert, caKey, err
-}
-
-func genCA(whisp whisperer.Whisperer, certPath, keyPath, kmsKeyID *string) (*x509.Certificate, *rsa.PrivateKey, error) {
-	fmt.Printf("Generating CA: %s and %s\n", *certPath, *keyPath)
-
-	caCert, caKey, err := pkiutil.NewCertificateAuthority()
+	parsedKey, err := keyutil.ParsePrivateKeyPEM([]byte(*keyString))
 	if err != nil {
 		return nil, nil, err
 	}
-	caCertPEM := string(certutil.EncodeCertPEM(caCert))
+	caKey, ok := parsedKey.(crypto.Signer)
+	if !ok {
+		return nil, nil, invalidKeyError
+	}
+	return caCert, caKey, err
+}
+
+func genCA(whisp whisperer.Whisperer, certPath, keyPath, kmsKeyID *string) (*x509.Certificate, crypto.Signer, error) {
+	fmt.Printf("Generating CA: %s and %s\n", *certPath, *keyPath)
+
+	caCert, caKey, err := pkiutil.NewCertificateAuthority(&pkiutil.CertConfig{
+		// Config defined in func KubeadmCertRootCA() from
+		// k8s.io/kubernetes@v1.23.4/cmd/kubeadm/app/phases/certs/certlist.go.
+		Config: certutil.Config{
+			CommonName: "kubernetes",
+		},
+	})
+	caCertPEMBytes, err := certutil.EncodeCertificates(caCert)
+	if err != nil {
+		return nil, nil, err
+	}
 	fmt.Printf("Storing %s\n", *certPath)
+	caCertPEM := string(caCertPEMBytes)
 	err = whisp.ForceStoreParameter(certPath, kmsKeyID, &caCertPEM)
 	if err != nil {
 		return nil, nil, err
 	}
-	caKeyPEM := string(certutil.EncodePrivateKeyPEM(caKey))
+	caKeyPEMBytes, err := keyutil.MarshalPrivateKeyToPEM(caKey)
+	if err != nil {
+		return nil, nil, err
+	}
+	caKeyPEM := string(caKeyPEMBytes)
 	fmt.Printf("Storing %s\n", *keyPath)
 	err = whisp.ForceStoreParameter(keyPath, kmsKeyID, &caKeyPEM)
 	if err != nil {
@@ -123,31 +137,33 @@ func genCA(whisp whisperer.Whisperer, certPath, keyPath, kmsKeyID *string) (*x50
 func genServiceAccountArtifacts(whisp whisperer.Whisperer, keyPath, pubKeyPath, kmsKeyID *string) error {
 	fmt.Printf("Generating service account artifacts: %s and %s\n", *keyPath, *pubKeyPath)
 
-	saSigningKey, err := certs.NewServiceAccountSigningKey()
+	saSigningKey, err := pkiutil.NewPrivateKey(x509.RSA)
 	if err != nil {
 		return err
 	}
-
-	saSigningKeyPEM := string(certutil.EncodePrivateKeyPEM(saSigningKey))
+	saSigningKeyPEMBytes, err := keyutil.MarshalPrivateKeyToPEM(saSigningKey)
+	if err != nil {
+		return err
+	}
+	saSigningKeyPEM := string(saSigningKeyPEMBytes)
 	fmt.Printf("Storing %s\n", *keyPath)
 	err = whisp.ForceStoreParameter(keyPath, kmsKeyID, &saSigningKeyPEM)
 	if err != nil {
 		return err
 	}
-
-	saSigningPubKeyPEM, err := certutil.EncodePublicKeyPEM(&saSigningKey.PublicKey)
+	saSigningPubKeyPEMBytes, err := pkiutil.EncodePublicKeyPEM(saSigningKey.Public())
 	if err != nil {
 		return err
 	}
-	saSigningPubKeyPEMStr := string(saSigningPubKeyPEM)
+	saSigningPubKeyPEM := string(saSigningPubKeyPEMBytes)
 	fmt.Printf("Storing %s\n", *pubKeyPath)
-	return whisp.ForceStoreParameter(pubKeyPath, kmsKeyID, &saSigningPubKeyPEMStr)
+	return whisp.ForceStoreParameter(pubKeyPath, kmsKeyID, &saSigningPubKeyPEM)
 }
 
 func genBootstrapToken(whisp whisperer.Whisperer, path, kmsKeyID *string) error {
 	fmt.Printf("Generating bootstrap token\n")
 
-	token, err := tokenutil.GenerateToken()
+	token, err := tokenutil.GenerateBootstrapToken()
 	if err != nil {
 		return err
 	}
@@ -155,26 +171,38 @@ func genBootstrapToken(whisp whisperer.Whisperer, path, kmsKeyID *string) error 
 	return whisp.StoreParameter(path, kmsKeyID, &token)
 }
 
-func genAPIClientCert(whisp whisperer.Whisperer, caCert *x509.Certificate, caKey *rsa.PrivateKey,
+func genAPIClientCert(whisp whisperer.Whisperer, caCert *x509.Certificate, caKey crypto.Signer,
 	certPath, keyPath, kmsKeyID *string) error {
 	fmt.Printf("Generating API client certificate\n")
 
-	config := certutil.Config{
-		CommonName:   kubeadmconstants.APIServerKubeletClientCertCommonName,
-		Usages:       []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-		Organization: []string{kubeadmconstants.MastersGroup},
+	config := &pkiutil.CertConfig{
+		// Config defined in func KubeadmCertKubeletClient() from
+		// k8s.io/kubernetes@v1.23.4/cmd/kubeadm/app/phases/certs/certlist.go.
+		Config: certutil.Config{
+			CommonName:   kubeadmconstants.APIServerKubeletClientCertCommonName,
+			Organization: []string{kubeadmconstants.SystemPrivilegedGroup},
+			Usages:       []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		},
 	}
 	apiClientCert, apiClientKey, err := pkiutil.NewCertAndKey(caCert, caKey, config)
 	if err != nil {
 		return err
 	}
-	apiClientCertPEM := string(certutil.EncodeCertPEM(apiClientCert))
+	apiClientCertPEMBytes, err := certutil.EncodeCertificates(apiClientCert)
+	if err != nil {
+		return err
+	}
+	apiClientCertPEM := string(apiClientCertPEMBytes)
 	fmt.Printf("Storing %s\n", *certPath)
 	err = whisp.ForceStoreParameter(certPath, kmsKeyID, &apiClientCertPEM)
 	if err != nil {
 		return err
 	}
-	apiClientKeyPEM := string(certutil.EncodePrivateKeyPEM(apiClientKey))
+	apiClientKeyPEMBytes, err := keyutil.MarshalPrivateKeyToPEM(apiClientKey)
+	if err != nil {
+		return err
+	}
+	apiClientKeyPEM := string(apiClientKeyPEMBytes)
 	fmt.Printf("Storing %s\n", *keyPath)
 	return whisp.ForceStoreParameter(keyPath, kmsKeyID, &apiClientKeyPEM)
 }
@@ -196,7 +224,7 @@ func concatErrors(errs []error) error {
 
 func handleCreateOrUpdate(props resourceProperties, whisp whisperer.Whisperer) error {
 	var caCert *x509.Certificate
-	var caKey *rsa.PrivateKey
+	var caKey crypto.Signer
 	var err error
 
 	clusterScopedPath := pathFormatter(clusterPathTemplate, props.ClusterName)
