@@ -1,4 +1,4 @@
-// Copyright 2019 Joseph Wright <joseph@cloudboss.co>
+// Copyright 2022 Joseph Wright <joseph@cloudboss.co>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +21,7 @@
 package main
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/cloudboss/keights/mocks"
@@ -114,7 +115,7 @@ func TestHandleCreateOrUpdate(t *testing.T) {
 				w.On("GetParameter", caCertPath).Return(&caCertMaterial, nil)
 				w.On("GetParameter", caKeyPath).Return(&invalidCAMaterial, nil)
 			},
-			keyDecodeError,
+			errors.New("data does not contain a valid RSA or ECDSA private key"),
 		},
 		{
 			func(w *mocks.Whisperer) {
@@ -232,7 +233,7 @@ func TestHandleCreateOrUpdate(t *testing.T) {
 		}
 		test.setupMock(whisp)
 		err := handleCreateOrUpdate(props, whisp)
-		assert.Equal(t, err, test.err)
+		assert.Equal(t, test.err, err)
 		whisp.AssertExpectations(t)
 	}
 }
