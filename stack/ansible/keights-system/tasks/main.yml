@@ -104,7 +104,7 @@
   when: 'keights_system.network.plugin == "calico"'
 
 - name: apply calico crd manifest
-  community.kubernetes.k8s:
+  kubernetes.core.k8s:
     # kubeconfig is used instead of other authentication arguments,
     # to ensure an existing ~/.kube/config does not take precedence.
     kubeconfig: '{{ cache_dir.path }}/kubeconfig'
@@ -131,7 +131,7 @@
   register: k8s_manifests
 
 - name: apply k8s manifests
-  community.kubernetes.k8s:
+  kubernetes.core.k8s:
     kubeconfig: '{{ cache_dir.path }}/kubeconfig'
     src: '{{ item.item.dest }}'
   loop: '{{ k8s_manifests.results }}'
@@ -141,7 +141,7 @@
   delay: 10
 
 - name: wait for network to come up
-  community.kubernetes.k8s_info:
+  kubernetes.core.k8s_info:
     kubeconfig: '{{ cache_dir.path }}/kubeconfig'
     kind: Pod
     namespace: kube-system
