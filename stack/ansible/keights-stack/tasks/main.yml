@@ -1,13 +1,13 @@
 ---
 - name: set keights version
-  set_fact:
+  ansible.builtin.set_fact:
     keights_version: '{{ item }}'
   with_file:
   - '{{ role_path }}/version'
 
 - name: set default values
-  set_fact:
+  ansible.builtin.set_fact:
     etcd_mode: '{{ keights_stack.etcd_mode | default("stacked") }}'
     default_etcd_domain: '{{ "{}.local".format(keights_stack.cluster_name) }}'
 
-- include_tasks: '{{ keights_stack.state | default("present") }}.yml'
+- ansible.builtin.include_tasks: '{{ keights_stack.state | default("present") }}.yml'
