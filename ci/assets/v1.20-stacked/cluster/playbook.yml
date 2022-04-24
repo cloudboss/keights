@@ -30,6 +30,9 @@
       cluster_name: '{{ cluster }}'
       cluster_apiserver: '{{ master_stack.stack_outputs.LoadBalancerDnsName }}'
       network:
+        busybox_image: ghcr.io/cloudboss/docker.io/library/busybox:1.30.1
+        kube_router_image: ghcr.io/cloudboss/docker.io/cloudnativelabs/kube-router:v1.4.0
+        kubectl_image: ghcr.io/cloudboss/docker.io/bitnami/kubectl:1.18.8
         plugin: kube-router
         # Let the masters act as route reflectors for CI clusters
         rr_node_label: node-role.kubernetes.io/control-plane
