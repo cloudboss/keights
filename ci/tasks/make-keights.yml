@@ -4,7 +4,7 @@ platform: linux
 image_resource:
   type: docker-image
   source:
-    repository: cloudboss.jfrog.io/containers/golang
+    repository: ghcr.io/cloudboss/docker.io/library/golang
     tag: '1.16.5'
 
 inputs:
