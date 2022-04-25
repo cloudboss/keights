@@ -42,6 +42,8 @@ run:
 
     echo "Waiting for ${CNI_PLUGIN_DAEMONSET} daemonset to be rolled out..."
     kubectl -n kube-system rollout status ds --timeout=600s ${CNI_PLUGIN_DAEMONSET}
+    # Refresh network pods after rollout has finished.
+    kubectl -n kube-system delete po -l k8s-app=${CNI_PLUGIN_DAEMONSET}
 
     echo "Waiting for network..."
     kubectl apply -f repo/ci/assets/verify-network.yml
