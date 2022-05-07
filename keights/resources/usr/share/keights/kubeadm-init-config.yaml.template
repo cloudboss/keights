@@ -12,7 +12,7 @@ localAPIEndpoint:
   advertiseAddress: {{ .MyIP }}
   bindPort: 6443
 nodeRegistration:
-  criSocket: /run/containerd/containerd.sock
+  criSocket: unix:///run/containerd/containerd.sock
   kubeletExtraArgs:
     cloud-provider: aws
   imagePullPolicy: IfNotPresent
