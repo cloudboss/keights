@@ -153,12 +153,12 @@
   delay: 10
 
 - name: define cert-manager defaults
-  set_fact:
+  ansible.builtin.set_fact:
     cert_manager_namespace_default: kube-system
     cert_manager_replicas_default: 2
 
 - name: define cert-manager namespace
-  set_fact:
+  ansible.builtin.set_fact:
     cert_manager_namespace: '{{ keights_system.cert_manager.namespace | default(cert_manager_namespace_default) }}'
 
 - name: expand cert-manager manifest templates
@@ -184,7 +184,7 @@
   when: keights_system.cert_manager.enable | default(true)
 
 - name: define csi driver defaults
-  set_fact:
+  ansible.builtin.set_fact:
     csi_driver_namespace_default: kube-system
     csi_driver_replicas_default: 2
     csi_driver_aws_ebs_csi_driver_affinity_default:
@@ -196,7 +196,7 @@
               operator: Exists
 
 - name: define csi driver namespace
-  set_fact:
+  ansible.builtin.set_fact:
     csi_driver_namespace: '{{ keights_system.csi_driver.namespace | default(csi_driver_namespace_default) }}'
 
 - name: expand csi driver manifest templates

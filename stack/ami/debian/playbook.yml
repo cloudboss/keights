@@ -78,12 +78,12 @@
 
   tasks:
     - name: define k8s variables
-      set_fact:
+      ansible.builtin.set_fact:
         k8s_version_no_v: '{{ k8s_version[1:] if k8s_version.startswith("v") else k8s_version }}'
         keights_version_v: '{{ keights_version if keights_version.startswith("v") else "v{}".format(keights_version) }}'
 
     - name: install packages for bootstrapping
-      apt:
+      ansible.builtin.apt:
         name:
           - ca-certificates
           - debootstrap
@@ -92,7 +92,7 @@
         update_cache: true
 
     - name: make root disk partitions
-      parted:
+      community.general.parted:
         device: '/dev/{{ root_vol }}'
         flags: '{{ item.flags | default(omit) }}'
         fs_type: '{{ item.fs_type }}'
@@ -117,19 +117,19 @@
           fs_type: ext4
 
     - name: make filesystems on volumes
-      filesystem:
+      community.general.filesystem:
         fstype: '{{ item.fstype }}'
         dev: '{{ item.device }}'
       loop: '{{ volumes }}'
 
     - name: get filesystem uuids
-      command: >-
+      ansible.builtin.command: >-
         lsblk -n -o uuid {{ item.device }}
       loop: '{{ volumes }}'
       register: filesystem_uuids
 
     - name: mount volumes
-      mount:
+      ansible.posix.mount:
         src: '{{ item.device }}'
         path: '/mnt{{ item.mount }}'
         fstype: '{{ item.fstype }}'
@@ -137,7 +137,7 @@
       loop: '{{ volumes }}'
 
     - name: bootstrap operating system onto root volume
-      shell: |
+      ansible.builtin.shell: |
         debootstrap \
           --merged-usr \
           --variant=minbase \
@@ -149,7 +149,7 @@
         creates: /mnt/usr/sbin/xfs_freeze
 
     - name: download software
-      get_url:
+      ansible.builtin.get_url:
         url: '{{ item.src }}'
         dest: '{{ item.dest }}'
       loop:
@@ -157,13 +157,13 @@
           dest: /mnt/tmp/keights.deb
 
     - name: download apt gpg keys
-      get_url:
+      ansible.builtin.get_url:
         url: '{{ item.url }}'
         dest: /tmp/{{ item.name }}.gpg
       loop: '{{ gpg_keys }}'
 
     - name: add apt gpg keys in chroot
-      shell: |
+      ansible.builtin.shell: |
         apt-key \
           --keyring /mnt/etc/apt/trusted.gpg.d/{{ item.name }}.gpg \
           add /tmp/{{ item.name }}.gpg
@@ -172,7 +172,7 @@
       loop: '{{ gpg_keys }}'
 
     - name: copy files into chroot
-      copy:
+      ansible.builtin.copy:
         src: '{{ item.path }}'
         dest: '/mnt/{{ item.path }}'
         mode: '{{ item.mode }}'
@@ -183,7 +183,7 @@
           mode: '0644'
 
     - name: expand templates into chroot
-      template:
+      ansible.builtin.template:
         src: '{{ item.path }}.j2'
         dest: '/mnt/{{ item.path }}'
         mode: '{{ item.mode }}'
@@ -196,7 +196,7 @@
           mode: '0644'
 
     - name: mount memory filesystems into chroot
-      mount:
+      ansible.posix.mount:
         src: '/{{ item }}'
         path: '/mnt/{{ item }}'
         fstype: none
@@ -208,7 +208,7 @@
         - sys
 
     - name: install and configure additional packages in chroot
-      shell: |
+      ansible.builtin.shell: |
         chroot /mnt sh -s <<EOF
         debconf-set-selections /tmp/debconf-selections && \
         apt-get update && \
@@ -239,7 +239,7 @@
         creates: /mnt/usr/bin/keights
 
     - name: create directories in chroot
-      file:
+      ansible.builtin.file:
         path: '/mnt/{{ item.path }}'
         state: directory
         mode: '{{ item.mode }}'
@@ -248,7 +248,7 @@
           mode: '0755'
 
     - name: post copy files into chroot
-      copy:
+      ansible.builtin.copy:
         src: '{{ item.path }}'
         dest: '/mnt/{{ item.path }}'
         mode: '{{ item.mode }}'
@@ -269,7 +269,7 @@
           mode: '0755'
 
     - name: set fstab filesystem mounts
-      mount:
+      ansible.posix.mount:
         src: 'UUID={{ item.stdout }}'
         path: '{{ item.item.mount }}'
         fstype: '{{ item.item.fstype }}'
@@ -279,33 +279,33 @@
       loop: '{{ filesystem_uuids.results }}'
 
     - name: clean up default fstab
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /mnt/etc/fstab
         regexp: UNCONFIGURED FSTAB
         state: absent
 
     - name: exit for dev mode
-      fail:
+      ansible.builtin.fail:
         msg: exiting build
       when: dev_mode | bool
 
     - name: find tmp files
-      command: find /mnt/tmp -mindepth 1 -maxdepth 1
+      ansible.builtin.command: find /mnt/tmp -mindepth 1 -maxdepth 1
       register: tmp_files
       changed_when: false
 
     - name: find apt lists
-      command: find /mnt/var/lib/apt/lists -mindepth 1 -maxdepth 1
+      ansible.builtin.command: find /mnt/var/lib/apt/lists -mindepth 1 -maxdepth 1
       register: apt_lists
       changed_when: false
 
     - name: find log files
-      command: find /mnt/var/log -type f
+      ansible.builtin.command: find /mnt/var/log -type f
       register: log_files
       changed_when: false
 
     - name: clean up
-      file:
+      ansible.builtin.file:
         path: '{{ item }}'
         state: absent
       with_flattened:
@@ -319,7 +319,7 @@
         - '{{ log_files.stdout_lines }}'
 
     - name: unmount chroot mounts
-      mount:
+      ansible.posix.mount:
         path: '{{ item }}'
         state: unmounted
       loop:
