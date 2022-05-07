@@ -19,7 +19,7 @@ nodeRegistration:
   name: {{ .NodeName }}
   taints:
   - effect: NoSchedule
-    key: node-role.kubernetes.io/master
+    key: node-role.kubernetes.io/control-plane
 ---
 apiServer:
   certSANs:
