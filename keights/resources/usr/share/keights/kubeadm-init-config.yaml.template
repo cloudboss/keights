@@ -12,14 +12,14 @@ localAPIEndpoint:
   advertiseAddress: {{ .MyIP }}
   bindPort: 6443
 nodeRegistration:
-  criSocket: /run/containerd/containerd.sock
+  criSocket: unix:///run/containerd/containerd.sock
   kubeletExtraArgs:
     cloud-provider: aws
   imagePullPolicy: IfNotPresent
   name: {{ .NodeName }}
   taints:
   - effect: NoSchedule
-    key: node-role.kubernetes.io/master
+    key: node-role.kubernetes.io/control-plane
 ---
 apiServer:
   certSANs:

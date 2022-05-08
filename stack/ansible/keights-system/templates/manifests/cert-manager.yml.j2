@@ -941,8 +941,6 @@ spec:
           operator: Exists
         - effect: NoSchedule
           key: node-role.kubernetes.io/control-plane
-        - effect: NoSchedule
-          key: node-role.kubernetes.io/master
 
 ---
 
@@ -1017,8 +1015,6 @@ spec:
           operator: Exists
         - effect: NoSchedule
           key: node-role.kubernetes.io/control-plane
-        - effect: NoSchedule
-          key: node-role.kubernetes.io/master
 
 ---
 
@@ -1106,8 +1102,6 @@ spec:
           operator: Exists
         - effect: NoSchedule
           key: node-role.kubernetes.io/control-plane
-        - effect: NoSchedule
-          key: node-role.kubernetes.io/master
 
 ---
 

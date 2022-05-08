@@ -14,6 +14,13 @@ All builds and tests are run on [Concourse CI](https://ci.cloudboss.xyz/teams/ke
 
 | Job | Version | Status |
 | ----- | ------- | ------ |
+| build-pull-request | 1.24 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.24/jobs/build-pull-request/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.24/jobs/build-pull-request/builds/latest) |
+| build-cluster-external-etcd | 1.24 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.24/jobs/build-cluster-external-etcd/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.24/jobs/build-cluster-external-etcd/builds/latest) |
+| build-cluster-stacked-etcd | 1.24 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.24/jobs/build-cluster-stacked-etcd/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.24/jobs/build-cluster-stacked-etcd/builds/latest) |
+| upgrade-cluster-external-etcd | 1.23 -> 1.24 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.24/jobs/upgrade-cluster-external-etcd/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.24/jobs/upgrade-cluster-external-etcd/builds/latest) |
+| upgrade-cluster-stacked-etcd | 1.23 -> 1.24 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.24/jobs/upgrade-cluster-stacked-etcd/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.24/jobs/upgrade-cluster-stacked-etcd/builds/latest) |
+| build-release | 1.24 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.24/jobs/build-release/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.24/jobs/build-release/builds/latest) |
+||||
 | build-pull-request | 1.23 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.23/jobs/build-pull-request/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.23/jobs/build-pull-request/builds/latest) |
 | build-cluster-external-etcd | 1.23 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.23/jobs/build-cluster-external-etcd/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.23/jobs/build-cluster-external-etcd/builds/latest) |
 | build-cluster-stacked-etcd | 1.23 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.23/jobs/build-cluster-stacked-etcd/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.23/jobs/build-cluster-stacked-etcd/builds/latest) |
@@ -34,13 +41,6 @@ All builds and tests are run on [Concourse CI](https://ci.cloudboss.xyz/teams/ke
 | upgrade-cluster-external-etcd | 1.20 -> 1.21 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.21/jobs/upgrade-cluster-external-etcd/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.21/jobs/upgrade-cluster-external-etcd/builds/latest) |
 | upgrade-cluster-stacked-etcd | 1.20 -> 1.21 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.21/jobs/upgrade-cluster-stacked-etcd/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.21/jobs/upgrade-cluster-stacked-etcd/builds/latest) |
 | build-release | 1.21 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.21/jobs/build-release/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.21/jobs/build-release/builds/latest) |
-||||
-| build-pull-request | 1.20 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.20/jobs/build-pull-request/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.20/jobs/build-pull-request/builds/latest) |
-| build-cluster-external-etcd | 1.20 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.20/jobs/build-cluster-external-etcd/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.20/jobs/build-cluster-external-etcd/builds/latest) |
-| build-cluster-stacked-etcd | 1.20 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.20/jobs/build-cluster-stacked-etcd/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.20/jobs/build-cluster-stacked-etcd/builds/latest) |
-| upgrade-cluster-external-etcd | 1.19 -> 1.20 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.20/jobs/upgrade-cluster-external-etcd/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.20/jobs/upgrade-cluster-external-etcd/builds/latest) |
-| upgrade-cluster-stacked-etcd | 1.19 -> 1.20 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.20/jobs/upgrade-cluster-stacked-etcd/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.20/jobs/upgrade-cluster-stacked-etcd/builds/latest) |
-| build-release | 1.20 | [![Build Status](https://ci.cloudboss.xyz/api/v1/teams/keights/pipelines/keights-v1.20/jobs/build-release/badge)](https://ci.cloudboss.xyz/teams/keights/pipelines/keights-v1.20/jobs/build-release/builds/latest) |
 
 # Rationale
 
