@@ -116,11 +116,11 @@ If `plugin` is `calico`, you may set the following keys. These will have no effe
 
 If `plugin` is `kube-router`, you may set the following keys. These will have no effect if `plugin` is `calico`.
 
-`kube_router_image`: (Optional, type *string*, default `cloudnativelabs/kube-router:v1.4.0`) - The kube-router container image.
+`kube_router_image`: (Optional, type *string*, default `cloudnativelabs/kube-router:v1.5.1`) - The kube-router container image.
 
-`busybox_image`: (Optional, type *string*, default `busybox:1.30.1`) - The busybox container image.
+`busybox_image`: (Optional, type *string*, default `busybox:1.35.0`) - The busybox container image.
 
-`kubectl_image`: (Optional, type *string*, default `bitnami/kubectl:1.18.8`) - The kubectl container image.
+`kubectl_image`: (Optional, type *string*, default `bitnami/kubectl:1.24.4`) - The kubectl container image.
 
 `replace_kube_proxy`: (Optional, type *bool*, default `false`) - Whether or not kube-router should replace kube-proxy. If `true`, this requires setting `keights_stack.enable_kube_proxy` to `false` in the `keights-stack` Ansible role.
 
