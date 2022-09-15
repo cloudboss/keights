@@ -90,7 +90,7 @@ This configures the [AWS EBS CSI driver](https://github.com/kubernetes-sigs/aws-
 
 The `network` dictionary may contain the following keys:
 
-`rr_node_label`: (Optional, type *string*, default `''`) - If defined, nodes with this label will be configured as route reflectors (see [here](https://docs.projectcalico.org/v3.9/networking/routereflector) and [here](https://github.com/cloudnativelabs/kube-router/blob/master/docs/bgp.md#route-reflector-setup--without-full-mesh)). To set the label on nodes, define it within [`node_labels`](https://github.com/cloudboss/keights/tree/master/stack/ansible/keights-stack#node_groups) when creating a node group. The value of the label is not important, only the presence of the label. Caution: if `rr_node_label` is defined and no nodes have a matching label, there will be no networking!
+`rr_node_label`: (Optional, type *string*, default `''`) - If defined, nodes with this label will be configured as route reflectors (see [here](https://projectcalico.docs.tigera.io/networking/bgp#configure-a-node-to-act-as-a-route-reflector) and [here](https://github.com/cloudnativelabs/kube-router/blob/master/docs/bgp.md#route-reflector-setup--without-full-mesh)). To set the label on nodes, define it within [`node_labels`](https://github.com/cloudboss/keights/tree/master/stack/ansible/keights-stack#node_groups) when creating a node group. The value of the label is not important, only the presence of the label. Caution: if `rr_node_label` is defined and no nodes have a matching label, there will be no networking!
 
 `rr_cluster_id`: (Optional, type *string*, default `10.0.0.1` for calico, `42` for kube-router) - Route reflector cluster ID when `rr_node_label` is defined. Calico expects the cluster ID to be an IPv4 address, while kube-router expects an integer.
 
@@ -100,19 +100,17 @@ If `plugin` is `calico`, you may set the following keys. These will have no effe
 
 `pod_cidr`: (Required, type *string*) - Kubernetes cluster pod CIDR, which must match what was given to the `keights-stack` Ansible role.
 
-`cni_image`: (Optional, type *string*, default `docker.io/calico/cni:v3.20.0`) - The CNI container image.
+`cni_image`: (Optional, type *string*, default `docker.io/calico/cni:v3.24.1`) - The CNI container image.
 
-`calico_node_image`: (Optional, type *string*, default `docker.io/calico/node:v3.20.0`) - The Calico node container image.
+`calico_node_image`: (Optional, type *string*, default `docker.io/calico/node:v3.24.1`) - The Calico node container image.
 
 `calico_ctl_image`: (Optional, type *string*, default `docker.io/calico/ctl:v3.15.5`) - The Calico ctl container image.
 
-`pod2daemon_flexvol_image`: (Optional, type *string*, default `docker.io/calico/pod2daemon-flexvol:v3.20.0`) - The Calico flex volume driver container image.
+`kube_controllers_image`: (Optional, type *string*, default `docker.io/calico/kube-controllers:v3.24.1`) - The Calico kube controllers container image.
 
-`kube_controllers_image`: (Optional, type *string*, default `docker.io/calico/kube-controllers:v3.20.0`) - The Calico kube controllers container image.
+`typha_image`: (Optional, type *string*, default `docker.io/calico/typha:v3.24.1`) - The [Typha](https://github.com/projectcalico/typha) container image.
 
-`typha_image`: (Optional, type *string*, default `docker.io/calico/typha:v3.20.0`) - The [Typha](https://github.com/projectcalico/typha) container image.
-
-`typha_autoscaler_image` (Optional, type *string*, default `k8s.gcr.io/cpa/cluster-proportional-autoscaler:1.8.4`) - The Typha autoscaler container image.
+`typha_autoscaler_image` (Optional, type *string*, default `k8s.gcr.io/cpa/cluster-proportional-autoscaler:1.8.6`) - The Typha autoscaler container image.
 
 If `plugin` is `kube-router`, you may set the following keys. These will have no effect if `plugin` is `calico`.
 
