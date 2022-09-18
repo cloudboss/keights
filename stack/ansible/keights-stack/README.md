@@ -52,6 +52,8 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `create_iam_resources`: (Optional, type *bool*, default `true`) - Whether or not to create IAM roles and policies for the cluster. If `false`, then IAM roles will need to be created another way and passed as parameters to the remaining stacks.
 
+`lambda_subnet_ids`: (Optional, type *list* of *string, default `[]`) - The subnets assigned to lambdas in the stack, if a VPC config is desired. If not given, lambdas will not have a VPC config.
+
 `instattr_lambda_role_arn`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The ARN of the IAM role for the InstAttr lambda.
 
 `auto_namer_lambda_role_arn`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The ARN of the IAM role for the AutoNamer lambda.

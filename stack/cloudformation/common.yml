@@ -65,6 +65,11 @@ Parameters:
   ResourceBucket:
     Description: Bucket used to store Lambda archives
     Type: String
+  LambdaSubnetIds:
+    Description: >-
+      List of subnet IDs in VPC where lambdas will be placed.
+    Type: CommaDelimitedList
+    Default: ''
 
 Conditions:
   HasIamResources: !Equals [!Ref CreateIamResources, 'true']
@@ -76,6 +81,7 @@ Conditions:
   HasUnmanagedHostedZone: !Not [!Equals [!Ref EtcdHostedZoneId, '']]
   HasIamUnmanagedHostedZone: !And [{Condition: HasIamResources}, {Condition: HasUnmanagedHostedZone}]
   AllowsNodePortAccess: !Not [!Equals [!Ref NodePortAccessCidr, '']]
+  HasLambdaVpcConfig: !Not [!Equals [!Join ['', !Ref LambdaSubnetIds], '']]
 
 Resources:
   EtcdSecurityGroup:
@@ -114,6 +120,23 @@ Resources:
       FromPort: 22
       IpProtocol: tcp
       ToPort: 22
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: HasLambdaVpcConfig
+    Properties:
+      GroupDescription: !Sub ${ClusterName} lambdas
+      VpcId: !Ref VpcId
+
+  LambdaSecurityGroupHttpsEgress:
+    Type: AWS::EC2::SecurityGroupEgress
+    Condition: HasLambdaVpcConfig
+    Properties:
+      GroupId: !Ref LambdaSecurityGroup
+      CidrIp: 0.0.0.0/0
+      FromPort: 443
+      ToPort: 443
+      IpProtocol: tcp
 
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -352,7 +375,6 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Condition: HasIamExternalEtcd
     Properties:
-      Roles: [!Ref EtcdRole]
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -378,7 +400,6 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Condition: HasIamResources
     Properties:
-      Roles: [!Ref MasterRole]
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -465,7 +486,6 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Condition: HasIamResources
     Properties:
-      Roles: [!Ref NodeRole]
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -493,16 +513,10 @@ Resources:
             Resource:
               - '*'
 
-  CloudwatchLogsLambdaAccess:
+  CommonLambdaAccess:
     Type: AWS::IAM::ManagedPolicy
     Condition: HasIamResources
     Properties:
-      Roles:
-        - !Ref AutoNamerLambdaRole
-        - !Ref InstAttrLambdaRole
-        - !Ref KubeCaLambdaRole
-        - !Ref SubnetToAzLambdaRole
-        - !Ref BasicLambdaRole
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -513,12 +527,23 @@ Resources:
               - logs:PutLogEvents
             Resource:
               - !Sub 'arn:${AWS::Partition}:logs:*:*:*'
+          - !If
+              - HasLambdaVpcConfig
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DeleteNetworkInterface
+                  - ec2:AssignPrivateIpAddresses
+                  - ec2:UnassignPrivateIpAddresses
+                Resource:
+                  - '*'
+              - !Ref AWS::NoValue
 
   AutoNamerLambdaAccess:
     Type: AWS::IAM::ManagedPolicy
     Condition: HasIamResources
     Properties:
-      Roles: [!Ref AutoNamerLambdaRole]
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -532,7 +557,6 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Condition: HasIamManagedHostedZone
     Properties:
-      Roles: [!Ref AutoNamerLambdaRole]
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -546,7 +570,6 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Condition: HasIamUnmanagedHostedZone
     Properties:
-      Roles: [!Ref AutoNamerLambdaRole]
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -560,7 +583,6 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Condition: HasIamResources
     Properties:
-      Roles: [!Ref InstAttrLambdaRole]
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -574,7 +596,6 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Condition: HasIamResources
     Properties:
-      Roles: [!Ref KubeCaLambdaRole]
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -600,7 +621,6 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Condition: HasIamResources
     Properties:
-      Roles: [!Ref SubnetToAzLambdaRole]
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -614,6 +634,8 @@ Resources:
     Type: AWS::IAM::Role
     Condition: HasIamExternalEtcd
     Properties:
+      ManagedPolicyArns:
+        - !Ref EtcdAccess
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -639,6 +661,8 @@ Resources:
             Principal:
               Service: ec2.amazonaws.com
             Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref K8sMasterAccess
 
   MasterInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -657,6 +681,8 @@ Resources:
             Principal:
               Service: ec2.amazonaws.com
             Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref K8sNodeAccess
 
   NodeInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -675,6 +701,11 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref CommonLambdaAccess
+        - !Ref AutoNamerLambdaAccess
+        - !If [HasIamManagedHostedZone, !Ref AutoNamerLambdaRoute53ManagedAccess, !Ref AWS::NoValue]
+        - !If [HasIamUnmanagedHostedZone, !Ref AutoNamerLambdaRoute53UnmanagedAccess, !Ref AWS::NoValue]
 
   InstAttrLambdaRole:
     Type: AWS::IAM::Role
@@ -687,6 +718,9 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref CommonLambdaAccess
+        - !Ref InstAttrLambdaAccess
 
   KubeCaLambdaRole:
     Type: AWS::IAM::Role
@@ -699,6 +733,9 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref CommonLambdaAccess
+        - !Ref KubeCaLambdaAccess
 
   SubnetToAzLambdaRole:
     Type: AWS::IAM::Role
@@ -711,6 +748,9 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref CommonLambdaAccess
+        - !Ref SubnetToAzLambdaAccess
 
   BasicLambdaRole:
     Type: AWS::IAM::Role
@@ -723,6 +763,8 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref CommonLambdaAccess
 
   InstanceAttributeFunction:
     Type: AWS::Lambda::Function
@@ -734,12 +776,21 @@ Resources:
       Runtime: go1.x
       Timeout: 30
       Role: !If [HasIamResources, !GetAtt InstAttrLambdaRole.Arn, !Ref InstAttrLambdaRoleArn]
+      VpcConfig: !If
+        - HasLambdaVpcConfig
+        - SecurityGroupIds: [!Ref LambdaSecurityGroup]
+          SubnetIds: !Ref LambdaSubnetIds
+        - !Ref AWS::NoValue
 
 Outputs:
   EtcdSecurityGroup:
     Description: Security group of etcd
     Value: !Ref EtcdSecurityGroup
     Condition: HasExternalEtcd
+  LambdaSecurityGroup:
+    Description: Security group for lambdas
+    Value: !Ref LambdaSecurityGroup
+    Condition: HasLambdaVpcConfig
   LoadBalancerSecurityGroup:
     Description: Security group of load balancer
     Value: !Ref LoadBalancerSecurityGroup

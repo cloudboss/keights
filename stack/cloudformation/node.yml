@@ -113,11 +113,20 @@ Parameters:
       ARN of role for InstanceTypeFormatter lambda.
     Type: String
     Default: ''
+  LambdaSecurityGroup:
+    Description: Security group for InstanceTypeFormatter lambda
+    Type: String
+    Default: ''
+  LambdaSubnetIds:
+    Description: List of subnet IDs in VPC where InstanceTypeFormatter lambda will be placed
+    Type: CommaDelimitedList
+    Default: ''
 
 Conditions:
   HasKubeadmJoinConfigTemplate: !Not [!Equals [!Ref KubeadmJoinConfigTemplate, '']]
   HasLowestPriceSpotAllocationStrategy: !Equals [!Ref SpotAllocationStrategy, lowest-price]
   HasSpotMaxPrice: !Not [!Equals [!Ref SpotMaxPrice, '']]
+  HasLambdaVpcConfig: !Not [!Equals [!Join ['', !Ref LambdaSubnetIds], '']]
 
 Resources:
   InstanceTypeFormatterFunction:
@@ -142,6 +151,11 @@ Resources:
                   event, context, cfnresponse.SUCCESS,
                   data, context.log_stream_name
               )
+      VpcConfig: !If
+        - HasLambdaVpcConfig
+        - SecurityGroupIds: [!Ref LambdaSecurityGroup]
+          SubnetIds: !Ref LambdaSubnetIds
+        - !Ref AWS::NoValue
 
   InstanceTypeFormatter:
     Type: Custom::InstanceTypeFormatter

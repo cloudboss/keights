@@ -35,6 +35,15 @@ Parameters:
   SecurityGroups:
     Description: Security groups of etcd instances
     Type: CommaDelimitedList
+  LambdaSecurityGroup:
+    Description: Security group for lambdas
+    Type: String
+    Default: ''
+  LambdaSubnetIds:
+    Description: >-
+      List of subnet IDs in VPC where lambdas will be placed.
+    Type: CommaDelimitedList
+    Default: ''
   AutoNamerLambdaRoleArn:
     Description: Role ARN to assign to AutoNamer helper Lamba function
     Type: String
@@ -94,6 +103,7 @@ Parameters:
 
 Conditions:
   HasThreeEtcdInstances: !Equals [!Ref NumInstances, 3]
+  HasLambdaVpcConfig: !Not [!Equals [!Join ['', !Ref LambdaSubnetIds], '']]
 
 Resources:
   SubnetToAzFunction:
@@ -106,6 +116,11 @@ Resources:
       Runtime: go1.x
       Timeout: 30
       Role: !Ref SubnetToAzLambdaRoleArn
+      VpcConfig: !If
+        - HasLambdaVpcConfig
+        - SecurityGroupIds: [!Ref LambdaSecurityGroup]
+          SubnetIds: !Ref LambdaSubnetIds
+        - !Ref AWS::NoValue
 
   KubeCaFunction:
     Type: AWS::Lambda::Function
@@ -117,6 +132,11 @@ Resources:
       Runtime: go1.x
       Timeout: 60
       Role: !Ref KubeCaLambdaRoleArn
+      VpcConfig: !If
+        - HasLambdaVpcConfig
+        - SecurityGroupIds: [!Ref LambdaSecurityGroup]
+          SubnetIds: !Ref LambdaSubnetIds
+        - !Ref AWS::NoValue
 
   AutoNamingFunction:
     Type: AWS::Lambda::Function
@@ -135,6 +155,11 @@ Resources:
           HOST_BASE_NAME: !Ref Prefix
           HOSTED_ZONE_NAME: !Ref Domain
           HOSTED_ZONE_ID: !Ref HostedZoneId
+      VpcConfig: !If
+        - HasLambdaVpcConfig
+        - SecurityGroupIds: [!Ref LambdaSecurityGroup]
+          SubnetIds: !Ref LambdaSubnetIds
+        - !Ref AWS::NoValue
 
   AutoNamingEventsRule:
     Type: AWS::Events::Rule
