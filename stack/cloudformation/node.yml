@@ -133,7 +133,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
-      Runtime: python3.7
+      Runtime: python3.9
       Role: !Ref BasicLambdaRoleArn
       Code:
         ZipFile: |
