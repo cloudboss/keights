@@ -100,6 +100,12 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `etcd_volume_size`: (Optional, type *int*, default `10`) - Size of etcd volume in gigabytes.
 
+`etcd_volume_type`: (Optional, choice of `gp2`, `gp3`, `io1`, or `io2`, default `gp2`) - Type of etcd volume.
+
+`etcd_volume_iops`: (Conditional, type *int*, required if `etcd_volume_type` is `io1` or `io2`) - IOPs of etcd volume.
+
+`etcd_volume_throughput`: (Optional, type *int*) - Throughput of etcd volume.
+
 `etcd_device`: (Optional, type *string*, default `/dev/xvdg`) - Name of etcd EBS volume device.
 
 `image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which Kubernetes component container images are pulled.
@@ -123,6 +129,12 @@ All role variables go under a top level dictionary `keights_stack`.
 `extra_security_groups`: (Optional, type *list* of *string*, default `[]`) - Additional security groups that may be assigned to etcd instances.
 
 `volume_size`: (Optional, type *int*, default `10`) - Size of etcd volume in gigabytes.
+
+`volume_type`: (Optional, choice of `gp2`, `gp3`, `io1`, or `io2`, default `gp2`) - Type of etcd volume.
+
+`volume_iops`: (Conditional, type *int*, required if `etcd_volume_type` is `io1` or `io2`) - IOPs of etcd volume.
+
+`volume_throughput`: (Optional, type *int*) - Throughput of etcd volume.
 
 `device`: (Optional, type *string*, default `/dev/xvdg`) - Name of etcd EBS volume device.
 

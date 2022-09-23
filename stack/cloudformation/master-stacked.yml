@@ -110,6 +110,21 @@ Parameters:
     Description: Size of etcd volume in GB
     Default: 10
     Type: Number
+  EtcdVolumeType:
+    Description: Type of etcd volume
+    Default: gp2
+    Type: String
+    AllowedValues: [gp2, gp3, io1, io2]
+  EtcdVolumeIops:
+    Description: >-
+      Iops of etcd volume. Required when EtcdVolumeType is `io1` or `io2`,
+      and can also be used with `gp3`.
+    Default: 0
+    Type: Number
+  EtcdVolumeThroughput:
+    Description: Throughput of etcd volume
+    Default: 0
+    Type: Number
   EtcdDevice:
     Description: Name of the etcd EBS volume, using the full device path.
     Default: /dev/xvdg
@@ -171,6 +186,8 @@ Conditions:
   HasThreeMasters: !Equals [!Ref NumInstances, 3]
   HasKubeadmInitConfigTemplate: !Not [!Equals [!Ref KubeadmInitConfigTemplate, '']]
   HasKubeProxy: !Equals [!Ref EnableKubeProxy, 'true']
+  HasIops: !Not [!Equals [!Ref EtcdVolumeIops, 0]]
+  HasThroughput: !Not [!Equals [!Ref EtcdVolumeThroughput, 0]]
   HasLambdaVpcConfig: !Not [!Equals [!Join ['', !Ref LambdaSubnetIds], '']]
 
 Resources:
@@ -347,7 +364,9 @@ Resources:
     Properties:
       AvailabilityZone: !Select [0, !Split [",", !GetAtt SubnetToAz.AvailabilityZones]]
       Size: !Ref EtcdVolumeSize
-      VolumeType: gp2
+      VolumeType: !Ref EtcdVolumeType
+      Iops: !If [HasIops, !Ref EtcdVolumeIops, !Ref AWS::NoValue]
+      Throughput: !If [HasThroughput, !Ref EtcdVolumeThroughput, !Ref AWS::NoValue]
       Encrypted: true
       Tags:
         - Key: Name
@@ -361,7 +380,9 @@ Resources:
     Properties:
       AvailabilityZone: !Select [1, !Split [",", !GetAtt SubnetToAz.AvailabilityZones]]
       Size: !Ref EtcdVolumeSize
-      VolumeType: gp2
+      VolumeType: !Ref EtcdVolumeType
+      Iops: !If [HasIops, !Ref EtcdVolumeIops, !Ref AWS::NoValue]
+      Throughput: !If [HasThroughput, !Ref EtcdVolumeThroughput, !Ref AWS::NoValue]
       Encrypted: true
       Tags:
         - Key: Name
@@ -375,7 +396,9 @@ Resources:
     Properties:
       AvailabilityZone: !Select [2, !Split [",", !GetAtt SubnetToAz.AvailabilityZones]]
       Size: !Ref EtcdVolumeSize
-      VolumeType: gp2
+      VolumeType: !Ref EtcdVolumeType
+      Iops: !If [HasIops, !Ref EtcdVolumeIops, !Ref AWS::NoValue]
+      Throughput: !If [HasThroughput, !Ref EtcdVolumeThroughput, !Ref AWS::NoValue]
       Encrypted: true
       Tags:
         - Key: Name
