@@ -100,7 +100,7 @@
     private_zone: true
     state: get
   register: etcd_record_details
-  loop: '{{ etcd_record_query | json_query("ResourceRecordSets[?Type == `A`].Name") if etcd_record_query.ResourceRecordSets is defined else [] }}'
+  loop: '{{ etcd_record_query | json_query("resource_record_sets[?type == `A`].name") if etcd_record_query.resource_record_sets is defined else [] }}'
 
 - name: delete route53 records for etcd
   community.aws.route53:
