@@ -184,7 +184,7 @@ spec:
       - args:
         - --v=5
         - --leader-election=true
-        image: {{ keights_system.csi_driver.snapshot_controller_image | default('k8s.gcr.io/sig-storage/snapshot-controller:v5.0.0') }}
+        image: {{ keights_system.csi_driver.snapshot_controller_image | default('registry.k8s.io/sig-storage/snapshot-controller:v5.0.0') }}
         imagePullPolicy: IfNotPresent
         name: snapshot-controller
       serviceAccount: snapshot-controller
@@ -218,7 +218,7 @@ spec:
     spec:
       containers:
       - name: snapshot-validation-webhook
-        image: {{ keights_system.csi_driver.snapshot_validation_image | default('k8s.gcr.io/sig-storage/snapshot-validation-webhook:v5.0.1') }}
+        image: {{ keights_system.csi_driver.snapshot_validation_image | default('registry.k8s.io/sig-storage/snapshot-validation-webhook:v5.0.1') }}
         imagePullPolicy: IfNotPresent
         args:
         - --tls-cert-file=/certs/tls.crt

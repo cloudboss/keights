@@ -56,33 +56,33 @@ This configures the [AWS EBS CSI driver](https://github.com/kubernetes-sigs/aws-
 
 `aws_ebs_csi_driver_extra_annotations`: (Optional, type *dict*, default `{}`) - Annotations to add to the AWS EBS CSI driver, such as for assigning an IAM role.
 
-`aws_ebs_csi_driver_image`: (Optional, type *string*, default `k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.4.0`) - The AWS EBS CSI driver container image.
+`aws_ebs_csi_driver_image`: (Optional, type *string*, default `registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.4.0`) - The AWS EBS CSI driver container image.
 
 `aws_ebs_csi_driver_replicas`: (Optional, type *int*,  default `2`) - The number of AWS EBS CSI driver replicas. Set to `1` if `aws_ebs_csi_driver_affinity` schedules the driver on the control plane and there is a single control plane node.
 
-`csi_attacher_image`: (Optional, type *string*, default `k8s.gcr.io/sig-storage/csi-attacher:v3.1.0`) - The CSI attacher container image.
+`csi_attacher_image`: (Optional, type *string*, default `registry.k8s.io/sig-storage/csi-attacher:v3.1.0`) - The CSI attacher container image.
 
-`csi_node_driver_registrar_image` (Optional, type *string*, default `k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.1.0`) - The CSI node driver registrar container image.
+`csi_node_driver_registrar_image` (Optional, type *string*, default `registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.1.0`) - The CSI node driver registrar container image.
 
-`csi_provisioner_image`: (Optional, type *string*, default `k8s.gcr.io/sig-storage/csi-provisioner:v2.1.1`) - The CSI provisioner container image.
+`csi_provisioner_image`: (Optional, type *string*, default `registry.k8s.io/sig-storage/csi-provisioner:v2.1.1`) - The CSI provisioner container image.
 
-`csi_resizer` (Optional, type *string*, default `k8s.gcr.io/sig-storage/csi-resizer:v1.1.0`) - The CSI resizer container image.
+`csi_resizer` (Optional, type *string*, default `registry.k8s.io/sig-storage/csi-resizer:v1.1.0`) - The CSI resizer container image.
 
-`csi_snapshotter_image`: (Optional, type *string*, default `k8s.gcr.io/sig-storage/csi-snapshotter:v3.0.3`) - The CSI snapshotter container image.
+`csi_snapshotter_image`: (Optional, type *string*, default `registry.k8s.io/sig-storage/csi-snapshotter:v3.0.3`) - The CSI snapshotter container image.
 
-`ebs_plugin_image`: (Optional, type *string*, default `k8s.gcr.io/provider-aws/aws-ebs-csi-driver:v1.4.0`) - The EBS plugin container image.
+`ebs_plugin_image`: (Optional, type *string*, default `registry.k8s.io/provider-aws/aws-ebs-csi-driver:v1.4.0`) - The EBS plugin container image.
 
 `enable`: (Optional, type *bool*, default `true`) - Whether or not to enable the EBS CSI driver.
 
-`livenessprobe_image`: (Optional, type *string*,  default `k8s.gcr.io/sig-storage/livenessprobe:v2.2.0`) - The liveness probe container image.
+`livenessprobe_image`: (Optional, type *string*,  default `registry.k8s.io/sig-storage/livenessprobe:v2.2.0`) - The liveness probe container image.
 
 `namespace`: (Optional, default `kube-system`) - The namespace used for csi driver.
 
-`snapshot_controller_image`: (Optional, type *string*, default `k8s.gcr.io/sig-storage/snapshot-controller:v5.0.0`) - The common snapshot controller container image.
+`snapshot_controller_image`: (Optional, type *string*, default `registry.k8s.io/sig-storage/snapshot-controller:v5.0.0`) - The common snapshot controller container image.
 
 `snapshot_controller_replicas`: (Optional, type *int*,  default `2`) - The number of snapshot controller replicas.
 
-`snapshot_validation_image`: (Optional, type *string*, default `k8s.gcr.io/sig-storage/snapshot-validation-webhook:v5.0.1`) - The snapshot validation webhook container image.
+`snapshot_validation_image`: (Optional, type *string*, default `registry.k8s.io/sig-storage/snapshot-validation-webhook:v5.0.1`) - The snapshot validation webhook container image.
 
 `snapshot_validation_replicas`: (Optional, type *int*,  default `2`) - The number of snapshot validation replicas.
 
@@ -110,7 +110,7 @@ If `plugin` is `calico`, you may set the following keys. These will have no effe
 
 `typha_image`: (Optional, type *string*, default `docker.io/calico/typha:v3.24.1`) - The [Typha](https://github.com/projectcalico/typha) container image.
 
-`typha_autoscaler_image` (Optional, type *string*, default `k8s.gcr.io/cpa/cluster-proportional-autoscaler:1.8.6`) - The Typha autoscaler container image.
+`typha_autoscaler_image` (Optional, type *string*, default `registry.k8s.io/cpa/cluster-proportional-autoscaler:1.8.6`) - The Typha autoscaler container image.
 
 If `plugin` is `kube-router`, you may set the following keys. These will have no effect if `plugin` is `calico`.
 
