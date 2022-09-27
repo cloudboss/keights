@@ -10,7 +10,7 @@
       version = 2
       [plugins]
         [plugins."io.containerd.grpc.v1.cri"]
-          sandbox_image = "k8s.gcr.io/pause:3.7"
+          sandbox_image = "{{ sandbox_image }}"
           [plugins."io.containerd.grpc.v1.cri".containerd]
             default_runtime_name = "runc"
             [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]
@@ -168,6 +168,7 @@
       NodePortAccessCidr: '{{ keights_stack.node_port_access_cidr | default("") }}'
       KeightsVersion: '{{ keights_version }}'
       ResourceBucket: '{{ keights_stack.resource_bucket }}'
+      LambdaSubnetIds: '{{ keights_stack.lambda_subnet_ids | default([]) | join(",") }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'
@@ -204,6 +205,8 @@
       KeyPair: '{{ keights_stack.etcd.keypair }}'
       InstanceProfile: '{{ etcd_instance_profile }}'
       SecurityGroups: '{{ ([common_stack.stack_outputs.EtcdSecurityGroup] + keights_stack.etcd.extra_security_groups | default([])) | join(",") }}'
+      LambdaSecurityGroup: '{{ common_stack.stack_outputs.LambdaSecurityGroup | default(omit) }}'
+      LambdaSubnetIds: '{{ keights_stack.lambda_subnet_ids | default([]) | join(",") }}'
       AutoNamerLambdaRoleArn: '{{ auto_namer_lambda_role_arn }}'
       KubeCaLambdaRoleArn: '{{ kube_ca_lambda_role_arn }}'
       SubnetToAzLambdaRoleArn: '{{ subnet_to_az_lambda_role_arn }}'
@@ -212,9 +215,12 @@
       Domain: '{{ keights_stack.etcd_domain | default(default_etcd_domain) }}'
       Prefix: '{{ keights_stack.etcd_prefix | default("etcd") }}'
       VolumeSize: '{{ keights_stack.etcd.volume_size | default(10) }}'
+      VolumeType: '{{ keights_stack.etcd.volume_type | default("gp2") }}'
+      VolumeIops: '{{ keights_stack.etcd.volume_iops | default(0) }}'
+      VolumeThroughput: '{{ keights_stack.etcd.volume_throughput | default(0) }}'
       Device: '{{ etcd_device if etcd_device.startswith("/dev/") else "/dev/{}".format(etcd_device) }}'
       EtcdVersion: '{{ keights_stack.etcd.etcd_version | default(default_etcd_version) }}'
-      ImageRepository: '{{ keights_stack.etcd.image_repository | default("k8s.gcr.io") }}'
+      ImageRepository: '{{ keights_stack.etcd.image_repository | default(default_image_repository) }}'
       KeightsVersion: '{{ keights_version }}'
       ResourceBucket: '{{ keights_stack.resource_bucket }}'
       # Piping to_json escapes the string so it can be put on one line in the CloudFormation template.
@@ -255,7 +261,7 @@
       EtcdDomain: '{{ keights_stack.etcd_domain | default(default_etcd_domain) }}'
       EtcdPrefix: '{{ keights_stack.etcd_prefix | default("etcd") }}'
       EtcdAvailabilityZones: '{{ etcd_stack.stack_outputs.AvailabilityZones }}'
-      ImageRepository: '{{ keights_stack.masters.image_repository | default("k8s.gcr.io") }}'
+      ImageRepository: '{{ keights_stack.etcd.image_repository | default(default_image_repository) }}'
       KubernetesVersion: '{{ k8s_version }}'
       KeightsVersion: '{{ keights_version }}'
       ResourceBucket: '{{ keights_stack.resource_bucket }}'
@@ -283,11 +289,13 @@
       NumInstances: '{{ keights_stack.masters.subnet_ids | length }}'
       VpcId: '{{ keights_stack.vpc_id }}'
       SubnetIds: '{{ keights_stack.masters.subnet_ids | join(",") }}'
+      LambdaSubnetIds: '{{ keights_stack.lambda_subnet_ids | default([]) | join(",") }}'
       LoadBalancerSubnetIds: '{{ keights_stack.masters.subnet_ids | join(",") }}'
       ImageId: '{{ keights_stack.masters.image_id if keights_stack.masters.image_id is defined else image_id }}'
       InstanceType: '{{ keights_stack.masters.instance_type }}'
       KeyPair: '{{ keights_stack.masters.keypair }}'
       MasterInstanceProfile: '{{ master_instance_profile }}'
+      LambdaSecurityGroup: '{{ common_stack.stack_outputs.LambdaSecurityGroup | default(omit) }}'
       LoadBalancerScheme: '{{ keights_stack.masters.load_balancer_scheme }}'
       LoadBalancerSecurityGroup: '{{ common_stack.stack_outputs.LoadBalancerSecurityGroup }}'
       LoadBalancerIdleTimeout: '{{ keights_stack.masters.load_balancer_idle_timeout | default(600) }}'
@@ -304,8 +312,11 @@
       EtcdDomain: '{{ keights_stack.etcd_domain | default(default_etcd_domain) }}'
       EtcdPrefix: '{{ keights_stack.etcd_prefix | default("etcd") }}'
       EtcdVolumeSize: '{{ keights_stack.masters.etcd_volume_size | default(10) }}'
+      EtcdVolumeType: '{{ keights_stack.masters.etcd_volume_type | default("gp2") }}'
+      EtcdVolumeIops: '{{ keights_stack.masters.etcd_volume_iops | default(0) }}'
+      EtcdVolumeThroughput: '{{ keights_stack.masters.etcd_volume_throughput | default(0) }}'
       EtcdDevice: '{{ etcd_device if etcd_device.startswith("/dev/") else "/dev/{}".format(etcd_device) }}'
-      ImageRepository: '{{ keights_stack.masters.image_repository | default("k8s.gcr.io") }}'
+      ImageRepository: '{{ keights_stack.etcd.image_repository | default(default_image_repository) }}'
       KubernetesVersion: '{{ k8s_version }}'
       KeightsVersion: '{{ keights_version }}'
       ResourceBucket: '{{ keights_stack.resource_bucket }}'
@@ -356,6 +367,8 @@
       SpotInstancePools: '{{ item.spot.instance_pools | default(omit) }}'
       SpotMaxPrice: '{{ item.spot.max_price | default(omit) }}'
       BasicLambdaRoleArn: '{{ basic_lambda_role_arn }}'
+      LambdaSecurityGroup: '{{ common_stack.stack_outputs.LambdaSecurityGroup | default(omit) }}'
+      LambdaSubnetIds: '{{ keights_stack.lambda_subnet_ids | default([]) | join(",") }}'
     tags:
       KubernetesCluster: '{{ keights_stack.cluster_name }}'
       k8s:version: '{{ k8s_version }}'

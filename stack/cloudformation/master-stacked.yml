@@ -20,6 +20,11 @@ Parameters:
       List of subnets IDs in VPC where cluster will be placed.
       The number of subnets must match the NumInstances parameter.
     Type: List<AWS::EC2::Subnet::Id>
+  LambdaSubnetIds:
+    Description: >-
+      List of subnet IDs in VPC where lambdas will be placed.
+    Type: CommaDelimitedList
+    Default: ''
   LoadBalancerSubnetIds:
     Description: >-
       List of subnets IDs in VPC for API load balancer.
@@ -37,6 +42,10 @@ Parameters:
   MasterInstanceProfile:
     Description: Name of IAM Instance profile to assign to instances
     Type: String
+  LambdaSecurityGroup:
+    Description: Security group for lambdas
+    Type: String
+    Default: ''
   LoadBalancerScheme:
     Description: Scheme of API load balancer
     Type: String
@@ -101,6 +110,21 @@ Parameters:
     Description: Size of etcd volume in GB
     Default: 10
     Type: Number
+  EtcdVolumeType:
+    Description: Type of etcd volume
+    Default: gp2
+    Type: String
+    AllowedValues: [gp2, gp3, io1, io2]
+  EtcdVolumeIops:
+    Description: >-
+      Iops of etcd volume. Required when EtcdVolumeType is `io1` or `io2`,
+      and can also be used with `gp3`.
+    Default: 0
+    Type: Number
+  EtcdVolumeThroughput:
+    Description: Throughput of etcd volume
+    Default: 0
+    Type: Number
   EtcdDevice:
     Description: Name of the etcd EBS volume, using the full device path.
     Default: /dev/xvdg
@@ -108,7 +132,7 @@ Parameters:
   ImageRepository:
     Description: Repository for core Kubernetes container images
     Type: String
-    Default: k8s.gcr.io
+    Default: registry.k8s.io
   KubernetesVersion:
     Description: Version of Kubernetes
     Type: String
@@ -139,7 +163,7 @@ Parameters:
       version = 2
       [plugins]
         [plugins."io.containerd.grpc.v1.cri"]
-          sandbox_image = "k8s.gcr.io/pause:3.7"
+          sandbox_image = "registry.k8s.io/pause:3.8"
           [plugins."io.containerd.grpc.v1.cri".containerd]
             default_runtime_name = "runc"
             [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]
@@ -162,6 +186,9 @@ Conditions:
   HasThreeMasters: !Equals [!Ref NumInstances, 3]
   HasKubeadmInitConfigTemplate: !Not [!Equals [!Ref KubeadmInitConfigTemplate, '']]
   HasKubeProxy: !Equals [!Ref EnableKubeProxy, 'true']
+  HasIops: !Not [!Equals [!Ref EtcdVolumeIops, 0]]
+  HasThroughput: !Not [!Equals [!Ref EtcdVolumeThroughput, 0]]
+  HasLambdaVpcConfig: !Not [!Equals [!Join ['', !Ref LambdaSubnetIds], '']]
 
 Resources:
   SubnetToAzFunction:
@@ -174,6 +201,11 @@ Resources:
       Runtime: go1.x
       Timeout: 30
       Role: !Ref SubnetToAzLambdaRoleArn
+      VpcConfig: !If
+        - HasLambdaVpcConfig
+        - SecurityGroupIds: [!Ref LambdaSecurityGroup]
+          SubnetIds: !Ref LambdaSubnetIds
+        - !Ref AWS::NoValue
 
   KubeCaFunction:
     Type: AWS::Lambda::Function
@@ -185,6 +217,11 @@ Resources:
       Runtime: go1.x
       Timeout: 60
       Role: !Ref KubeCaLambdaRoleArn
+      VpcConfig: !If
+        - HasLambdaVpcConfig
+        - SecurityGroupIds: [!Ref LambdaSecurityGroup]
+          SubnetIds: !Ref LambdaSubnetIds
+        - !Ref AWS::NoValue
 
   AutoNamingFunction:
     Type: AWS::Lambda::Function
@@ -203,6 +240,11 @@ Resources:
           HOST_BASE_NAME: !Ref EtcdPrefix
           HOSTED_ZONE_NAME: !Ref EtcdDomain
           HOSTED_ZONE_ID: !Ref HostedZoneId
+      VpcConfig: !If
+        - HasLambdaVpcConfig
+        - SecurityGroupIds: [!Ref LambdaSecurityGroup]
+          SubnetIds: !Ref LambdaSubnetIds
+        - !Ref AWS::NoValue
 
   AutoNamingEventsRule:
     Type: AWS::Events::Rule
@@ -322,7 +364,9 @@ Resources:
     Properties:
       AvailabilityZone: !Select [0, !Split [",", !GetAtt SubnetToAz.AvailabilityZones]]
       Size: !Ref EtcdVolumeSize
-      VolumeType: gp2
+      VolumeType: !Ref EtcdVolumeType
+      Iops: !If [HasIops, !Ref EtcdVolumeIops, !Ref AWS::NoValue]
+      Throughput: !If [HasThroughput, !Ref EtcdVolumeThroughput, !Ref AWS::NoValue]
       Encrypted: true
       Tags:
         - Key: Name
@@ -336,7 +380,9 @@ Resources:
     Properties:
       AvailabilityZone: !Select [1, !Split [",", !GetAtt SubnetToAz.AvailabilityZones]]
       Size: !Ref EtcdVolumeSize
-      VolumeType: gp2
+      VolumeType: !Ref EtcdVolumeType
+      Iops: !If [HasIops, !Ref EtcdVolumeIops, !Ref AWS::NoValue]
+      Throughput: !If [HasThroughput, !Ref EtcdVolumeThroughput, !Ref AWS::NoValue]
       Encrypted: true
       Tags:
         - Key: Name
@@ -350,7 +396,9 @@ Resources:
     Properties:
       AvailabilityZone: !Select [2, !Split [",", !GetAtt SubnetToAz.AvailabilityZones]]
       Size: !Ref EtcdVolumeSize
-      VolumeType: gp2
+      VolumeType: !Ref EtcdVolumeType
+      Iops: !If [HasIops, !Ref EtcdVolumeIops, !Ref AWS::NoValue]
+      Throughput: !If [HasThroughput, !Ref EtcdVolumeThroughput, !Ref AWS::NoValue]
       Encrypted: true
       Tags:
         - Key: Name

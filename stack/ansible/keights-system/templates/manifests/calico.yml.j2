@@ -1,8 +1,9 @@
 #jinja2: trim_blocks:False
-# Calico Version v3.20.0
-# https://docs.projectcalico.org/archive/v3.20/about/about-calico
+# Calico Version v3.24.1
+# https://projectcalico.docs.tigera.io/archive/v3.24/about/about-calico
 ---
 
+# Source: calico/templates/calico-node-rbac.yaml
 # Include a clusterrole for the calico-node DaemonSet,
 # and bind it to the calico-node serviceaccount.
 kind: ClusterRole
@@ -10,6 +11,14 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: calico-node
 rules:
+  # Used for creating service account tokens to be used by the CNI plugin
+  - apiGroups: [""]
+    resources:
+      - serviceaccounts/token
+    resourceNames:
+      - calico-node
+    verbs:
+      - create
   # The CNI plugin needs to get pods, nodes, and namespaces.
   - apiGroups: [""]
     resources:
@@ -81,6 +90,7 @@ rules:
       - globalbgpconfigs
       - bgpconfigurations
       - ippools
+      - ipreservations
       - ipamblocks
       - globalnetworkpolicies
       - globalnetworksets
@@ -89,6 +99,7 @@ rules:
       - clusterinformations
       - hostendpoints
       - blockaffinities
+      - caliconodestatuses
     verbs:
       - get
       - list
@@ -102,6 +113,12 @@ rules:
     verbs:
       - create
       - update
+  # Calico must update some CRDs.
+  - apiGroups: [ "crd.projectcalico.org" ]
+    resources:
+      - caliconodestatuses
+    verbs:
+      - update
   # Calico stores some configuration information on the node.
   - apiGroups: [""]
     resources:
@@ -110,6 +127,15 @@ rules:
       - get
       - list
       - watch
+  # These permissions are only required for upgrade from v2.6, and can
+  # be removed after upgrade or on fresh installations.
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - bgpconfigurations
+      - bgppeers
+    verbs:
+      - create
+      - update
   # These permissions are required for Calico CNI to perform IPAM allocations.
   - apiGroups: ["crd.projectcalico.org"]
     resources:
@@ -122,11 +148,14 @@ rules:
       - create
       - update
       - delete
+  # The CNI plugin and calico/node need to be able to create a default
+  # IPAMConfiguration
   - apiGroups: ["crd.projectcalico.org"]
     resources:
       - ipamconfigs
     verbs:
       - get
+      - create
   # Block affinities must also be watchable by confd for route aggregation.
   - apiGroups: ["crd.projectcalico.org"]
     resources:
@@ -143,6 +172,7 @@ rules:
 
 ---
 
+# Source: calico/templates/calico-kube-controllers-rbac.yaml
 # Include a clusterrole for the kube-controllers component,
 # and bind it to the calico-kube-controllers serviceaccount.
 kind: ClusterRole
@@ -166,10 +196,10 @@ rules:
       - get
       - list
       - watch
-  # IPAM resources are manipulated when nodes are deleted.
+  # IPAM resources are manipulated in response to node and block updates, as well as periodic triggers.
   - apiGroups: ["crd.projectcalico.org"]
     resources:
-      - ippools
+      - ipreservations
     verbs:
       - list
   - apiGroups: ["crd.projectcalico.org"]
@@ -183,6 +213,13 @@ rules:
       - create
       - update
       - delete
+      - watch
+  # Pools are watched to maintain a mapping of blocks to IP pools.
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - ippools
+    verbs:
+      - list
       - watch
   # kube-controllers manages hostendpoints.
   - apiGroups: ["crd.projectcalico.org"]
@@ -200,8 +237,10 @@ rules:
       - clusterinformations
     verbs:
       - get
+      - list
       - create
       - update
+      - watch
   # KubeControllersConfiguration is where it gets its config
   - apiGroups: ["crd.projectcalico.org"]
     resources:
@@ -218,6 +257,7 @@ rules:
 
 ---
 
+# Source: calico/templates/calico-kube-controllers-rbac.yaml
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -233,6 +273,7 @@ subjects:
 
 ---
 
+# Source: calico/templates/calico-node-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -248,6 +289,7 @@ subjects:
 
 ---
 
+# Source: calico/templates/calico-config.yaml
 # This ConfigMap is used to configure a self-hosted Calico installation.
 kind: ConfigMap
 apiVersion: v1
@@ -255,6 +297,7 @@ metadata:
   name: calico-config
   namespace: kube-system
 data:
+  # You must set a non-zero value for Typha replicas below.
   typha_service_name: "calico-typha"
   # Configure the backend to use.
   calico_backend: "bird"
@@ -274,6 +317,7 @@ data:
         {
           "type": "calico",
           "log_level": "info",
+          "log_file_path": "/var/log/calico/cni/cni.log",
           "datastore_type": "kubernetes",
           "nodename": "__KUBERNETES_NODE_NAME__",
           "mtu": __CNI_MTU__,
@@ -301,6 +345,7 @@ data:
 
 ---
 
+# Source: calico/templates/calico-typha.yaml
 # This manifest creates a Service, which will be backed by Calico's Typha daemon.
 # Typha sits in between Felix and the API server, reducing Calico's load on the API server.
 
@@ -322,7 +367,9 @@ spec:
 
 ---
 
+# Source: calico/templates/calico-typha.yaml
 # This manifest creates a Deployment of Typha to back the above service.
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -331,6 +378,13 @@ metadata:
   labels:
     k8s-app: calico-typha
 spec:
+  # Number of Typha replicas. To enable Typha, set this to a non-zero value *and* set the
+  # typha_service_name variable in the calico-config ConfigMap above.
+  #
+  # We recommend using Typha if you have more than 50 nodes. Above 100 nodes it is essential
+  # (when using the Kubernetes datastore). Use one replica for every 100-200 nodes. In
+  # production, we recommend running at least 3 replicas to reduce the impact of rolling upgrade.
+  replicas: 1
   revisionHistoryLimit: 2
   selector:
     matchLabels:
@@ -357,12 +411,18 @@ spec:
       securityContext:
         fsGroup: 65534
       containers:
-      - image: {{ keights_system.network.typha_image | default('docker.io/calico/typha:v3.20.0') }}
+      - image: {{ keights_system.network.typha_image | default('docker.io/calico/typha:v3.24.1') }}
+        imagePullPolicy: IfNotPresent
         name: calico-typha
         ports:
         - containerPort: 5473
           name: calico-typha
           protocol: TCP
+        envFrom:
+        - configMapRef:
+            # Allow KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT to be overridden for eBPF mode.
+            name: kubernetes-services-endpoint
+            optional: true
         env:
           # Enable "info" logging by default. Can be set to "debug" to increase verbosity.
           - name: TYPHA_LOGSEVERITYSCREEN
@@ -380,6 +440,12 @@ spec:
             value: "kubernetes"
           - name: TYPHA_HEALTHENABLED
             value: "true"
+          # Uncomment these lines to enable prometheus metrics. Since Typha is host-networked,
+          # this opens a port on the host, which may need to be secured.
+          #- name: TYPHA_PROMETHEUSMETRICSENABLED
+          #  value: "true"
+          #- name: TYPHA_PROMETHEUSMETRICSPORT
+          #  value: "9093"
         livenessProbe:
           httpGet:
             path: /liveness
@@ -401,8 +467,10 @@ spec:
 
 ---
 
+# Source: calico/templates/calico-typha.yaml
 # This manifest creates a Pod Disruption Budget for Typha to allow K8s Cluster Autoscaler to evict
-apiVersion: policy/v1beta1
+
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: calico-typha
@@ -417,6 +485,7 @@ spec:
 
 ---
 
+# Source: calico/templates/calico-node.yaml
 # This manifest installs the calico-node container, as well
 # as the CNI plugins and network config on
 # each master and worker node in a Kubernetes cluster.
@@ -493,8 +562,14 @@ spec:
         # It can be deleted if this is a fresh installation, or if you have already
         # upgraded to use calico-ipam.
         - name: upgrade-ipam
-          image: {{ keights_system.network.cni_image | default('docker.io/calico/cni:v3.20.0') }}
+          image: {{ keights_system.network.cni_image | default('docker.io/calico/cni:v3.24.1') }}
+          imagePullPolicy: IfNotPresent
           command: ["/opt/cni/bin/calico-ipam", "-upgrade"]
+          envFrom:
+          - configMapRef:
+              # Allow KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT to be overridden for eBPF mode.
+              name: kubernetes-services-endpoint
+              optional: true
           env:
             - name: KUBERNETES_NODE_NAME
               valueFrom:
@@ -515,8 +590,14 @@ spec:
         # This container installs the CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
-          image: {{ keights_system.network.cni_image | default('docker.io/calico/cni:v3.20.0') }}
+          image: {{ keights_system.network.cni_image | default('docker.io/calico/cni:v3.24.1') }}
+          imagePullPolicy: IfNotPresent
           command: ["/opt/cni/bin/install"]
+          envFrom:
+          - configMapRef:
+              # Allow KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT to be overridden for eBPF mode.
+              name: kubernetes-services-endpoint
+              optional: true
           env:
             # Name of the CNI config file to create.
             - name: CNI_CONF_NAME
@@ -548,13 +629,29 @@ spec:
               name: cni-net-dir
           securityContext:
             privileged: true
-        # Adds a Flex Volume Driver that creates a per-pod Unix Domain Socket to allow Dikastes
-        # to communicate with Felix over the Policy Sync API.
-        - name: flexvol-driver
-          image: {{ keights_system.network.pod2daemon_flexvol_image | default('docker.io/calico/pod2daemon-flexvol:v3.20.0') }}
+        # This init container mounts the necessary filesystems needed by the BPF data plane
+        # i.e. bpf at /sys/fs/bpf and cgroup2 at /run/calico/cgroup. Calico-node initialisation is executed
+        # in best effort fashion, i.e. no failure for errors, to not disrupt pod creation in iptable mode.
+        - name: "mount-bpffs"
+          image: {{ keights_system.network.calico_node_image | default('docker.io/calico/node:v3.24.1') }}
+          imagePullPolicy: IfNotPresent
+          command: ["calico-node", "-init", "-best-effort"]
           volumeMounts:
-          - name: flexvol-driver-host
-            mountPath: /host/driver
+            - mountPath: /sys/fs
+              name: sys-fs
+              # Bidirectional is required to ensure that the new mount we make at /sys/fs/bpf propagates to the host
+              # so that it outlives the init container.
+              mountPropagation: Bidirectional
+            - mountPath: /var/run/calico
+              name: var-run-calico
+              # Bidirectional is required to ensure that the new mount we make at /run/calico/cgroup propagates to the host
+              # so that it outlives the init container.
+              mountPropagation: Bidirectional
+            # Mount /proc/ from host which usually is an init program at /nodeproc. It's needed by mountns binary,
+            # executed by calico-node, to mount root cgroup2 fs at /run/calico/cgroup to attach CTLB programs correctly.
+            - mountPath: /nodeproc
+              name: nodeproc
+              readOnly: true
           securityContext:
             privileged: true
       containers:
@@ -562,7 +659,13 @@ spec:
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: {{ keights_system.network.calico_node_image | default('docker.io/calico/node:v3.20.0') }}
+          image: {{ keights_system.network.calico_node_image | default('docker.io/calico/node:v3.24.1') }}
+          imagePullPolicy: IfNotPresent
+          envFrom:
+          - configMapRef:
+              # Allow KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT to be overridden for eBPF mode.
+              name: kubernetes-services-endpoint
+              optional: true
           env:
             # Use Kubernetes API as the backing datastore.
             - name: DATASTORE_TYPE
@@ -598,6 +701,9 @@ spec:
               value: "CrossSubnet"
             # Enable or Disable VXLAN on the default IP pool.
             - name: CALICO_IPV4POOL_VXLAN
+              value: "Never"
+            # Enable or Disable VXLAN on the default IPv6 IP pool.
+            - name: CALICO_IPV6POOL_VXLAN
               value: "Never"
             # Set MTU for tunnel device used if ipip is enabled
             - name: FELIX_IPINIPMTU
@@ -638,6 +744,12 @@ spec:
           resources:
             requests:
               cpu: 250m
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                - /bin/calico-node
+                - -shutdown
           livenessProbe:
             exec:
               command:
@@ -675,6 +787,13 @@ spec:
               readOnly: false
             - name: policysync
               mountPath: /var/run/nodeagent
+            # For eBPF mode, we need to be able to mount the BPF filesystem at /sys/fs/bpf so we mount in the
+            # parent directory.
+            - name: bpffs
+              mountPath: /sys/fs/bpf
+            - name: cni-log-dir
+              mountPath: /var/log/calico/cni
+              readOnly: true
       volumes:
         # Used by calico-node.
         - name: lib-modules
@@ -690,6 +809,18 @@ spec:
           hostPath:
             path: /run/xtables.lock
             type: FileOrCreate
+        - name: sys-fs
+          hostPath:
+            path: /sys/fs/
+            type: DirectoryOrCreate
+        - name: bpffs
+          hostPath:
+            path: /sys/fs/bpf
+            type: Directory
+        # mount /proc at /nodeproc to be used by mount-bpffs initContainer to mount root cgroup2 fs.
+        - name: nodeproc
+          hostPath:
+            path: /proc
         # Used to install CNI.
         - name: cni-bin-dir
           hostPath:
@@ -697,6 +828,10 @@ spec:
         - name: cni-net-dir
           hostPath:
             path: /etc/cni/net.d
+        # Used to access CNI logs.
+        - name: cni-log-dir
+          hostPath:
+            path: /var/log/calico/cni
         # Mount in the directory for host-local IPAM allocations. This is
         # used when upgrading from host-local to calico-ipam, and can be removed
         # if not using the upgrade-ipam init container.
@@ -708,11 +843,6 @@ spec:
           hostPath:
             type: DirectoryOrCreate
             path: /var/run/nodeagent
-        # Used to install Flex Volume Driver
-        - name: flexvol-driver-host
-          hostPath:
-            type: DirectoryOrCreate
-            path: /var/lib/kubelet/plugins/volume/exec/nodeagent~uds
 
 ---
 
@@ -728,19 +858,9 @@ metadata:
 kind: BGPPeer
 apiVersion: crd.projectcalico.org/v1
 metadata:
-  name: peer-to-rrs
+  name: peer-with-route-reflectors
 spec:
-  nodeSelector: '!has({{ keights_system.network.rr_node_label }})'
-  peerSelector: 'has({{ keights_system.network.rr_node_label }})'
-
----
-
-kind: BGPPeer
-apiVersion: crd.projectcalico.org/v1
-metadata:
-  name: rr-mesh
-spec:
-  nodeSelector: 'has({{ keights_system.network.rr_node_label }})'
+  nodeSelector: 'all()'
   peerSelector: 'has({{ keights_system.network.rr_node_label }})'
 
 ---
@@ -757,6 +877,7 @@ spec:
 
 ---
 
+# Source: calico/templates/calico-kube-controllers.yaml
 # See https://github.com/projectcalico/kube-controllers
 apiVersion: apps/v1
 kind: Deployment
@@ -792,7 +913,8 @@ spec:
       priorityClassName: system-cluster-critical
       containers:
         - name: calico-kube-controllers
-          image: {{ keights_system.network.kube_controllers_image | default('docker.io/calico/kube-controllers:v3.20.0') }}
+          image: {{ keights_system.network.kube_controllers_image | default('docker.io/calico/kube-controllers:v3.24.1') }}
+          imagePullPolicy: IfNotPresent
           env:
             # Choose which controllers to run.
             - name: ENABLED_CONTROLLERS
@@ -899,7 +1021,7 @@ spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
       containers:
-        - image: {{ keights_system.network.typha_autoscaler_image | default('k8s.gcr.io/cpa/cluster-proportional-autoscaler:1.8.4') }}
+        - image: {{ keights_system.network.typha_autoscaler_image | default('registry.k8s.io/cpa/cluster-proportional-autoscaler:1.8.6') }}
           name: autoscaler
           command:
             - /cluster-proportional-autoscaler
@@ -956,9 +1078,10 @@ subjects:
 
 ---
 
+# Source: calico/templates/calico-kube-controllers.yaml
 # This manifest creates a Pod Disruption Budget for Controller to allow K8s Cluster Autoscaler to evict
 
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: calico-kube-controllers

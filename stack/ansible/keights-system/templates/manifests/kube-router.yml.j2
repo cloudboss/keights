@@ -74,7 +74,7 @@ spec:
       serviceAccountName: kube-router
       containers:
       - name: kube-router
-        image: {{ keights_system.network.kube_router_image | default('cloudnativelabs/kube-router:v1.4.0') }}
+        image: {{ keights_system.network.kube_router_image | default('cloudnativelabs/kube-router:v1.5.1') }}
         imagePullPolicy: IfNotPresent
         args:
         - --run-router=true
@@ -115,7 +115,7 @@ spec:
           mountPath: /kube-router
       initContainers:
       - name: write-kubeconfig
-        image: {{ keights_system.network.busybox_image | default('busybox:1.30.1') }}
+        image: {{ keights_system.network.busybox_image | default('busybox:1.35.0') }}
         command:
         - /bin/sh
         - -xec
@@ -134,7 +134,7 @@ spec:
       {% if keights_system.network.rr_node_label | default('') %}
       # Label a node so you can annotate a node...
       - name: annotate-node
-        image: {{ keights_system.network.kubectl_image | default('bitnami/kubectl:1.20.5') }}
+        image: {{ keights_system.network.kubectl_image | default('bitnami/kubectl:1.24.4') }}
         imagePullPolicy: IfNotPresent
         env:
         - name: KUBECONFIG
@@ -165,7 +165,7 @@ spec:
           mountPath: /kube-router
       {% endif %}
       - name: install-cni
-        image: {{ keights_system.network.busybox_image | default('busybox:1.30.1') }}
+        image: {{ keights_system.network.busybox_image | default('busybox:1.35.0') }}
         imagePullPolicy: IfNotPresent
         command:
         - /bin/sh

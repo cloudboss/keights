@@ -1,3 +1,5 @@
 lookup_image: true
 subnet_tag_map: {}
-default_etcd_version: '3.5.3-0'
+default_etcd_version: '3.5.5-0'
+default_image_repository: registry.k8s.io
+sandbox_image: '{{ default_image_repository }}/pause:3.8'

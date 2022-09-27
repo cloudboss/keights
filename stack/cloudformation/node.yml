@@ -74,7 +74,7 @@ Parameters:
       version = 2
       [plugins]
         [plugins."io.containerd.grpc.v1.cri"]
-          sandbox_image = "k8s.gcr.io/pause:3.7"
+          sandbox_image = "registry.k8s.io/pause:3.8"
           [plugins."io.containerd.grpc.v1.cri".containerd]
             default_runtime_name = "runc"
             [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]
@@ -113,18 +113,27 @@ Parameters:
       ARN of role for InstanceTypeFormatter lambda.
     Type: String
     Default: ''
+  LambdaSecurityGroup:
+    Description: Security group for InstanceTypeFormatter lambda
+    Type: String
+    Default: ''
+  LambdaSubnetIds:
+    Description: List of subnet IDs in VPC where InstanceTypeFormatter lambda will be placed
+    Type: CommaDelimitedList
+    Default: ''
 
 Conditions:
   HasKubeadmJoinConfigTemplate: !Not [!Equals [!Ref KubeadmJoinConfigTemplate, '']]
   HasLowestPriceSpotAllocationStrategy: !Equals [!Ref SpotAllocationStrategy, lowest-price]
   HasSpotMaxPrice: !Not [!Equals [!Ref SpotMaxPrice, '']]
+  HasLambdaVpcConfig: !Not [!Equals [!Join ['', !Ref LambdaSubnetIds], '']]
 
 Resources:
   InstanceTypeFormatterFunction:
     Type: AWS::Lambda::Function
     Properties:
       Handler: index.handler
-      Runtime: python3.7
+      Runtime: python3.9
       Role: !Ref BasicLambdaRoleArn
       Code:
         ZipFile: |
@@ -142,6 +151,11 @@ Resources:
                   event, context, cfnresponse.SUCCESS,
                   data, context.log_stream_name
               )
+      VpcConfig: !If
+        - HasLambdaVpcConfig
+        - SecurityGroupIds: [!Ref LambdaSecurityGroup]
+          SubnetIds: !Ref LambdaSubnetIds
+        - !Ref AWS::NoValue
 
   InstanceTypeFormatter:
     Type: Custom::InstanceTypeFormatter

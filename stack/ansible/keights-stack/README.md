@@ -52,6 +52,8 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `create_iam_resources`: (Optional, type *bool*, default `true`) - Whether or not to create IAM roles and policies for the cluster. If `false`, then IAM roles will need to be created another way and passed as parameters to the remaining stacks.
 
+`lambda_subnet_ids`: (Optional, type *list* of *string, default `[]`) - The subnets assigned to lambdas in the stack, if a VPC config is desired. If not given, lambdas will not have a VPC config.
+
 `instattr_lambda_role_arn`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The ARN of the IAM role for the InstAttr lambda.
 
 `auto_namer_lambda_role_arn`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The ARN of the IAM role for the AutoNamer lambda.
@@ -98,11 +100,17 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `etcd_volume_size`: (Optional, type *int*, default `10`) - Size of etcd volume in gigabytes.
 
+`etcd_volume_type`: (Optional, choice of `gp2`, `gp3`, `io1`, or `io2`, default `gp2`) - Type of etcd volume.
+
+`etcd_volume_iops`: (Conditional, type *int*, required if `etcd_volume_type` is `io1` or `io2`) - IOPs of etcd volume.
+
+`etcd_volume_throughput`: (Optional, type *int*) - Throughput of etcd volume.
+
 `etcd_device`: (Optional, type *string*, default `/dev/xvdg`) - Name of etcd EBS volume device.
 
-`image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which Kubernetes component container images are pulled.
+`image_repository`: (Optional, type *string*, default `registry.k8s.io`) - Repository from which Kubernetes component container images are pulled.
 
-`containerd_options`: (Optional, type *string*, default `version = 2\n[plugins]\n  [plugins."io.containerd.grpc.v1.cri"]\n    sandbox_image = "k8s.gcr.io/pause:3.7"\n    [plugins."io.containerd.grpc.v1.cri".containerd]\n      default_runtime_name = "runc"\n      [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]\n      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]\n        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]\n          runtime_type = "io.containerd.runc.v2"\n          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]\n            SystemdCgroup = true\n`) - Options to write to `/etc/containerd/config.toml`.
+`containerd_options`: (Optional, type *string*, default `version = 2\n[plugins]\n  [plugins."io.containerd.grpc.v1.cri"]\n    sandbox_image = "registry.k8s.io/pause:3.8"\n    [plugins."io.containerd.grpc.v1.cri".containerd]\n      default_runtime_name = "runc"\n      [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]\n      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]\n        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]\n          runtime_type = "io.containerd.runc.v2"\n          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]\n            SystemdCgroup = true\n`) - Options to write to `/etc/containerd/config.toml`.
 
 `kubeadm_init_config_template`: (Optional, type *string*, default `''`) - A kubeadm init [configuration file](https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-init/#config-file) as a Go template string. If not defined, a default one will be used which is built into the AMI. See [Kubeadm init](#kubeadm-init) below for a description of the variables that will be available within the template. Due to CloudFormation parameter limitations, this string must not be over 4kb.
 
@@ -122,11 +130,17 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `volume_size`: (Optional, type *int*, default `10`) - Size of etcd volume in gigabytes.
 
+`volume_type`: (Optional, choice of `gp2`, `gp3`, `io1`, or `io2`, default `gp2`) - Type of etcd volume.
+
+`volume_iops`: (Conditional, type *int*, required if `etcd_volume_type` is `io1` or `io2`) - IOPs of etcd volume.
+
+`volume_throughput`: (Optional, type *int*) - Throughput of etcd volume.
+
 `device`: (Optional, type *string*, default `/dev/xvdg`) - Name of etcd EBS volume device.
 
-`image_repository`: (Optional, type *string*, default `k8s.gcr.io`) - Repository from which container image is pulled.
+`image_repository`: (Optional, type *string*, default `registry.k8s.io`) - Repository from which container image is pulled.
 
-`containerd_options`: (Optional, type *string*, default `version = 2\n[plugins]\n  [plugins."io.containerd.grpc.v1.cri"]\n    sandbox_image = "k8s.gcr.io/pause:3.7"\n    [plugins."io.containerd.grpc.v1.cri".containerd]\n      default_runtime_name = "runc"\n      [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]\n      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]\n        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]\n          runtime_type = "io.containerd.runc.v2"\n          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]\n            SystemdCgroup = true\n`) - Options to write to `/etc/containerd/config.toml`.
+`containerd_options`: (Optional, type *string*, default `version = 2\n[plugins]\n  [plugins."io.containerd.grpc.v1.cri"]\n    sandbox_image = "registry.k8s.io/pause:3.8"\n    [plugins."io.containerd.grpc.v1.cri".containerd]\n      default_runtime_name = "runc"\n      [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]\n      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]\n        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]\n          runtime_type = "io.containerd.runc.v2"\n          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]\n            SystemdCgroup = true\n`) - Options to write to `/etc/containerd/config.toml`.
 
 `instance_profile`: (Conditional, type *string*, required if `create_iam_resources` is `false`) - The name of the IAM instance profile assigned to EC2 instances.
 
@@ -158,7 +172,7 @@ All role variables go under a top level dictionary `keights_stack`.
 
 `node_taints`: (Optional, type *dict*, default `{}`) - A dictionary of key/value pairs used to assign Kubernetes taints to nodes, for example `{'key1': 'value1:NoSchedule', 'key1': 'value1:NoExecute'}`.
 
-`containerd_options`: (Optional, type *string*, default `version = 2\n[plugins]\n  [plugins."io.containerd.grpc.v1.cri"]\n    sandbox_image = "k8s.gcr.io/pause:3.7"\n    [plugins."io.containerd.grpc.v1.cri".containerd]\n      default_runtime_name = "runc"\n      [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]\n      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]\n        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]\n          runtime_type = "io.containerd.runc.v2"\n          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]\n            SystemdCgroup = true\n`) - Options to write to `/etc/containerd/config.toml`.
+`containerd_options`: (Optional, type *string*, default `version = 2\n[plugins]\n  [plugins."io.containerd.grpc.v1.cri"]\n    sandbox_image = "registry.k8s.io/pause:3.8"\n    [plugins."io.containerd.grpc.v1.cri".containerd]\n      default_runtime_name = "runc"\n      [plugins."io.containerd.grpc.v1.cri".containerd.default_runtime]\n      [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]\n        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]\n          runtime_type = "io.containerd.runc.v2"\n          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]\n            SystemdCgroup = true\n`) - Options to write to `/etc/containerd/config.toml`.
 
 `kubeadm_join_config_template`: (Optional, type *string*, default `''`) - A kubeadm join [configuration file](https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-join/#config-file) as a Go template string. If not defined, a default one will be used which is built into the AMI. See [Kubeadm join](#kubeadm-join) below for a description of the variables that will be available within the template. Due to CloudFormation parameter limitations, this string must not be over 4kb.
 
