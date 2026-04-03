@@ -1,0 +1,32 @@
+#!/bin/sh -ex
+# Initialize aws-iam-authenticator certs and config for
+# use by the control plane, before installing the chart.
+exec 2>&1
+NAME=aws-iam-authenticator
+[ -f /.easyto/var/lib/keights/${NAME}-init-done ] && exit 0
+VERSION=v0.7.8-eks-1-34-latest
+IMAGE=public.ecr.aws/eks-distro/kubernetes-sigs/${NAME}:${VERSION}
+CONF_DIR=/etc/kubernetes/${NAME}
+STATE_DIR=/var/lib/${NAME}
+NS=k8s.io
+INSTALL="/.easyto/bin/busybox install"
+# UID inside the container image.
+UID=10000
+/usr/local/bin/ctr -n ${NS} i pull ${IMAGE}
+/usr/local/bin/ctr -n ${NS} c ls | grep ^${NAME} && \
+   /usr/local/bin/ctr -n ${NS} c rm ${NAME}
+/usr/local/bin/ctr -n ${NS} c create \
+   --mount src=/tmp,dst=/assets,options=rbind \
+   --cwd /assets \
+   ${IMAGE} ${NAME} \
+   /${NAME} -i kubernetes init
+/usr/local/bin/ctr -n ${NS} t start ${NAME}
+/usr/local/bin/ctr -n ${NS} c rm ${NAME}
+mkdir -p ${CONF_DIR}
+${INSTALL} -m 0644 /tmp/${NAME}.kubeconfig ${CONF_DIR}/${NAME}.conf
+mkdir -p ${STATE_DIR}
+chmod 700 ${STATE_DIR}
+chown ${UID} ${STATE_DIR}
+${INSTALL} -o ${UID} -m 0644 /tmp/cert.pem ${STATE_DIR}/cert.pem
+${INSTALL} -o ${UID} -m 0600 /tmp/key.pem ${STATE_DIR}/key.pem
+rm -f /tmp/cert.pem /tmp/key.pem /tmp/${NAME}.kubeconfig

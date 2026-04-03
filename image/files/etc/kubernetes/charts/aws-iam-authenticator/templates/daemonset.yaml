@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    k8s-app: {{ .Chart.Name }}
+spec:
+  selector:
+    matchLabels:
+      k8s-app: {{ .Chart.Name }}
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        k8s-app: {{ .Chart.Name }}
+    spec:
+      serviceAccountName: {{ .Chart.Name }}
+      hostNetwork: true
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+      - key: CriticalAddonsOnly
+        operator: Exists
+      priorityClassName: system-cluster-critical
+      containers:
+      - name: {{ .Chart.Name }}
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+        args:
+        - server
+        - --cluster-id={{ .Values.clusterId }}
+        - --backend-mode={{ .Values.backendMode }}
+        - --state-dir={{ .Values.stateDir }}
+        - --kubeconfig-pregenerated=true
+        - --partition={{ .Values.awsPartition }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        volumeMounts:
+        - name: conf-dir
+          mountPath: {{ .Values.confDir }}
+        - name: state-dir
+          mountPath: {{ .Values.stateDir }}
+      volumes:
+      - name: conf-dir
+        hostPath:
+          path: {{ .Values.confDir }}
+      - name: state-dir
+        hostPath:
+          path: {{ .Values.stateDir }}

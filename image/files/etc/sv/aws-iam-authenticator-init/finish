@@ -1,0 +1,10 @@
+#!/bin/sh -e
+NAME=aws-iam-authenticator
+if [ "${1}" = 0 ]; then
+    /usr/bin/sv exit /etc/service/${NAME}-init
+    if [ -h /etc/service/${NAME}-init ]; then
+        /usr/sbin/update-service --remove /etc/sv/${NAME}-init
+    fi
+    mkdir -p /.easyto/var/lib/keights
+    touch /.easyto/var/lib/keights/${NAME}-init-done
+fi

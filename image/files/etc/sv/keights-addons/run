@@ -1,0 +1,26 @@
+#!/bin/sh -ex
+exec 2>&1
+while true; do
+    [ -f /.easyto/var/lib/keights/aws-iam-authenticator-init-done ] && break
+    echo "Waiting for keights-addons dependencies"
+    sleep 1
+done
+export KUBECONFIG=/etc/kubernetes/admin.conf
+/usr/local/bin/helm template aws-cloud-controller-manager -n kube-system \
+    /etc/kubernetes/charts/aws-cloud-controller-manager \
+        -f /etc/kubernetes/charts/aws-cloud-controller-manager.yaml | \
+    /usr/local/bin/kubectl apply \
+        --server-side \
+        --field-manager keights -f -
+/usr/local/bin/helm template aws-iam-authenticator -n kube-system --include-crds \
+    /etc/kubernetes/charts/aws-iam-authenticator \
+        -f /etc/kubernetes/charts/aws-iam-authenticator.yaml | \
+    /usr/local/bin/kubectl apply \
+        --server-side \
+        --field-manager keights -f -
+/usr/local/bin/helm template aws-vpc-cni -n kube-system --include-crds \
+    /etc/kubernetes/charts/aws-vpc-cni \
+        -f /etc/kubernetes/charts/aws-vpc-cni.yaml | \
+    /usr/local/bin/kubectl apply \
+        --server-side \
+        --field-manager keights -f -

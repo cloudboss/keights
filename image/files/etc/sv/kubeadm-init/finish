@@ -1,0 +1,9 @@
+#!/bin/sh -e
+if [ "${1}" = 0 ]; then
+    /usr/bin/sv exit /etc/service/kubeadm-init
+    if [ -h /etc/service/kubeadm-init ]; then
+        /usr/sbin/update-service --remove /etc/sv/kubeadm-init
+    fi
+    mkdir -p /.easyto/var/lib/keights
+    touch /.easyto/var/lib/keights/kubeadm-init-done
+fi

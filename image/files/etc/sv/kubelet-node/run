@@ -1,0 +1,9 @@
+#!/bin/sh -e
+exec 2>&1
+exec /usr/local/bin/kubelet \
+    --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf \
+    --config=/var/lib/kubelet/config.yaml \
+    --cloud-provider=external \
+    --image-credential-provider-bin-dir=/usr/local/bin \
+    --image-credential-provider-config=/etc/kubernetes/ecr-credential-provider.yaml \
+    --kubeconfig=/etc/kubernetes/kubelet.conf

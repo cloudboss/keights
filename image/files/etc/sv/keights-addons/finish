@@ -1,0 +1,7 @@
+#!/bin/sh
+if [ "${1}" = 0 ]; then
+    /usr/bin/sv exit /etc/service/keights-addons
+    if [ -h /etc/service/keights-addons ]; then
+        /usr/sbin/update-service --remove /etc/sv/keights-addons
+    fi
+fi

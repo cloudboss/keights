@@ -1,0 +1,11 @@
+#!/bin/sh -e
+exec 2>&1
+[ -f /.easyto/var/lib/keights/kubeadm-init-done ] && exit 0
+while true; do
+    [ -S /run/containerd/containerd.sock ] && break
+    echo "Waiting for kubeadm-init dependencies"
+    sleep 1
+done
+/usr/local/bin/kubeadm init \
+    --config /etc/kubernetes/kubeadm-init.yaml \
+    --skip-phases=preflight,show-join-command

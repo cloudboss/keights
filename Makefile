@@ -23,6 +23,10 @@ VERSION =
 DIR_OUT = _output
 DIR_ROOT = $(realpath $(CURDIR))
 
+KUBERNETES_VERSION = 1.34.5
+IMAGE_REPOSITORY = ghcr.io/cloudboss/keights
+IMAGE_TAG =
+
 CTR_IMAGE_GO = golang:1.26.1-alpine3.23
 UID = $(shell id -u)
 GID = $(shell id -g)
@@ -68,6 +72,15 @@ $(HAS_IMAGE_LOCAL): $(HAS_COMMAND_DOCKER)
 		-t $(CTR_IMAGE_LOCAL) \
 		.
 	@touch $(HAS_IMAGE_LOCAL)
+
+image: $(HAS_COMMAND_DOCKER)
+	@[ -n "$(IMAGE_TAG)" ] || (echo "IMAGE_TAG is required"; exit 1)
+	@[ $$(echo $(IMAGE_TAG) | cut -c 1) = v ] || (echo "IMAGE_TAG must begin with a 'v'"; exit 1)
+	@docker build \
+		--build-arg KUBERNETES_VERSION=$(KUBERNETES_VERSION) \
+		-t $(IMAGE_REPOSITORY):$(IMAGE_TAG) \
+		-f image/Containerfile \
+		.
 
 STACKBOT_GO_DEPS = \
 	go.mod \
@@ -154,4 +167,4 @@ clean:
 	@chmod -R +w $(DIR_OUT)/go
 	@rm -rf $(DIR_OUT)
 
-.PHONY: stackbot test clean
+.PHONY: stackbot test clean image

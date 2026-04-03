@@ -1,0 +1,15 @@
+#!/bin/sh -ex
+exec 2>&1
+[ -f /.easyto/var/lib/keights/cfn-signal-control-plane-done ] && exit 0
+# The environment file is created in user data startup script.
+. /etc/sv/cfn-signal-control-plane/environment
+while true; do
+    [ -f /.easyto/var/lib/keights/kubeadm-init-done ] && break
+    sleep 2
+done
+while true; do
+    health=$(curl -s --cacert /etc/kubernetes/pki/ca.crt https://${IPV4_ADDRESS}:6443/healthz)
+    [ "${health}" = "ok" ] && break
+    sleep 1
+done
+/usr/local/bin/cfn-signal -n ${CFN_STACK_NAME} -s SUCCESS

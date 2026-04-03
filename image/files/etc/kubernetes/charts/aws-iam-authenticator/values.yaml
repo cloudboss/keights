@@ -1,0 +1,24 @@
+clusterId: ""
+
+image:
+  repository: public.ecr.aws/eks-distro/kubernetes-sigs/aws-iam-authenticator
+
+awsPartition: aws
+backendMode: CRD
+
+confDir: /etc/kubernetes/aws-iam-authenticator
+stateDir: /var/lib/aws-iam-authenticator
+kubeconfig: /etc/kubernetes/aws-iam-authenticator/aws-iam-authenticator.conf
+
+identityMappings:
+  - name: kubernetes-admin
+    spec:
+      arn: arn:aws:iam::XXXXXXXXXXXX:user/KubernetesAdmin
+      username: kubernetes-admin
+      groups:
+        - system:masters
+
+resources:
+  requests:
+    memory: 20Mi
+    cpu: 10m

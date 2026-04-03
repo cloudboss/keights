@@ -1,0 +1,9 @@
+#!/bin/sh -e
+if [ "${1}" = 0 ]; then
+    /usr/bin/sv exit /etc/service/cfn-signal-control-plane
+    if [ -h /etc/service/cfn-signal-control-plane ]; then
+        /usr/sbin/update-service --remove /etc/sv/cfn-signal-control-plane
+    fi
+    mkdir -p /.easyto/var/lib/keights
+    touch /.easyto/var/lib/keights/cfn-signal-control-plane-done
+fi

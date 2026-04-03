@@ -1,0 +1,9 @@
+{{- range .Values.identityMappings }}
+apiVersion: iamauthenticator.k8s.aws/v1alpha1
+kind: IAMIdentityMapping
+metadata:
+  name: {{ .name }}
+spec:
+  {{- toYaml .spec | nindent 2 }}
+---
+{{- end }}

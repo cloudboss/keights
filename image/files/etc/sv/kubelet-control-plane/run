@@ -1,0 +1,13 @@
+#!/bin/sh -e
+exec 2>&1
+while true; do
+    [ -f /var/lib/kubelet/kubeadm-flags.env ] && break
+    echo "Waiting for kubelet dependencies"
+    sleep 1
+done
+. /var/lib/kubelet/kubeadm-flags.env
+exec /usr/local/bin/kubelet \
+    --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf \
+    --kubeconfig=/etc/kubernetes/kubelet.conf \
+    --config=/var/lib/kubelet/config.yaml \
+    ${KUBELET_KUBEADM_ARGS}

@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /usr/bin/tee /dev/stderr | /usr/bin/svlogd -tt /var/log/kubelet-control-plane

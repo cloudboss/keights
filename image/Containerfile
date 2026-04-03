@@ -1,0 +1,106 @@
+# Copyright © 2026 Joseph Wright <joseph@cloudboss.co>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+# When passing versions with --build-arg, don't include the 'v' at the beginning.
+
+FROM debian:trixie-20251020-slim AS builder
+
+ARG AWS_CNI_VERSION=1.20.4
+ARG CLOUD_PROVIDER_AWS_VERSION=1.34.2
+ARG CONTAINERD_VERSION=2.1.4
+ARG CRICTL_VERSION=1.34.0
+ARG HELM_VERSION=3.19.0
+ARG KUBERNETES_VERSION=1.34.5
+
+ARG AWS_CNI_RELEASE=https://github.com/aws/amazon-vpc-cni-k8s/archive/refs/tags/v${AWS_CNI_VERSION}.tar.gz
+ARG CLOUD_PROVIDER_AWS_RELEASE=https://github.com/kubernetes/cloud-provider-aws/archive/refs/tags/v${CLOUD_PROVIDER_AWS_VERSION}.tar.gz
+ARG CONTAINERD_RELEASE=https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz
+ARG CRICTL_RELEASE=https://github.com/kubernetes-sigs/cri-tools/releases/download/v${CRICTL_VERSION}/crictl-v${CRICTL_VERSION}-linux-amd64.tar.gz
+ARG HELM_RELEASE=https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz
+ARG KUBERNETES_RELEASE=https://dl.k8s.io/v${KUBERNETES_VERSION}/kubernetes-node-linux-amd64.tar.gz
+
+RUN apt update && \
+    apt install -y curl && \
+    curl -L -o amazon-vpc-cni-k8s-${AWS_CNI_VERSION}.tar.gz ${AWS_CNI_RELEASE} && \
+    curl -L -o cloud-provider-aws-${CLOUD_PROVIDER_AWS_VERSION}.tar.gz ${CLOUD_PROVIDER_AWS_RELEASE} && \
+    curl -LO ${CONTAINERD_RELEASE} && \
+    curl -LO ${CRICTL_RELEASE} && \
+    curl -LO ${HELM_RELEASE} && \
+    curl -LO ${KUBERNETES_RELEASE} && \
+    mkdir -p /staging/bin && \
+    tar -C /staging -zxf amazon-vpc-cni-k8s-${AWS_CNI_VERSION}.tar.gz && \
+    tar -C /staging -zxf cloud-provider-aws-${CLOUD_PROVIDER_AWS_VERSION}.tar.gz && \
+    tar -C /staging -zxf $(basename ${CONTAINERD_RELEASE}) && \
+    tar -C /staging/bin -zxf $(basename ${CRICTL_RELEASE}) && \
+    tar -C /staging/bin -zxf $(basename ${HELM_RELEASE}) \
+        --xform "s|linux-amd64/||" \
+        linux-amd64/helm && \
+    tar -C /staging -zxf $(basename ${KUBERNETES_RELEASE}) \
+        --xform "s|kubernetes/node/||" \
+        kubernetes/node/bin/kubeadm \
+        kubernetes/node/bin/kubectl \
+        kubernetes/node/bin/kubelet
+
+FROM golang:1.26.1-alpine3.23 AS go-builder
+
+ARG AWS_IAM_AUTHENTICATOR_VERSION=0.7.8
+ARG CLOUD_PROVIDER_AWS_VERSION=1.34.2
+ARG KUBERNETES_VERSION
+
+RUN go install -ldflags "-s -w" sigs.k8s.io/aws-iam-authenticator/cmd/aws-iam-authenticator@v${AWS_IAM_AUTHENTICATOR_VERSION} && \
+    go install -ldflags "-s -w" k8s.io/cloud-provider-aws/cmd/ecr-credential-provider@v${CLOUD_PROVIDER_AWS_VERSION}
+
+RUN --mount=type=bind,target=/code \
+    cd /code && go build -ldflags "-s -w" -o /cfn-signal ./cmd/cfn-signal
+
+FROM debian:trixie-20251020-slim
+
+ARG AWS_CNI_VERSION=1.20.4
+ARG CLOUD_PROVIDER_AWS_VERSION=1.34.2
+ARG KUBERNETES_VERSION
+
+RUN for svc in \
+        aws-iam-authenticator-init containerd cfn-signal-control-plane \
+        cfn-signal-node keights-addons kubeadm-init kubelet-control-plane kubelet-node; \
+    do \
+        mkdir -p /var/log/${svc}; \
+        printf "n10\ns10485760\n" > /var/log/${svc}/config; \
+    done
+
+COPY --from=go-builder /go/bin/aws-iam-authenticator /usr/local/bin
+COPY --from=go-builder /go/bin/ecr-credential-provider /usr/local/bin
+COPY --from=go-builder /cfn-signal /usr/local/bin
+COPY --from=builder /staging/bin /usr/local/bin
+COPY --from=builder \
+    /staging/amazon-vpc-cni-k8s-${AWS_CNI_VERSION}/charts/aws-vpc-cni \
+    /etc/kubernetes/charts/aws-vpc-cni
+COPY --from=builder \
+    /staging/cloud-provider-aws-${CLOUD_PROVIDER_AWS_VERSION}/charts/aws-cloud-controller-manager \
+    /etc/kubernetes/charts/aws-cloud-controller-manager
+COPY image/files/ /
+
+RUN apt update && \
+    apt install -y ca-certificates curl iproute2 iptables runc runit && \
+    apt clean && \
+    rm -rf /var/lib/apt/* && \
+    rm -rf /run/* && \
+    chown root:root /usr/local/bin/* && \
+    mkdir -p /var/lib/kubelet && \
+    chmod 700 /var/lib/kubelet
