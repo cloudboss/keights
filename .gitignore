@@ -1,2 +1,7 @@
 .DS_STORE
 _output/
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/*.out
+terraform/*.tfstate*
+terraform/*.tfvars

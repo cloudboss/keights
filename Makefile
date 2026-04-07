@@ -43,6 +43,10 @@ HAS_COMMAND_DOCKER = $(DIR_OUT)/.command-docker
 HAS_COMMAND_FAKEROOT = $(DIR_OUT)/.command-fakeroot
 HAS_COMMAND_ZIP = $(DIR_OUT)/.command-zip
 
+TERRAFORM_TARBALL = $(DIR_OUT)/keights-terraform-$(VERSION).tar.gz
+
+TERRAFORM_SOURCES = $(shell find terraform -type f -name '*.tf')
+
 STACKBOT_ZIPS = \
 	$(DIR_OUT)/auto-namer/auto-namer-$(VERSION).zip \
 	$(DIR_OUT)/instance-attr/instance-attr-$(VERSION).zip \
@@ -151,6 +155,19 @@ $(DIR_OUT)/kube-ca/kube-ca-$(VERSION).zip: $(DIR_OUT)/kube-ca/bootstrap \
 	@[ $$(echo $(VERSION) | cut -c 1) = v ] || (echo "VERSION must begin with a 'v'"; exit 1)
 	@cd $(DIR_OUT)/kube-ca && fakeroot zip kube-ca-$(VERSION).zip bootstrap
 
+$(TERRAFORM_TARBALL): $(TERRAFORM_SOURCES) | $(DIR_OUT) $(HAS_COMMAND_FAKEROOT)
+	@[ -n "$(VERSION)" ] || (echo "VERSION is required"; exit 1)
+	@[ $$(echo $(VERSION) | cut -c 1) = v ] || (echo "VERSION must begin with a 'v'"; exit 1)
+	@fakeroot tar -czf $(TERRAFORM_TARBALL) \
+		--exclude='.terraform' \
+		--exclude='*.tfvars' \
+		--exclude='*.tfstate' \
+		--exclude='*.tfstate.backup' \
+		--exclude='.terraform.lock.hcl' \
+		-C terraform .
+
+terraform-release: $(TERRAFORM_TARBALL)
+
 stackbot: $(STACKBOT_ZIPS)
 
 test: | $(HAS_IMAGE_LOCAL)
@@ -167,4 +184,4 @@ clean:
 	@chmod -R +w $(DIR_OUT)/go
 	@rm -rf $(DIR_OUT)
 
-.PHONY: stackbot test clean image
+.PHONY: stackbot terraform-release test clean image
