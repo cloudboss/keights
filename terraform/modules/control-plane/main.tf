@@ -145,6 +145,88 @@ locals {
     var.addons.aws_iam_authenticator.values
   ))
 
+  cert_manager_node_selector = {
+    "node-role.kubernetes.io/control-plane" = ""
+  }
+
+  cert_manager_pod_anti_affinity = {
+    preferredDuringSchedulingIgnoredDuringExecution = [
+      {
+        weight = 100
+        podAffinityTerm = {
+          topologyKey = "kubernetes.io/hostname"
+          labelSelector = {
+            matchExpressions = [
+              {
+                key      = "app.kubernetes.io/instance"
+                operator = "In"
+                values   = ["cert-manager"]
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+
+  cert_manager_values_default = {
+    affinity = {
+      podAntiAffinity = local.cert_manager_pod_anti_affinity
+    }
+    cainjector = {
+      affinity = {
+        podAntiAffinity = local.cert_manager_pod_anti_affinity
+      }
+      nodeSelector = local.cert_manager_node_selector
+      podDisruptionBudget = {
+        enabled = local.cluster_size > 1
+      }
+      replicaCount = local.cluster_size
+      tolerations = [
+        {
+          key    = "node-role.kubernetes.io/control-plane"
+          effect = "NoSchedule"
+        }
+      ]
+    }
+    installCRDs = true
+    nodeSelector = local.cert_manager_node_selector
+    podDisruptionBudget = {
+      enabled = local.cluster_size > 1
+    }
+    replicaCount = local.cluster_size
+    startupapicheck = {
+      enabled = false
+    }
+    tolerations = [
+      {
+        key    = "node-role.kubernetes.io/control-plane"
+        effect = "NoSchedule"
+      }
+    ]
+    webhook = {
+      affinity = {
+        podAntiAffinity = local.cert_manager_pod_anti_affinity
+      }
+      nodeSelector = local.cert_manager_node_selector
+      podDisruptionBudget = {
+        enabled = local.cluster_size > 1
+      }
+      replicaCount = local.cluster_size
+      tolerations = [
+        {
+          key    = "node-role.kubernetes.io/control-plane"
+          effect = "NoSchedule"
+        }
+      ]
+    }
+  }
+
+  cert_manager_values = yamlencode(merge(
+    local.cert_manager_values_default,
+    var.addons.cert_manager.values
+  ))
+
   aws_vpc_cni_values_default = {
     init = {
       image = {
@@ -172,9 +254,11 @@ locals {
   aws_cloud_controller_manager_yaml          = "aws-cloud-controller-manager.yaml"
   aws_iam_authenticator_yaml                 = "aws-iam-authenticator.yaml"
   aws_vpc_cni_yaml                           = "aws-vpc-cni.yaml"
+  cert_manager_yaml                          = "cert-manager.yaml"
   aws_cloud_controller_manager_values_key_s3 = "${var.s3_bucket_prefix}/${var.cluster_name}/controller/addons/${local.aws_cloud_controller_manager_yaml}"
   aws_iam_authenticator_values_key_s3        = "${var.s3_bucket_prefix}/${var.cluster_name}/controller/addons/${local.aws_iam_authenticator_yaml}"
   aws_vpc_cni_values_key_s3                  = "${var.s3_bucket_prefix}/${var.cluster_name}/controller/addons/${local.aws_vpc_cni_yaml}"
+  cert_manager_values_key_s3                 = "${var.s3_bucket_prefix}/${var.cluster_name}/controller/addons/${local.cert_manager_yaml}"
   kubeadm_init_config_key_s3                 = "${var.s3_bucket_prefix}/${var.cluster_name}/controller/kubeadm-init.yaml"
   kubeadm_init_config_path_host              = "/etc/kubernetes/kubeadm-init.yaml"
 
@@ -182,6 +266,7 @@ locals {
     local.aws_cloud_controller_manager_values,
     local.aws_iam_authenticator_values,
     local.aws_vpc_cni_values,
+    local.cert_manager_values,
     local.kubeadm_init_config,
   ]))
 }
@@ -218,6 +303,12 @@ resource "aws_s3_object" "aws_vpc_cni_values" {
   bucket  = var.s3_bucket
   key     = local.aws_vpc_cni_values_key_s3
   content = local.aws_vpc_cni_values
+}
+
+resource "aws_s3_object" "cert_manager_values" {
+  bucket  = var.s3_bucket
+  key     = local.cert_manager_values_key_s3
+  content = local.cert_manager_values
 }
 
 resource "aws_s3_object" "kubeadm_init_config" {
@@ -400,6 +491,15 @@ module "user_data" {
         key-prefix = local.aws_vpc_cni_values_key_s3
         mount = {
           destination = "/etc/kubernetes/charts/${local.aws_vpc_cni_yaml}"
+        }
+      }
+    },
+    {
+      s3 = {
+        bucket     = var.s3_bucket
+        key-prefix = local.cert_manager_values_key_s3
+        mount = {
+          destination = "/etc/kubernetes/charts/${local.cert_manager_yaml}"
         }
       }
     },

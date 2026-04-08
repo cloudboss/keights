@@ -24,3 +24,11 @@ export KUBECONFIG=/etc/kubernetes/admin.conf
     /usr/local/bin/kubectl apply \
         --server-side \
         --field-manager keights -f -
+/usr/local/bin/kubectl create namespace cert-manager --dry-run=client -o yaml | \
+    /usr/local/bin/kubectl apply --server-side --field-manager keights -f -
+/usr/local/bin/helm template cert-manager -n cert-manager --include-crds \
+    /etc/kubernetes/charts/cert-manager \
+        -f /etc/kubernetes/charts/cert-manager.yaml | \
+    /usr/local/bin/kubectl apply \
+        --server-side \
+        --field-manager keights -f -

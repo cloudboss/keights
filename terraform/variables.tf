@@ -40,6 +40,9 @@ variable "addons" {
     aws_vpc_cni = optional(object({
       values = optional(map(any), {})
     }), {})
+    cert_manager = optional(object({
+      values = optional(map(any), {})
+    }), {})
   })
   description = "Configuration for addon Helm charts."
 

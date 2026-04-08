@@ -52,6 +52,7 @@ An object to configure cluster addons. Addons are deployed with Helm charts, and
 | aws\_cloud\_controller\_manager | Configuration for the AWS cloud controller manager addon. | [object](#addon-object) | `{}` | no |
 | aws\_iam\_authenticator | Configuration for the AWS IAM authenticator addon. | [object](#addon-object) | `{}` | no |
 | aws\_vpc\_cni | Configuration for the AWS VPC CNI addon. | [object](#addon-object) | `{}` | no |
+| cert\_manager | Configuration for the cert-manager addon. | [object](#addon-object) | `{}` | no |
 
 ## addon object
 
