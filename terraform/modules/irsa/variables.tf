@@ -18,14 +18,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-output "load_balancer_dns_name" {
-  value = module.load_balancer.it.load_balancer.dns_name
+variable "audience" {
+  type = string
 }
 
-output "oidc_provider_arn" {
-  value = one(module.irsa[*].oidc_provider_arn)
+variable "cluster_name" {
+  type = string
 }
 
-output "oidc_provider_url" {
-  value = one(module.irsa[*].oidc_provider_url)
+variable "jwks" {
+  type = string
+}
+
+variable "tags" {
+  type = map(string)
 }

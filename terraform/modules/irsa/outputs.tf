@@ -18,14 +18,18 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-output "load_balancer_dns_name" {
-  value = module.load_balancer.it.load_balancer.dns_name
-}
-
 output "oidc_provider_arn" {
-  value = one(module.irsa[*].oidc_provider_arn)
+  value = aws_iam_openid_connect_provider.it.arn
 }
 
 output "oidc_provider_url" {
-  value = one(module.irsa[*].oidc_provider_url)
+  value = replace(aws_iam_openid_connect_provider.it.url, "https://", "")
+}
+
+output "oidc_issuer" {
+  value = local.oidc_issuer
+}
+
+output "oidc_bucket_name" {
+  value = aws_s3_bucket.it.bucket
 }

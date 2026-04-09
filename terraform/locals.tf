@@ -25,6 +25,8 @@ locals {
 
   aws_region = data.aws_region.current.region
 
+  irsa = var.irsa_enabled ? { oidc_issuer = module.irsa[0].oidc_issuer } : null
+
   is_etcd_external = var.etcd_mode == "external"
 
   is_lambda_vpc = var.lambda.subnet_ids != null && length(var.lambda.subnet_ids) > 0

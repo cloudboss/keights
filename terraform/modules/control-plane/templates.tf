@@ -75,23 +75,38 @@ locals {
     }
   }
 
+  apiserver_extra_args = concat(
+    local.apiserver_extra_args_default,
+    local.apiserver_extra_args_irsa,
+  )
+  apiserver_extra_args_default = [
+    {
+      name  = "authentication-token-webhook-config-file"
+      value = "/etc/kubernetes/aws-iam-authenticator/aws-iam-authenticator.conf"
+    },
+    {
+      name  = "external-hostname"
+      value = var.load_balancer.dns_name
+    },
+    {
+      name  = "service-account-jwks-uri"
+      value = "https://kubernetes.default.svc.${var.cluster_domain}/openid/v1/jwks"
+    },
+  ]
+  apiserver_extra_args_irsa = (
+    var.irsa != null
+    ? [
+      { name = "service-account-issuer", value = var.irsa.oidc_issuer },
+      # Allow "old" issuer if IRSA is initially disabled and later enabled.
+      { name = "service-account-issuer", value = "https://kubernetes.default.svc.${var.cluster_domain}" },
+    ]
+    : []
+  )
+
   kubeadm_init_clusterconfiguration = {
     apiServer = {
-      certSANs = [var.load_balancer.dns_name]
-      extraArgs = [
-        {
-          name  = "authentication-token-webhook-config-file"
-          value = "/etc/kubernetes/aws-iam-authenticator/aws-iam-authenticator.conf"
-        },
-        {
-          name  = "external-hostname"
-          value = var.load_balancer.dns_name
-        },
-        {
-          name  = "service-account-jwks-uri"
-          value = "https://kubernetes.default.svc.${var.cluster_domain}/openid/v1/jwks"
-        },
-      ]
+      certSANs  = [var.load_balancer.dns_name]
+      extraArgs = local.apiserver_extra_args
       extraVolumes = [
         {
           name      = "aws-iam-authenticator-config"
@@ -229,4 +244,177 @@ locals {
     ---
     ${yamlencode(local.kubeadm_init_kubeletconfiguration)}
   EOS
+
+  volumes_ebs = [
+    {
+      ebs = {
+        device = var.storage.containerd.device
+        mount = {
+          destination = "/var/lib/containerd"
+          fs-type     = "ext4"
+          mode        = "0700"
+        }
+      }
+    },
+    {
+      ebs = {
+        attachment = {
+          tags = [
+            {
+              key   = "keights.cloudboss.co/cluster"
+              value = var.cluster_name
+            },
+            {
+              key   = "keights.cloudboss.co/etcd"
+              value = ""
+            },
+          ]
+        }
+        device = var.storage.etcd.device
+        mount = {
+          destination = "/var/lib/etcd"
+          fs-type     = "ext4"
+          mode        = "0700"
+        }
+      }
+    },
+  ]
+
+  volumes_addon_values = [
+    {
+      s3 = {
+        bucket     = var.s3_bucket
+        key-prefix = local.aws_cloud_controller_manager_values_key_s3
+        mount = {
+          destination = "/etc/kubernetes/charts/${local.aws_cloud_controller_manager_yaml}"
+        }
+      }
+    },
+    {
+      s3 = {
+        bucket     = var.s3_bucket
+        key-prefix = local.aws_iam_authenticator_values_key_s3
+        mount = {
+          destination = "/etc/kubernetes/charts/${local.aws_iam_authenticator_yaml}"
+        }
+      }
+    },
+    {
+      s3 = {
+        bucket     = var.s3_bucket
+        key-prefix = local.aws_vpc_cni_values_key_s3
+        mount = {
+          destination = "/etc/kubernetes/charts/${local.aws_vpc_cni_yaml}"
+        }
+      }
+    },
+    {
+      s3 = {
+        bucket     = var.s3_bucket
+        key-prefix = local.cert_manager_values_key_s3
+        mount = {
+          destination = "/etc/kubernetes/charts/${local.cert_manager_yaml}"
+        }
+      }
+    },
+  ]
+
+  volumes_irsa = var.irsa != null ? [
+    {
+      s3 = {
+        bucket     = var.s3_bucket
+        key-prefix = local.pod_identity_webhook_values_key_s3
+        mount = {
+          destination = "/etc/kubernetes/charts/${local.pod_identity_webhook_yaml}"
+        }
+      }
+    },
+  ] : []
+
+  volumes_config = [
+    {
+      s3 = {
+        bucket     = var.s3_bucket
+        key-prefix = local.kubeadm_init_config_key_s3
+        mount = {
+          destination = local.kubeadm_init_config_path_host
+        }
+      }
+    },
+  ]
+
+  volumes_pki = [
+    {
+      ssm = {
+        path = "/keights/${var.cluster_name}/cluster/ca.crt"
+        mount = {
+          destination = "/etc/kubernetes/pki/ca.crt"
+        }
+      }
+    },
+    {
+      ssm = {
+        path = "/keights/${var.cluster_name}/controller/ca.key"
+        mount = {
+          destination = "/etc/kubernetes/pki/ca.key"
+        }
+      }
+    },
+    {
+      ssm = {
+        path = "/keights/${var.cluster_name}/controller/etcd-ca.crt"
+        mount = {
+          destination = "/etc/kubernetes/pki/etcd/ca.crt"
+        }
+      }
+    },
+    {
+      ssm = {
+        path = "/keights/${var.cluster_name}/controller/etcd-ca.key"
+        mount = {
+          destination = "/etc/kubernetes/pki/etcd/ca.key"
+        }
+      }
+    },
+    {
+      ssm = {
+        path = "/keights/${var.cluster_name}/controller/front-proxy-ca.crt"
+        mount = {
+          destination = "/etc/kubernetes/pki/front-proxy-ca.crt"
+        }
+      }
+    },
+    {
+      ssm = {
+        path = "/keights/${var.cluster_name}/controller/front-proxy-ca.key"
+        mount = {
+          destination = "/etc/kubernetes/pki/front-proxy-ca.key"
+        }
+      }
+    },
+    {
+      ssm = {
+        path = "/keights/${var.cluster_name}/controller/sa.key"
+        mount = {
+          destination = "/etc/kubernetes/pki/sa.key"
+        }
+      }
+    },
+    {
+      ssm = {
+        path = "/keights/${var.cluster_name}/controller/sa.pub"
+        mount = {
+          destination = "/etc/kubernetes/pki/sa.pub"
+        }
+      }
+    },
+  ]
+
+  volumes = concat(
+    local.volumes_ebs,
+    local.volumes_addon_values,
+    local.volumes_irsa,
+    local.volumes_config,
+    local.volumes_pki,
+  )
 }

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: pod-identity-webhook
+description: A Helm chart for Amazon EKS Pod Identity Webhook
+type: application
+version: 0.1.0
+appVersion: "v0.6.14"

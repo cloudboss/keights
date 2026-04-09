@@ -109,6 +109,31 @@ func retrieveCA(
 	return caCert, caKey, err
 }
 
+func retrieveSAPublicKey(
+	ctx context.Context,
+	whisp whisperer.Whisperer,
+	pubKeyPath string,
+) (crypto.PublicKey, error) {
+	log.Printf("Retrieving SA public key via SSM parameter %s\n", pubKeyPath)
+
+	pubKeyPEM, err := whisp.GetParameter(ctx, pubKeyPath)
+	if err != nil {
+		return nil, err
+	}
+	pubKeys, err := keyutil.ParsePublicKeysPEM([]byte(*pubKeyPEM))
+	if err != nil {
+		return nil, err
+	}
+	if len(pubKeys) == 0 {
+		return nil, fmt.Errorf("no public keys found in %s", pubKeyPath)
+	}
+	pubKey, ok := pubKeys[0].(crypto.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("unexpected key type in %s", pubKeyPath)
+	}
+	return pubKey, nil
+}
+
 func genCA(
 	ctx context.Context,
 	whisp whisperer.Whisperer,
@@ -149,30 +174,34 @@ func genServiceAccountArtifacts(
 	whisp whisperer.Whisperer,
 	keyPath, pubKeyPath, kmsKeyID string,
 	encryptionAlgorithm kubeadmapi.EncryptionAlgorithmType,
-) error {
+) (crypto.PublicKey, error) {
 	log.Printf("Generating service account artifacts: %s and %s\n", keyPath, pubKeyPath)
 
 	saSigningKey, err := pkiutil.NewPrivateKey(encryptionAlgorithm)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	saSigningKeyPEMBytes, err := keyutil.MarshalPrivateKeyToPEM(saSigningKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	saSigningKeyPEM := string(saSigningKeyPEMBytes)
 	log.Printf("Storing %s\n", keyPath)
 	err = whisp.ForceStoreParameter(ctx, keyPath, kmsKeyID, saSigningKeyPEM)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	saSigningPubKeyPEMBytes, err := pkiutil.EncodePublicKeyPEM(saSigningKey.Public())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	saSigningPubKeyPEM := string(saSigningPubKeyPEMBytes)
 	log.Printf("Storing %s\n", pubKeyPath)
-	return whisp.ForceStoreParameter(ctx, pubKeyPath, kmsKeyID, saSigningPubKeyPEM)
+	err = whisp.ForceStoreParameter(ctx, pubKeyPath, kmsKeyID, saSigningPubKeyPEM)
+	if err != nil {
+		return nil, err
+	}
+	return saSigningKey.Public(), nil
 }
 
 func genBootstrapToken(
@@ -235,11 +264,16 @@ func genAPIServerKubeletClientCert(
 	return whisp.ForceStoreParameter(ctx, keyPath, kmsKeyID, apiClientKeyPEM)
 }
 
-func createOrUpdateCerts(ctx context.Context, props Properties, whisp whisperer.Whisperer) error {
+func createOrUpdateCerts(
+	ctx context.Context,
+	props Properties,
+	whisp whisperer.Whisperer,
+) (crypto.PublicKey, error) {
 	var (
-		caCert *x509.Certificate
-		caKey  crypto.Signer
-		err    error
+		caCert   *x509.Certificate
+		caKey    crypto.Signer
+		saPubKey crypto.PublicKey
+		err      error
 	)
 
 	clusterScopedPath := pathFormatter(clusterPathTemplate, props.ClusterName)
@@ -282,7 +316,7 @@ func createOrUpdateCerts(ctx context.Context, props Properties, whisp whisperer.
 		},
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Etcd CA.
@@ -297,7 +331,7 @@ func createOrUpdateCerts(ctx context.Context, props Properties, whisp whisperer.
 		},
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Front Proxy CA.
@@ -312,7 +346,7 @@ func createOrUpdateCerts(ctx context.Context, props Properties, whisp whisperer.
 		},
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// API Server Kubelet Client Cert.
@@ -328,25 +362,37 @@ func createOrUpdateCerts(ctx context.Context, props Properties, whisp whisperer.
 		},
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Service Account signing keys.
 	err = doUnless(
 		func() (bool, error) {
-			return whisp.HasParameters(ctx, saSigningKeyPath, saSigningPubKeyPath)
+			hasParameters, err := whisp.HasParameters(ctx, saSigningKeyPath,
+				saSigningPubKeyPath)
+			if err != nil {
+				return false, err
+			}
+			if hasParameters {
+				saPubKey, err = retrieveSAPublicKey(ctx, whisp, saSigningPubKeyPath)
+				if err != nil {
+					return false, err
+				}
+			}
+			return hasParameters, nil
 		},
 		func() error {
-			return genServiceAccountArtifacts(ctx, whisp, saSigningKeyPath,
+			saPubKey, err = genServiceAccountArtifacts(ctx, whisp, saSigningKeyPath,
 				saSigningPubKeyPath, props.KMSKeyID, props.EncryptionAlgorithm)
+			return err
 		},
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Bootstrap token.
-	return doUnless(
+	err = doUnless(
 		func() (bool, error) {
 			return whisp.HasParameters(ctx, bootstrapTokenPath)
 		},
@@ -354,12 +400,17 @@ func createOrUpdateCerts(ctx context.Context, props Properties, whisp whisperer.
 			return genBootstrapToken(ctx, whisp, bootstrapTokenPath, props.KMSKeyID)
 		},
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	return saPubKey, nil
 }
 
-func handleRequest(ctx context.Context) error {
+func handleRequest(ctx context.Context) (map[string]string, error) {
 	env, err := environment.EnsureEnvironment(requiredEnvironment)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	log.Printf("Environment: %+v\n", env)
 
@@ -375,12 +426,22 @@ func handleRequest(ctx context.Context) error {
 
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("unable to load default AWS config: %w", err)
+		return nil, fmt.Errorf("unable to load default AWS config: %w", err)
 	}
 
 	whisp := whisperer.NewSSMWhisperer(cfg)
 
-	return createOrUpdateCerts(ctx, props, whisp)
+	saPubKey, err := createOrUpdateCerts(ctx, props, whisp)
+	if err != nil {
+		return nil, err
+	}
+
+	jwks, err := generateJWKS(saPubKey)
+	if err != nil {
+		return nil, fmt.Errorf("error generating jwks: %w", err)
+	}
+
+	return map[string]string{"jwks": jwks}, nil
 }
 
 func doUnless(isDone func() (bool, error), do func() error) error {

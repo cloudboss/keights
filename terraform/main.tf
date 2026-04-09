@@ -35,6 +35,16 @@ module "route53" {
   vpc_id           = var.vpc_id
 }
 
+module "irsa" {
+  source = "./modules/irsa"
+  count  = var.irsa_enabled ? 1 : 0
+
+  audience     = "sts.amazonaws.com"
+  cluster_name = var.cluster_name
+  jwks         = jsondecode(aws_lambda_invocation.kube_ca.result).jwks
+  tags         = var.tags
+}
+
 module "iam" {
   source = "./modules/iam"
 
@@ -133,6 +143,7 @@ module "control_plane" {
 
   addons                = var.addons
   ami                   = var.ami
+  irsa                  = local.irsa
   aws_partition         = local.aws_partition
   aws_region            = local.aws_region
   caller_identity       = data.aws_caller_identity.current

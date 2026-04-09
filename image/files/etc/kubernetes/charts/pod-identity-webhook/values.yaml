@@ -1,0 +1,51 @@
+image:
+  repository: public.ecr.aws/eks/amazon-eks-pod-identity-webhook
+
+args:
+  - --in-cluster=false
+  - --tls-cert=/etc/webhook/certs/tls.crt
+  - --tls-key=/etc/webhook/certs/tls.key
+  - --annotation-prefix=eks.amazonaws.com
+  - --token-audience=sts.amazonaws.com
+  - --sts-regional-endpoint=true
+  - --logtostderr
+
+failurePolicy: Fail
+
+replicas: 2
+
+resources:
+  requests:
+    memory: 20Mi
+    cpu: 10m
+
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app
+              operator: In
+              values:
+                - pod-identity-webhook
+        topologyKey: kubernetes.io/hostname
+
+mutatingWebhookConfiguration:
+  objectSelector:
+    matchExpressions:
+      - key: tier
+        operator: NotIn
+        values:
+          - control-plane
+      - key: pod-identity-webhook/exclude
+        operator: DoesNotExist
+
+nodeSelector:
+  node-role.kubernetes.io/control-plane: ""
+
+podLabels:
+  pod-identity-webhook/exclude: ""
+
+tolerations:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/control-plane

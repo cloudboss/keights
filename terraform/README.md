@@ -23,6 +23,7 @@ See the [example](./example) directory for a sample that follows the [DELAR](htt
 | encryption\_algorithm | The encryption algorithm used for cluster encryption. Must be one of `ECDSA-P256`, `ECDSA-P384`, `RSA-3072`, or `RSA-4096`. | string | `ECDSA-P256` | no |
 | etcd\_mode | The etcd cluster deployment mode. Must be one of `external` or `stacked`. In `stacked` mode, etcd runs on the control plane nodes. In `external` mode, etcd runs on separate instances. | string | `stacked` | no |
 | identity\_mappings | Configuration for aws-iam-authenticator identity mappings. By default the IAM identity of the cluster creator will have administrative access and nodes will have access to join the cluster. | list([object](#identity_mappings-object)) | `[]` | no |
+| irsa\_enabled | Whether or not IAM Roles for Service Accounts (IRSA) will be enabled. When true, an S3 bucket for OIDC discovery documents and an IAM OIDC provider will be created. | bool | `true` | no |
 | kms\_key\_id | The KMS Key ID used for cluster encryption. | string | N/A | yes |
 | kubernetes\_configuration | Kubernetes configuration options. | [object](#kubernetes_configuration-object) | `{}` | no |
 | lambda | Configuration for Lambda functions. If `subnet_ids` are not provided, they will be deployed without VPC configuration. | [object](#lambda-object) | `{}` | no |
@@ -53,6 +54,7 @@ An object to configure cluster addons. Addons are deployed with Helm charts, and
 | aws\_iam\_authenticator | Configuration for the AWS IAM authenticator addon. | [object](#addon-object) | `{}` | no |
 | aws\_vpc\_cni | Configuration for the AWS VPC CNI addon. | [object](#addon-object) | `{}` | no |
 | cert\_manager | Configuration for the cert-manager addon. | [object](#addon-object) | `{}` | no |
+| pod\_identity\_webhook | Configuration for the pod identity webhook addon, if `irsa_enabled` is true. | [object](#addon-object) | `{}` | no |
 
 ## addon object
 
@@ -238,3 +240,5 @@ An object to configure storage volumes.
 | Name | Description |
 |------|-------------|
 | load\_balancer\_dns\_name | The DNS name of the API server load balancer. |
+| oidc\_provider\_arn | The ARN of the IAM OIDC provider. `null` if IRSA is disabled. |
+| oidc\_provider\_url | The URL of the IAM OIDC provider. `null` if IRSA is disabled. |

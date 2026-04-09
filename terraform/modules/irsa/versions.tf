@@ -18,14 +18,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-output "load_balancer_dns_name" {
-  value = module.load_balancer.it.load_balancer.dns_name
-}
-
-output "oidc_provider_arn" {
-  value = one(module.irsa[*].oidc_provider_arn)
-}
-
-output "oidc_provider_url" {
-  value = one(module.irsa[*].oidc_provider_url)
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">=6, <7"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = ">=4, <5"
+    }
+  }
 }

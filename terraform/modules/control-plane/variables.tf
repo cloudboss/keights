@@ -66,6 +66,10 @@ variable "identity_mappings" {
   type = list(any)
 }
 
+variable "irsa" {
+  type = any
+}
+
 variable "image_registry" {
   type = string
 }

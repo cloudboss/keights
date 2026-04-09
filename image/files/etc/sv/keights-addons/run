@@ -32,3 +32,13 @@ export KUBECONFIG=/etc/kubernetes/admin.conf
     /usr/local/bin/kubectl apply \
         --server-side \
         --field-manager keights -f -
+if [ -f /etc/kubernetes/charts/pod-identity-webhook.yaml ]; then
+    /usr/local/bin/kubectl -n cert-manager rollout status \
+        deployment/cert-manager-webhook --timeout=120s
+    /usr/local/bin/helm template pod-identity-webhook -n kube-system \
+        /etc/kubernetes/charts/pod-identity-webhook \
+            -f /etc/kubernetes/charts/pod-identity-webhook.yaml | \
+        /usr/local/bin/kubectl apply \
+            --server-side \
+            --field-manager keights -f -
+fi

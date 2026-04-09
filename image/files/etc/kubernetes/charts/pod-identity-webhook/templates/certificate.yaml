@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  secretName: {{ .Chart.Name }}
+  dnsNames:
+    - {{ .Chart.Name }}
+    - {{ .Chart.Name }}.{{ .Release.Namespace }}
+    - {{ .Chart.Name }}.{{ .Release.Namespace }}.svc
+  issuerRef:
+    name: {{ .Chart.Name }}-selfsigned
+    kind: Issuer

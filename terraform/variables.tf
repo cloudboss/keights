@@ -43,6 +43,9 @@ variable "addons" {
     cert_manager = optional(object({
       values = optional(map(any), {})
     }), {})
+    pod_identity_webhook = optional(object({
+      values = optional(map(any), {})
+    }), {})
   })
   description = "Configuration for addon Helm charts."
 
@@ -126,6 +129,13 @@ variable "identity_mappings" {
   description = "Configuration for aws-iam-authenticator identity mappings. By default the IAM identity of the cluster creator will have administrative access and nodes will have access to join the cluster."
 
   default = []
+}
+
+variable "irsa_enabled" {
+  type        = bool
+  description = "Enable IAM Roles for Service Accounts (IRSA). When enabled, an S3 bucket for OIDC discovery documents and an IAM OIDC provider will be created."
+
+  default = true
 }
 
 variable "kms_key_id" {

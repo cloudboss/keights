@@ -169,6 +169,10 @@ locals {
     ]
   }
 
+  cert_manager_pod_labels = {
+    "pod-identity-webhook/exclude" = ""
+  }
+
   cert_manager_values_default = {
     affinity = {
       podAntiAffinity = local.cert_manager_pod_anti_affinity
@@ -181,6 +185,7 @@ locals {
       podDisruptionBudget = {
         enabled = local.cluster_size > 1
       }
+      podLabels    = local.cert_manager_pod_labels
       replicaCount = local.cluster_size
       tolerations = [
         {
@@ -189,11 +194,12 @@ locals {
         }
       ]
     }
-    installCRDs = true
+    installCRDs  = true
     nodeSelector = local.cert_manager_node_selector
     podDisruptionBudget = {
       enabled = local.cluster_size > 1
     }
+    podLabels    = local.cert_manager_pod_labels
     replicaCount = local.cluster_size
     startupapicheck = {
       enabled = false
@@ -212,6 +218,7 @@ locals {
       podDisruptionBudget = {
         enabled = local.cluster_size > 1
       }
+      podLabels    = local.cert_manager_pod_labels
       replicaCount = local.cluster_size
       tolerations = [
         {
@@ -251,14 +258,73 @@ locals {
     var.addons.aws_vpc_cni.values
   ))
 
+  pod_identity_webhook_values_default = {
+    args = [
+      "--in-cluster=false",
+      "--tls-cert=/etc/webhook/certs/tls.crt",
+      "--tls-key=/etc/webhook/certs/tls.key",
+      "--annotation-prefix=eks.amazonaws.com",
+      "--token-audience=sts.amazonaws.com",
+      "--aws-default-region=${var.aws_region}",
+      "--sts-regional-endpoint=true",
+      "--logtostderr",
+    ]
+    failurePolicy = "Fail"
+    podLabels = {
+      "pod-identity-webhook/exclude" = ""
+    }
+    mutatingWebhookConfiguration = {
+      objectSelector = {
+        matchExpressions = [
+          {
+            key      = "tier"
+            operator = "NotIn"
+            values   = ["control-plane"]
+          },
+          {
+            key      = "k8s-app"
+            operator = "NotIn"
+            values = [
+              "aws-cloud-controller-manager",
+              "aws-node",
+              "aws-iam-authenticator",
+              "kube-dns",
+              "kube-proxy",
+            ]
+          },
+          {
+            key      = "pod-identity-webhook/exclude"
+            operator = "DoesNotExist"
+          },
+        ]
+      }
+    }
+    replicas = local.cluster_size
+    tolerations = [
+      {
+        key    = "node-role.kubernetes.io/control-plane"
+        effect = "NoSchedule"
+      }
+    ]
+  }
+
+  pod_identity_webhook_values = yamlencode(merge(
+    local.pod_identity_webhook_values_default,
+    var.addons.pod_identity_webhook.values
+  ))
+
+  addon_s3_prefix = "${var.s3_bucket_prefix}/${var.cluster_name}/controller/addons"
+
   aws_cloud_controller_manager_yaml          = "aws-cloud-controller-manager.yaml"
   aws_iam_authenticator_yaml                 = "aws-iam-authenticator.yaml"
   aws_vpc_cni_yaml                           = "aws-vpc-cni.yaml"
   cert_manager_yaml                          = "cert-manager.yaml"
-  aws_cloud_controller_manager_values_key_s3 = "${var.s3_bucket_prefix}/${var.cluster_name}/controller/addons/${local.aws_cloud_controller_manager_yaml}"
-  aws_iam_authenticator_values_key_s3        = "${var.s3_bucket_prefix}/${var.cluster_name}/controller/addons/${local.aws_iam_authenticator_yaml}"
-  aws_vpc_cni_values_key_s3                  = "${var.s3_bucket_prefix}/${var.cluster_name}/controller/addons/${local.aws_vpc_cni_yaml}"
-  cert_manager_values_key_s3                 = "${var.s3_bucket_prefix}/${var.cluster_name}/controller/addons/${local.cert_manager_yaml}"
+  pod_identity_webhook_yaml                  = "pod-identity-webhook.yaml"
+  aws_cloud_controller_manager_values_key_s3 = "${local.addon_s3_prefix}/${local.aws_cloud_controller_manager_yaml}"
+  aws_iam_authenticator_values_key_s3        = "${local.addon_s3_prefix}/${local.aws_iam_authenticator_yaml}"
+  aws_vpc_cni_values_key_s3                  = "${local.addon_s3_prefix}/${local.aws_vpc_cni_yaml}"
+  cert_manager_values_key_s3                 = "${local.addon_s3_prefix}/${local.cert_manager_yaml}"
+  pod_identity_webhook_values_key_s3         = "${local.addon_s3_prefix}/${local.pod_identity_webhook_yaml}"
   kubeadm_init_config_key_s3                 = "${var.s3_bucket_prefix}/${var.cluster_name}/controller/kubeadm-init.yaml"
   kubeadm_init_config_path_host              = "/etc/kubernetes/kubeadm-init.yaml"
 
@@ -267,6 +333,7 @@ locals {
     local.aws_iam_authenticator_values,
     local.aws_vpc_cni_values,
     local.cert_manager_values,
+    local.pod_identity_webhook_values,
     local.kubeadm_init_config,
   ]))
 }
@@ -309,6 +376,14 @@ resource "aws_s3_object" "cert_manager_values" {
   bucket  = var.s3_bucket
   key     = local.cert_manager_values_key_s3
   content = local.cert_manager_values
+}
+
+resource "aws_s3_object" "pod_identity_webhook_values" {
+  count = var.irsa != null ? 1 : 0
+
+  bucket  = var.s3_bucket
+  key     = local.pod_identity_webhook_values_key_s3
+  content = local.pod_identity_webhook_values
 }
 
 resource "aws_s3_object" "kubeadm_init_config" {
@@ -434,147 +509,5 @@ module "user_data" {
   ]
   modules = var.modules
   sysctls = var.sysctls
-  volumes = [
-    {
-      ebs = {
-        device = var.storage.containerd.device
-        mount = {
-          destination = "/var/lib/containerd"
-          fs-type     = "ext4"
-          mode        = "0700"
-        }
-      }
-    },
-    {
-      ebs = {
-        attachment = {
-          tags = [
-            {
-              key   = "keights.cloudboss.co/cluster"
-              value = var.cluster_name
-            },
-            {
-              key   = "keights.cloudboss.co/etcd"
-              value = ""
-            },
-          ]
-        }
-        device = var.storage.etcd.device
-        mount = {
-          destination = "/var/lib/etcd"
-          fs-type     = "ext4"
-          mode        = "0700"
-        }
-      }
-    },
-    {
-      s3 = {
-        bucket     = var.s3_bucket
-        key-prefix = local.aws_cloud_controller_manager_values_key_s3
-        mount = {
-          destination = "/etc/kubernetes/charts/${local.aws_cloud_controller_manager_yaml}"
-        }
-      }
-    },
-    {
-      s3 = {
-        bucket     = var.s3_bucket
-        key-prefix = local.aws_iam_authenticator_values_key_s3
-        mount = {
-          destination = "/etc/kubernetes/charts/${local.aws_iam_authenticator_yaml}"
-        }
-      }
-    },
-    {
-      s3 = {
-        bucket     = var.s3_bucket
-        key-prefix = local.aws_vpc_cni_values_key_s3
-        mount = {
-          destination = "/etc/kubernetes/charts/${local.aws_vpc_cni_yaml}"
-        }
-      }
-    },
-    {
-      s3 = {
-        bucket     = var.s3_bucket
-        key-prefix = local.cert_manager_values_key_s3
-        mount = {
-          destination = "/etc/kubernetes/charts/${local.cert_manager_yaml}"
-        }
-      }
-    },
-    {
-      s3 = {
-        bucket     = var.s3_bucket
-        key-prefix = local.kubeadm_init_config_key_s3
-        mount = {
-          destination = local.kubeadm_init_config_path_host
-        }
-      }
-    },
-    {
-      ssm = {
-        path = "/keights/${var.cluster_name}/cluster/ca.crt"
-        mount = {
-          destination = "/etc/kubernetes/pki/ca.crt"
-        }
-      }
-    },
-    {
-      ssm = {
-        path = "/keights/${var.cluster_name}/controller/ca.key"
-        mount = {
-          destination = "/etc/kubernetes/pki/ca.key"
-        }
-      }
-    },
-    {
-      ssm = {
-        path = "/keights/${var.cluster_name}/controller/etcd-ca.crt"
-        mount = {
-          destination = "/etc/kubernetes/pki/etcd/ca.crt"
-        }
-      }
-    },
-    {
-      ssm = {
-        path = "/keights/${var.cluster_name}/controller/etcd-ca.key"
-        mount = {
-          destination = "/etc/kubernetes/pki/etcd/ca.key"
-        }
-      }
-    },
-    {
-      ssm = {
-        path = "/keights/${var.cluster_name}/controller/front-proxy-ca.crt"
-        mount = {
-          destination = "/etc/kubernetes/pki/front-proxy-ca.crt"
-        }
-      }
-    },
-    {
-      ssm = {
-        path = "/keights/${var.cluster_name}/controller/front-proxy-ca.key"
-        mount = {
-          destination = "/etc/kubernetes/pki/front-proxy-ca.key"
-        }
-      }
-    },
-    {
-      ssm = {
-        path = "/keights/${var.cluster_name}/controller/sa.key"
-        mount = {
-          destination = "/etc/kubernetes/pki/sa.key"
-        }
-      }
-    },
-    {
-      ssm = {
-        path = "/keights/${var.cluster_name}/controller/sa.pub"
-        mount = {
-          destination = "/etc/kubernetes/pki/sa.pub"
-        }
-      }
-    },
-  ]
+  volumes = local.volumes
 }

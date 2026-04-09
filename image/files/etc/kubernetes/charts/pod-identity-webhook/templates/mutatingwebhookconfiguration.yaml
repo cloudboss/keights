@@ -1,0 +1,33 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ .Chart.Name }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ .Chart.Name }}
+webhooks:
+  - name: {{ .Chart.Name }}.amazonaws.com
+    admissionReviewVersions:
+      # Workaround: v1beta1 must be first due to upstream bug.
+      # https://github.com/aws/amazon-eks-pod-identity-webhook/pull/255#issuecomment-4105906937
+      - v1beta1
+      - v1
+    clientConfig:
+      service:
+        name: {{ .Chart.Name }}
+        namespace: {{ .Release.Namespace }}
+        path: /mutate
+    failurePolicy: {{ .Values.failurePolicy }}
+    {{- with .Values.mutatingWebhookConfiguration.objectSelector }}
+    objectSelector: {{- toYaml . | nindent 6 }}
+    {{- end }}
+    reinvocationPolicy: IfNeeded
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+        resources:
+          - pods
+    sideEffects: None
