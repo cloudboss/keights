@@ -163,9 +163,10 @@ variable "node_groups" {
   type = map(object({
     ami = optional(any)
     autoscaling_group = optional(object({
-      instances_desired = optional(number, 2)
-      instances_max     = optional(number, 5)
-      instances_min     = optional(number, 0)
+      desired_capacity      = optional(number, 2)
+      desired_capacity_type = optional(string, "units")
+      instances_max         = optional(number, 5)
+      instances_min         = optional(number, 0)
     }), {})
     debug_logging            = optional(bool)
     extra_security_group_ids = optional(list(string))

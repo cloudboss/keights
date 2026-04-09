@@ -46,6 +46,14 @@ variable "debug_logging" {
   type = bool
 }
 
+variable "desired_capacity" {
+  type = number
+}
+
+variable "desired_capacity_type" {
+  type = string
+}
+
 variable "iam_instance_profile" {
   type = string
 }
@@ -56,10 +64,6 @@ variable "instance_refresh" {
 
 variable "instance_type" {
   type = string
-}
-
-variable "instances_desired" {
-  type = number
 }
 
 variable "instances_max" {

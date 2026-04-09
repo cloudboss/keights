@@ -197,10 +197,11 @@ module "node_groups" {
   cluster_name              = var.cluster_name
   control_plane_endpoint    = module.load_balancer.it.load_balancer.dns_name
   debug_logging             = each.value.debug_logging
+  desired_capacity          = each.value.autoscaling_group.desired_capacity
+  desired_capacity_type     = each.value.autoscaling_group.desired_capacity_type
   iam_instance_profile      = each.value.iam_instance_profile
   instance_refresh          = each.value.instance_refresh
   instance_type             = each.value.instance_type
-  instances_desired         = each.value.autoscaling_group.instances_desired
   instances_max             = each.value.autoscaling_group.instances_max
   instances_min             = each.value.autoscaling_group.instances_min
   key_pair                  = each.value.key_pair

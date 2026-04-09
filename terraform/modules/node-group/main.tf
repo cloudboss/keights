@@ -134,7 +134,7 @@ module "user_data" {
 
 module "asg" {
   source  = "cloudboss/asg/aws"
-  version = "0.1.1"
+  version = "0.2.0"
 
   ami = var.ami
   block_device_mappings = [
@@ -149,10 +149,11 @@ module "asg" {
       }
     }
   ]
+  desired_capacity          = var.desired_capacity
+  desired_capacity_type     = var.desired_capacity_type
   iam_instance_profile      = var.iam_instance_profile
   instance_type             = var.instance_type
   instance_refresh          = var.instance_refresh
-  instances_desired         = var.instances_desired
   instances_max             = var.instances_max
   instances_min             = var.instances_min
   mixed_instances_overrides = var.mixed_instances_overrides
