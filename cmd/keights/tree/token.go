@@ -21,30 +21,36 @@
 package tree
 
 import (
-	"os"
+	"fmt"
 
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 )
 
-var (
-	ClusterName string
-	Region      string
+var TokenCmd = &cobra.Command{
+	Use:   "token",
+	Short: "Generate a Kubernetes authentication token",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if ClusterName == "" {
+			return fmt.Errorf("--cluster-name is required")
+		}
 
-	RootCmd = &cobra.Command{
-		Use:          "keights",
-		Short:        "Self hosted Kubernetes on AWS",
-		SilenceUsage: true,
-	}
-)
+		gen, err := token.NewGenerator(false, false)
+		if err != nil {
+			return fmt.Errorf("unable to create token generator: %w", err)
+		}
 
-func init() {
-	RootCmd.PersistentFlags().StringVar(
-		&ClusterName, "cluster-name", "", "name of the cluster",
-	)
-	RootCmd.PersistentFlags().StringVar(
-		&Region, "region", os.Getenv("AWS_DEFAULT_REGION"),
-		"AWS region",
-	)
-	RootCmd.AddCommand(TokenCmd)
-	RootCmd.AddCommand(VersionCmd)
+		opts := &token.GetTokenOptions{
+			ClusterID: ClusterName,
+			Region:    Region,
+		}
+
+		tok, err := gen.GetWithOptions(cmd.Context(), opts)
+		if err != nil {
+			return fmt.Errorf("unable to generate token: %w", err)
+		}
+
+		fmt.Print(gen.FormatJSON(tok))
+		return nil
+	},
 }
