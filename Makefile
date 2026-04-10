@@ -45,12 +45,52 @@ HAS_COMMAND_ZIP = $(DIR_OUT)/.command-zip
 
 TERRAFORM_TARBALL = $(DIR_OUT)/keights-terraform-$(VERSION).tar.gz
 
+OS = $(shell uname -s | tr '[:upper:]' '[:lower:]')
+ARCH = $(shell uname -m | sed 's/x86_64/amd64/')
+
+KEIGHTS_GO_DEPS = \
+	go.mod \
+	$(shell find cmd/keights -type f -path '*.go' ! -path '*_test.go') \
+	$(shell find internal/deps -type f -path '*.go' ! -path '*_test.go') \
+	$(shell find internal/nlb -type f -path '*.go' ! -path '*_test.go') \
+	$(shell find internal/quickstart -type f -path '*.go' ! -path '*_test.go') \
+	$(shell find internal/whisperer -type f -path '*.go' ! -path '*_test.go')
+
+KEIGHTS_LDFLAGS = \
+	-X github.com/cloudboss/keights/cmd/keights/tree.Version=$(VERSION)
+
 TERRAFORM_SOURCES = $(shell find terraform -type f -name '*.tf')
 
 STACKBOT_ZIPS = \
 	$(DIR_OUT)/auto-namer/auto-namer-$(VERSION).zip \
 	$(DIR_OUT)/instance-attr/instance-attr-$(VERSION).zip \
 	$(DIR_OUT)/kube-ca/kube-ca-$(VERSION).zip
+
+$(DIR_OUT)/keights-$(OS)-$(ARCH): $(KEIGHTS_GO_DEPS) | $(DIR_OUT) $(HAS_IMAGE_LOCAL)
+	@[ -n "$(VERSION)" ] || (echo "VERSION is required"; exit 1)
+	@[ $$(echo $(VERSION) | cut -c 1) = v ] || (echo "VERSION must begin with a 'v'"; exit 1)
+	@docker run --rm -t \
+		-v $(DIR_ROOT):/code:z \
+		-e GOPATH=/code/$(DIR_OUT)/go \
+		-e GOCACHE=/code/$(DIR_OUT)/gocache \
+		-e CGO_ENABLED=0 \
+		-e GOOS=$(OS) \
+		-e GOARCH=$(ARCH) \
+		-w /code \
+		$(CTR_IMAGE_LOCAL) \
+		go build -ldflags "$(KEIGHTS_LDFLAGS)" \
+			-o /code/$(DIR_OUT)/keights-$(OS)-$(ARCH) \
+			./cmd/keights
+
+keights: $(DIR_OUT)/keights-$(OS)-$(ARCH)
+
+keights-linux-%:
+	@$(MAKE) keights OS=linux ARCH=$*
+
+keights-darwin-%:
+	@$(MAKE) keights OS=darwin ARCH=$*
+
+keights-release: keights-linux-amd64 keights-darwin-amd64 keights-darwin-arm64
 
 .DEFAULT_GOAL = stackbot
 
@@ -184,4 +224,4 @@ clean:
 	@chmod -R +w $(DIR_OUT)/go
 	@rm -rf $(DIR_OUT)
 
-.PHONY: stackbot terraform-release test clean image
+.PHONY: keights keights-release stackbot terraform-release test clean image
