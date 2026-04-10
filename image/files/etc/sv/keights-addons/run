@@ -41,4 +41,16 @@ if [ -f /etc/kubernetes/charts/pod-identity-webhook.yaml ]; then
         /usr/local/bin/kubectl apply \
             --server-side \
             --field-manager keights -f -
+    /usr/local/bin/kubectl -n kube-system rollout status \
+        deployment/pod-identity-webhook --timeout=120s
 fi
+/usr/local/bin/helm template aws-ebs-csi-driver -n kube-system \
+    /etc/kubernetes/charts/aws-ebs-csi-driver \
+        -f /etc/kubernetes/charts/aws-ebs-csi-driver.yaml | \
+    /usr/local/bin/kubectl apply \
+        --server-side \
+        --field-manager keights -f -
+/usr/local/bin/kubectl apply \
+    --server-side \
+    --field-manager keights \
+    -f /etc/kubernetes/manifests-addons/

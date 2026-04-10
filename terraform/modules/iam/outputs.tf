@@ -54,6 +54,10 @@ output "iam_role_node" {
   value = aws_iam_role.node
 }
 
+output "iam_policy_ebs_csi" {
+  value = aws_iam_policy.ebs_csi
+}
+
 output "iam_policy_lambda_logs" {
   value = aws_iam_policy.lambda_logs
 }

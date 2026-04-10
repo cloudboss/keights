@@ -25,7 +25,10 @@ locals {
 
   aws_region = data.aws_region.current.region
 
-  irsa = var.irsa_enabled ? { oidc_issuer = module.irsa[0].oidc_issuer } : null
+  irsa = var.irsa_enabled ? {
+    oidc_issuer             = module.irsa[0].oidc_issuer
+    ebs_csi_driver_role_arn = module.irsa_roles[0].iam_role_ebs_csi.arn
+  } : null
 
   is_etcd_external = var.etcd_mode == "external"
 

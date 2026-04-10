@@ -98,6 +98,74 @@ locals {
     "keights.cloudboss.co/etcd"    = ""
   })
 
+  aws_ebs_csi_driver_node_selector = {
+    "node-role.kubernetes.io/control-plane" = ""
+  }
+
+  aws_ebs_csi_driver_pod_anti_affinity = {
+    preferredDuringSchedulingIgnoredDuringExecution = [
+      {
+        weight = 100
+        podAffinityTerm = {
+          topologyKey = "kubernetes.io/hostname"
+          labelSelector = {
+            matchExpressions = [
+              {
+                key      = "app.kubernetes.io/name"
+                operator = "In"
+                values   = ["aws-ebs-csi-driver"]
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+
+  aws_ebs_csi_driver_controller_base = {
+    affinity = {
+      podAntiAffinity = local.aws_ebs_csi_driver_pod_anti_affinity
+    }
+    nodeSelector = local.aws_ebs_csi_driver_node_selector
+    replicaCount = local.cluster_size
+    resources = {
+      requests = {
+        cpu    = "10m"
+        memory = "40Mi"
+      }
+    }
+    tolerations = [
+      {
+        key    = "node-role.kubernetes.io/control-plane"
+        effect = "NoSchedule"
+      }
+    ]
+    serviceAccount = {
+      annotations = {}
+    }
+  }
+
+  aws_ebs_csi_driver_controller = (
+    var.irsa != null
+    ? merge(local.aws_ebs_csi_driver_controller_base, {
+      serviceAccount = {
+        annotations = {
+          "eks.amazonaws.com/role-arn" = var.irsa.ebs_csi_driver_role_arn
+        }
+      }
+    })
+    : local.aws_ebs_csi_driver_controller_base
+  )
+
+  aws_ebs_csi_driver_values = yamlencode(merge(
+    {
+      controller = local.aws_ebs_csi_driver_controller
+      node       = { hostNetwork = true }
+      helmTester = { enabled = false }
+    },
+    var.addons.aws_ebs_csi_driver.values
+  ))
+
   aws_cloud_controller_manager_values_default = {
     args = [
       "--allocate-node-cidrs=false",
@@ -316,11 +384,13 @@ locals {
   addon_s3_prefix = "${var.s3_bucket_prefix}/${var.cluster_name}/controller/addons"
 
   aws_cloud_controller_manager_yaml          = "aws-cloud-controller-manager.yaml"
+  aws_ebs_csi_driver_yaml                    = "aws-ebs-csi-driver.yaml"
   aws_iam_authenticator_yaml                 = "aws-iam-authenticator.yaml"
   aws_vpc_cni_yaml                           = "aws-vpc-cni.yaml"
   cert_manager_yaml                          = "cert-manager.yaml"
   pod_identity_webhook_yaml                  = "pod-identity-webhook.yaml"
   aws_cloud_controller_manager_values_key_s3 = "${local.addon_s3_prefix}/${local.aws_cloud_controller_manager_yaml}"
+  aws_ebs_csi_driver_values_key_s3           = "${local.addon_s3_prefix}/${local.aws_ebs_csi_driver_yaml}"
   aws_iam_authenticator_values_key_s3        = "${local.addon_s3_prefix}/${local.aws_iam_authenticator_yaml}"
   aws_vpc_cni_values_key_s3                  = "${local.addon_s3_prefix}/${local.aws_vpc_cni_yaml}"
   cert_manager_values_key_s3                 = "${local.addon_s3_prefix}/${local.cert_manager_yaml}"
@@ -330,6 +400,7 @@ locals {
 
   keights_inputs_sha = sha256(join("", [
     local.aws_cloud_controller_manager_values,
+    local.aws_ebs_csi_driver_values,
     local.aws_iam_authenticator_values,
     local.aws_vpc_cni_values,
     local.cert_manager_values,
@@ -358,6 +429,12 @@ resource "aws_s3_object" "aws_cloud_controller_manager_values" {
   bucket  = var.s3_bucket
   key     = local.aws_cloud_controller_manager_values_key_s3
   content = local.aws_cloud_controller_manager_values
+}
+
+resource "aws_s3_object" "aws_ebs_csi_driver_values" {
+  bucket  = var.s3_bucket
+  key     = local.aws_ebs_csi_driver_values_key_s3
+  content = local.aws_ebs_csi_driver_values
 }
 
 resource "aws_s3_object" "aws_iam_authenticator_values" {
@@ -403,9 +480,10 @@ resource "aws_launch_template" "it" {
   vpc_security_group_ids               = var.security_group_ids
 
   metadata_options {
-    http_endpoint      = "enabled"
-    http_tokens        = "required"
-    http_protocol_ipv6 = "enabled"
+    http_endpoint               = "enabled"
+    http_put_response_hop_limit = var.irsa != null ? 1 : 2
+    http_tokens                 = "required"
+    http_protocol_ipv6          = "enabled"
   }
 
   monitoring {

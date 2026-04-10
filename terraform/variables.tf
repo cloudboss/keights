@@ -37,6 +37,9 @@ variable "addons" {
     aws_iam_authenticator = optional(object({
       values = optional(map(any), {})
     }), {})
+    aws_ebs_csi_driver = optional(object({
+      values = optional(map(any), {})
+    }), {})
     aws_vpc_cni = optional(object({
       values = optional(map(any), {})
     }), {})

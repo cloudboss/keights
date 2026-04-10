@@ -54,6 +54,7 @@ module "iam" {
   cluster_name   = var.cluster_name
   features = {
     etcd_external = local.is_etcd_external
+    irsa          = var.irsa_enabled
     lambda_vpc    = local.is_lambda_vpc
   }
   kms_key_id             = data.aws_kms_key.it.id
@@ -61,6 +62,17 @@ module "iam" {
   s3_bucket              = local.s3_bucket
   s3_bucket_prefix       = "keights"
   tags                   = var.tags
+}
+
+module "irsa_roles" {
+  source = "./modules/irsa-roles"
+  count  = var.irsa_enabled ? 1 : 0
+
+  cluster_name       = var.cluster_name
+  ebs_csi_policy_arn = module.iam.iam_policy_ebs_csi.arn
+  oidc_provider_arn  = module.irsa[0].oidc_provider_arn
+  oidc_provider_url  = module.irsa[0].oidc_provider_url
+  tags               = var.tags
 }
 
 module "security_groups" {

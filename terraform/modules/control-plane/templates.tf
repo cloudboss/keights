@@ -293,6 +293,15 @@ locals {
     {
       s3 = {
         bucket     = var.s3_bucket
+        key-prefix = local.aws_ebs_csi_driver_values_key_s3
+        mount = {
+          destination = "/etc/kubernetes/charts/${local.aws_ebs_csi_driver_yaml}"
+        }
+      }
+    },
+    {
+      s3 = {
+        bucket     = var.s3_bucket
         key-prefix = local.aws_iam_authenticator_values_key_s3
         mount = {
           destination = "/etc/kubernetes/charts/${local.aws_iam_authenticator_yaml}"

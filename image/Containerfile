@@ -23,6 +23,7 @@
 FROM debian:trixie-20251020-slim AS builder
 
 ARG AWS_CNI_VERSION=1.20.4
+ARG AWS_EBS_CSI_DRIVER_VERSION=2.58.0
 ARG CERT_MANAGER_VERSION=1.20.1
 ARG CLOUD_PROVIDER_AWS_VERSION=1.34.2
 ARG CONTAINERD_VERSION=2.1.4
@@ -31,6 +32,7 @@ ARG HELM_VERSION=3.19.0
 ARG KUBERNETES_VERSION=1.34.5
 
 ARG AWS_CNI_RELEASE=https://github.com/aws/amazon-vpc-cni-k8s/archive/refs/tags/v${AWS_CNI_VERSION}.tar.gz
+ARG AWS_EBS_CSI_DRIVER_RELEASE=https://github.com/kubernetes-sigs/aws-ebs-csi-driver/releases/download/helm-chart-aws-ebs-csi-driver-${AWS_EBS_CSI_DRIVER_VERSION}/aws-ebs-csi-driver-${AWS_EBS_CSI_DRIVER_VERSION}.tgz
 ARG CERT_MANAGER_RELEASE=https://charts.jetstack.io/charts/cert-manager-v${CERT_MANAGER_VERSION}.tgz
 ARG CLOUD_PROVIDER_AWS_RELEASE=https://github.com/kubernetes/cloud-provider-aws/archive/refs/tags/v${CLOUD_PROVIDER_AWS_VERSION}.tar.gz
 ARG CONTAINERD_RELEASE=https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz
@@ -41,6 +43,7 @@ ARG KUBERNETES_RELEASE=https://dl.k8s.io/v${KUBERNETES_VERSION}/kubernetes-node-
 RUN apt update && \
     apt install -y curl && \
     curl -L -o amazon-vpc-cni-k8s-${AWS_CNI_VERSION}.tar.gz ${AWS_CNI_RELEASE} && \
+    curl -LO ${AWS_EBS_CSI_DRIVER_RELEASE} && \
     curl -L -o cert-manager-v${CERT_MANAGER_VERSION}.tgz ${CERT_MANAGER_RELEASE} && \
     curl -L -o cloud-provider-aws-${CLOUD_PROVIDER_AWS_VERSION}.tar.gz ${CLOUD_PROVIDER_AWS_RELEASE} && \
     curl -LO ${CONTAINERD_RELEASE} && \
@@ -49,6 +52,7 @@ RUN apt update && \
     curl -LO ${KUBERNETES_RELEASE} && \
     mkdir -p /staging/bin && \
     tar -C /staging -zxf amazon-vpc-cni-k8s-${AWS_CNI_VERSION}.tar.gz && \
+    tar -C /staging -zxf aws-ebs-csi-driver-${AWS_EBS_CSI_DRIVER_VERSION}.tgz && \
     tar -C /staging -zxf cert-manager-v${CERT_MANAGER_VERSION}.tgz && \
     tar -C /staging -zxf cloud-provider-aws-${CLOUD_PROVIDER_AWS_VERSION}.tar.gz && \
     tar -C /staging -zxf $(basename ${CONTAINERD_RELEASE}) && \
@@ -95,6 +99,9 @@ COPY --from=builder /staging/bin /usr/local/bin
 COPY --from=builder \
     /staging/amazon-vpc-cni-k8s-${AWS_CNI_VERSION}/charts/aws-vpc-cni \
     /etc/kubernetes/charts/aws-vpc-cni
+COPY --from=builder \
+    /staging/aws-ebs-csi-driver \
+    /etc/kubernetes/charts/aws-ebs-csi-driver
 COPY --from=builder \
     /staging/cert-manager \
     /etc/kubernetes/charts/cert-manager

@@ -267,6 +267,42 @@ resource "aws_iam_instance_profile" "control_plane" {
   tags = var.tags
 }
 
+resource "aws_iam_policy" "ebs_csi" {
+  name = "keights-ebs-csi-${var.cluster_name}"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:AttachVolume",
+          "ec2:CreateSnapshot",
+          "ec2:CreateTags",
+          "ec2:CreateVolume",
+          "ec2:DeleteSnapshot",
+          "ec2:DeleteVolume",
+          "ec2:DescribeAvailabilityZones",
+          "ec2:DescribeInstances",
+          "ec2:DescribeSnapshots",
+          "ec2:DescribeTags",
+          "ec2:DescribeVolumes",
+          "ec2:DetachVolume",
+          "ec2:ModifyVolume",
+        ]
+        Resource = ["*"]
+      },
+    ]
+  })
+  tags = var.tags
+}
+
+resource "aws_iam_role_policy_attachment" "control_plane_ebs_csi" {
+  count = var.features.irsa ? 0 : 1
+
+  role       = aws_iam_role.control_plane.name
+  policy_arn = aws_iam_policy.ebs_csi.arn
+}
+
 resource "aws_iam_policy" "node" {
   name = "keights-node-${var.cluster_name}"
   policy = jsonencode({
