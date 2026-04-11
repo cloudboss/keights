@@ -21,8 +21,10 @@
 package tree
 
 import (
-	"os"
+	"context"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/spf13/cobra"
 )
 
@@ -42,9 +44,17 @@ func init() {
 		&ClusterName, "cluster-name", "", "name of the cluster",
 	)
 	RootCmd.PersistentFlags().StringVar(
-		&Region, "region", os.Getenv("AWS_DEFAULT_REGION"),
-		"AWS region",
+		&Region, "region", "", "AWS region (overrides SDK defaults)",
 	)
+	RootCmd.AddCommand(KubeconfigCmd)
 	RootCmd.AddCommand(TokenCmd)
 	RootCmd.AddCommand(VersionCmd)
+}
+
+func loadAWSConfig(ctx context.Context) (aws.Config, error) {
+	var opts []func(*config.LoadOptions) error
+	if Region != "" {
+		opts = append(opts, config.WithRegion(Region))
+	}
+	return config.LoadDefaultConfig(ctx, opts...)
 }
