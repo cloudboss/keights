@@ -30,6 +30,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 )
 
 type Format int
@@ -97,6 +98,10 @@ func Ensure(dep Dependency) (string, error) {
 		return "", fmt.Errorf("unable to create cache directory: %w", err)
 	}
 
+	fmt.Fprintf(os.Stderr,
+		"Downloading %s v%s...\n", dep.Name, dep.Version,
+	)
+
 	tmpFile, err := download(url, dir)
 	if err != nil {
 		return "", fmt.Errorf("unable to download %s: %w", dep.Name, err)
@@ -114,6 +119,8 @@ func Ensure(dep Dependency) (string, error) {
 	if err := os.Chmod(binPath, 0o755); err != nil {
 		return "", fmt.Errorf("unable to set permissions on %s: %w", dep.Name, err)
 	}
+
+	fmt.Fprintf(os.Stderr, "Cached %s at %s\n", dep.Name, binPath)
 
 	return binPath, nil
 }
@@ -147,12 +154,66 @@ func download(url, dir string) (string, error) {
 	}
 	defer tmp.Close()
 
-	if _, err := io.Copy(tmp, resp.Body); err != nil {
+	var reader io.Reader = resp.Body
+	if size := contentLength(resp); size > 0 {
+		reader = &progressReader{
+			reader: resp.Body,
+			total:  size,
+		}
+	}
+
+	if _, err := io.Copy(tmp, reader); err != nil {
 		os.Remove(tmp.Name())
 		return "", err
 	}
 
+	fmt.Fprint(os.Stderr, "\n")
+
 	return tmp.Name(), nil
+}
+
+func contentLength(resp *http.Response) int64 {
+	cl := resp.Header.Get("Content-Length")
+	if cl == "" {
+		return 0
+	}
+	n, err := strconv.ParseInt(cl, 10, 64)
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
+type progressReader struct {
+	reader  io.Reader
+	total   int64
+	current int64
+	lastPct int
+}
+
+func (pr *progressReader) Read(p []byte) (int, error) {
+	n, err := pr.reader.Read(p)
+	pr.current += int64(n)
+	pct := int(pr.current * 100 / pr.total)
+	if pct != pr.lastPct {
+		pr.lastPct = pct
+		filled := pct / 2
+		empty := 50 - filled
+		fmt.Fprintf(os.Stderr, "\r  [%-*s%*s] %3d%%",
+			filled, repeat('=', filled),
+			empty, "",
+			pct,
+		)
+	}
+	return n, err
+}
+
+func repeat(b byte, n int) string {
+	buf := make([]byte, n)
+	for i := range buf {
+		buf[i] = b
+	}
+	return string(buf)
 }
 
 func verifyChecksum(path, expected string) error {
