@@ -33,9 +33,10 @@ var (
 	Region      string
 
 	RootCmd = &cobra.Command{
-		Use:          "keights",
-		Short:        "Self hosted Kubernetes on AWS",
-		SilenceUsage: true,
+		Use:              "keights",
+		Short:            "Self hosted Kubernetes on AWS",
+		SilenceUsage:     true,
+		TraverseChildren: true,
 	}
 )
 
@@ -47,6 +48,7 @@ func init() {
 		&Region, "region", "", "AWS region (overrides SDK defaults)",
 	)
 	RootCmd.AddCommand(KubeconfigCmd)
+	RootCmd.AddCommand(KubectlCmd)
 	RootCmd.AddCommand(TokenCmd)
 	RootCmd.AddCommand(VersionCmd)
 }
