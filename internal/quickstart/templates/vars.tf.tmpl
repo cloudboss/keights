@@ -1,0 +1,42 @@
+locals {
+  access_cidrs = {
+    api        = {{quotedList .APICIDRs}}
+    node_ports = {{quotedList .NodePortsCIDRs}}
+    ssh        = {{quotedList .SSHCIDRs}}
+  }
+  ami = {
+    name  = "{{.AMIName}}"
+    owner = "{{.AMIOwnerID}}"
+  }
+  aws_region   = "{{.Region}}"
+  cluster_name = "{{.ClusterName}}"
+  control_plane = {
+    instance_type = "{{.ControlPlane.InstanceType}}"
+{{- if .SSHKeyPair}}
+    key_pair      = "{{.SSHKeyPair}}"
+{{- end}}
+    subnet_ids = {
+      autoscaling_group = {{quotedList .ControlPlane.SubnetIDs}}
+      load_balancer     = {{quotedList .ControlPlane.SubnetIDs}}
+    }
+  }
+  irsa_enabled = {{.IRSAEnabled}}
+  kms_key_id = "{{.KMSKeyID}}"
+  node_groups = {
+{{- range .NodeGroups}}
+    {{.Name}} = {
+      instance_type = "{{.InstanceType}}"
+      autoscaling_group = {
+        instances_min    = {{.MinSize}}
+        instances_max    = {{.MaxSize}}
+        desired_capacity = {{.DesiredSize}}
+      }
+{{- if $.SSHKeyPair}}
+      key_pair   = "{{$.SSHKeyPair}}"
+{{- end}}
+      subnet_ids = {{quotedList .SubnetIDs}}
+    }
+{{- end}}
+  }
+  vpc_id = "{{.VPCID}}"
+}

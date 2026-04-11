@@ -1,0 +1,41 @@
+terraform {
+  required_version = ">= 1.14.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = local.aws_region
+}
+
+module "keights" {
+  source = "{{.ModuleSource}}"
+
+  access_cidrs  = local.access_cidrs
+  ami           = local.ami
+  cluster_name  = local.cluster_name
+  control_plane = local.control_plane
+  irsa_enabled  = local.irsa_enabled
+  kms_key_id    = local.kms_key_id
+  node_groups   = local.node_groups
+  vpc_id        = local.vpc_id
+}
+
+output "load_balancer_dns_name" {
+  value = module.keights.load_balancer_dns_name
+}
+{{- if .IRSAEnabled}}
+
+output "oidc_provider_arn" {
+  value = module.keights.oidc_provider_arn
+}
+
+output "oidc_provider_url" {
+  value = module.keights.oidc_provider_url
+}
+{{- end}}

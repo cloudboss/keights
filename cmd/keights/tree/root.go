@@ -49,6 +49,7 @@ func init() {
 	)
 	RootCmd.AddCommand(KubeconfigCmd)
 	RootCmd.AddCommand(KubectlCmd)
+	RootCmd.AddCommand(QuickstartCmd)
 	RootCmd.AddCommand(TokenCmd)
 	RootCmd.AddCommand(VersionCmd)
 }
