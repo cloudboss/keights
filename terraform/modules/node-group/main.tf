@@ -21,14 +21,7 @@
 locals {
   name = "keights-node-${var.cluster_name}-${var.node_group_name}"
 
-  bootstrap_kubelet_conf              = "bootstrap-kubelet.conf"
-  kubelet_bootstrap_kubeconfig_key_s3 = "keights/${var.cluster_name}/node/${local.bootstrap_kubelet_conf}"
-  kubelet_config_key_s3               = "keights/${var.cluster_name}/node/kubelet-config.yaml"
-
-  keights_inputs_sha = sha256(join("", [
-    local.kubelet_bootstrap_kubeconfig,
-    local.kubelet_config,
-  ]))
+  bootstrap_kubelet_conf = "bootstrap-kubelet.conf"
 
   tags = merge(
     {
@@ -40,33 +33,12 @@ locals {
   )
 }
 
-resource "aws_s3_object" "kubelet_bootstrap_kubeconfig" {
-  bucket  = var.s3_bucket
-  key     = local.kubelet_bootstrap_kubeconfig_key_s3
-  content = local.kubelet_bootstrap_kubeconfig
-}
-
-resource "aws_s3_object" "kubelet_configuration" {
-  bucket  = var.s3_bucket
-  key     = local.kubelet_config_key_s3
-  content = local.kubelet_config
-}
-
 module "user_data" {
   source  = "cloudboss/easyto-user-data/aws"
-  version = "0.4.0"
+  version = "0.5.0"
 
   command = ["/usr/bin/runsvdir", "/etc/service"]
   debug   = var.debug_logging
-  env = [
-    {
-      # Since some configurations are stored in S3 and SSM and do not affect
-      # the launch template directly, we include a hash of those configurations
-      # to force a change to the launch configuration and trigger an update.
-      name  = "KEIGHTS_INPUTS_SHA"
-      value = local.keights_inputs_sha
-    },
-  ]
   env-from = [
     {
       imds = {
@@ -78,8 +50,6 @@ module "user_data" {
   init-scripts = [
     <<-EOS
       #!/bin/sh -e
-      echo $${HOSTNAME} > /etc/hostname
-
       kernel_version=$(uname -r)
       mkdir -p /lib/modules/$${kernel_version}
       mount --bind /.easyto/lib/modules/$${kernel_version} /lib/modules/$${kernel_version}
@@ -104,32 +74,47 @@ module "user_data" {
       }
     },
     {
-      s3 = {
-        bucket     = var.s3_bucket
-        key-prefix = local.kubelet_bootstrap_kubeconfig_key_s3
+      template = {
+        content = <<-EOS
+          {{hostname}}
+        EOS
+        mount = {
+          destination = "/etc/hostname"
+        }
+        variables = {
+          hostname = "$(HOSTNAME)"
+        }
+      }
+    },
+    {
+      template = {
+        content = local.kubelet_bootstrap_kubeconfig
         mount = {
           destination = "/etc/kubernetes/${local.bootstrap_kubelet_conf}"
         }
       }
     },
     {
-      s3 = {
-        bucket     = var.s3_bucket
-        key-prefix = local.kubelet_config_key_s3
+      template = {
+        content = local.kubelet_config
         mount = {
           destination = "/var/lib/kubelet/config.yaml"
         }
       }
     },
     {
-      ssm = {
-        path = "/keights/${var.cluster_name}/cluster/ca.crt"
+      template = {
+        content = data.aws_ssm_parameter.ca_crt.value
         mount = {
           destination = "/etc/kubernetes/pki/ca.crt"
         }
       }
     },
   ]
+}
+
+data "aws_ssm_parameter" "ca_crt" {
+  name = "/keights/${var.cluster_name}/cluster/ca.crt"
 }
 
 module "asg" {
@@ -165,7 +150,8 @@ module "asg" {
     instance = local.tags
   }
   user_data = {
-    value = module.user_data.value
+    value         = base64gzip(module.user_data.value)
+    base64encoded = true
   }
   vpc_id = var.vpc_id
 }

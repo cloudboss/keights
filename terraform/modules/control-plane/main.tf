@@ -395,24 +395,29 @@ locals {
   aws_vpc_cni_values_key_s3                  = "${local.addon_s3_prefix}/${local.aws_vpc_cni_yaml}"
   cert_manager_values_key_s3                 = "${local.addon_s3_prefix}/${local.cert_manager_yaml}"
   pod_identity_webhook_values_key_s3         = "${local.addon_s3_prefix}/${local.pod_identity_webhook_yaml}"
-  kubeadm_init_config_key_s3                 = "${var.s3_bucket_prefix}/${var.cluster_name}/controller/kubeadm-init.yaml"
   kubeadm_init_config_path_host              = "/etc/kubernetes/kubeadm-init.yaml"
-
-  keights_inputs_sha = sha256(join("", [
-    local.aws_cloud_controller_manager_values,
-    local.aws_ebs_csi_driver_values,
-    local.aws_iam_authenticator_values,
-    local.aws_vpc_cni_values,
-    local.cert_manager_values,
-    local.pod_identity_webhook_values,
-    local.kubeadm_init_config,
-  ]))
 }
 
 data "aws_subnet" "autoscaling_group" {
   for_each = var.subnet_ids
 
   id = each.value
+}
+
+data "aws_ssm_parameter" "ca_crt" {
+  name = "/keights/${var.cluster_name}/cluster/ca.crt"
+}
+
+data "aws_ssm_parameter" "etcd_ca_crt" {
+  name = "/keights/${var.cluster_name}/controller/etcd-ca.crt"
+}
+
+data "aws_ssm_parameter" "front_proxy_ca_crt" {
+  name = "/keights/${var.cluster_name}/controller/front-proxy-ca.crt"
+}
+
+data "aws_ssm_parameter" "sa_pub" {
+  name = "/keights/${var.cluster_name}/controller/sa.pub"
 }
 
 resource "aws_ebs_volume" "etcd" {
@@ -425,50 +430,6 @@ resource "aws_ebs_volume" "etcd" {
   type              = var.storage.etcd.type
 }
 
-resource "aws_s3_object" "aws_cloud_controller_manager_values" {
-  bucket  = var.s3_bucket
-  key     = local.aws_cloud_controller_manager_values_key_s3
-  content = local.aws_cloud_controller_manager_values
-}
-
-resource "aws_s3_object" "aws_ebs_csi_driver_values" {
-  bucket  = var.s3_bucket
-  key     = local.aws_ebs_csi_driver_values_key_s3
-  content = local.aws_ebs_csi_driver_values
-}
-
-resource "aws_s3_object" "aws_iam_authenticator_values" {
-  bucket  = var.s3_bucket
-  key     = local.aws_iam_authenticator_values_key_s3
-  content = local.aws_iam_authenticator_values
-}
-
-resource "aws_s3_object" "aws_vpc_cni_values" {
-  bucket  = var.s3_bucket
-  key     = local.aws_vpc_cni_values_key_s3
-  content = local.aws_vpc_cni_values
-}
-
-resource "aws_s3_object" "cert_manager_values" {
-  bucket  = var.s3_bucket
-  key     = local.cert_manager_values_key_s3
-  content = local.cert_manager_values
-}
-
-resource "aws_s3_object" "pod_identity_webhook_values" {
-  count = var.irsa != null ? 1 : 0
-
-  bucket  = var.s3_bucket
-  key     = local.pod_identity_webhook_values_key_s3
-  content = local.pod_identity_webhook_values
-}
-
-resource "aws_s3_object" "kubeadm_init_config" {
-  bucket  = var.s3_bucket
-  key     = local.kubeadm_init_config_key_s3
-  content = local.kubeadm_init_config
-}
-
 resource "aws_launch_template" "it" {
   image_id                             = module.ami.id
   instance_initiated_shutdown_behavior = "stop"
@@ -476,7 +437,7 @@ resource "aws_launch_template" "it" {
   key_name                             = var.key_pair
   name                                 = local.name
   tags                                 = local.tags_launch_template
-  user_data                            = base64encode(module.user_data.value)
+  user_data                            = base64gzip(module.user_data.value)
   vpc_security_group_ids               = var.security_group_ids
 
   metadata_options {
@@ -526,19 +487,10 @@ module "ami" {
 
 module "user_data" {
   source  = "cloudboss/easyto-user-data/aws"
-  version = "0.4.0"
+  version = "0.5.0"
 
   command = ["/usr/bin/runsvdir", "/etc/service"]
   debug   = var.debug_logging
-  env = [
-    {
-      # Since some configurations are stored in S3 and SSM and do not affect the
-      # launch template directly, include a hash of those configurations to force a
-      # change to the launch template and trigger an update when they change.
-      name  = "KEIGHTS_INPUTS_SHA"
-      value = local.keights_inputs_sha
-    },
-  ]
   env-from = [
     {
       imds = {
@@ -562,15 +514,6 @@ module "user_data" {
   init-scripts = [
     <<-EOS
       #!/bin/sh -e
-      echo $${HOSTNAME} > /etc/hostname
-
-      sed -i "s|__AVAILABILITY_ZONE__|$${AVAILABILITY_ZONE}|" ${local.kubeadm_init_config_path_host}
-      sed -i "s|__HOSTNAME__|$${HOSTNAME}|" ${local.kubeadm_init_config_path_host}
-      sed -i "s|__IPV4_ADDRESS__|$${IPV4_ADDRESS}|" ${local.kubeadm_init_config_path_host}
-
-      echo CFN_STACK_NAME=${local.name} > /etc/sv/cfn-signal-control-plane/environment
-      echo IPV4_ADDRESS=$${IPV4_ADDRESS} >> /etc/sv/cfn-signal-control-plane/environment
-
       kernel_version=$(uname -r)
       mkdir -p /lib/modules/$${kernel_version}
       mount --bind /.easyto/lib/modules/$${kernel_version} /lib/modules/$${kernel_version}

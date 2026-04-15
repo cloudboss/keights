@@ -36,7 +36,7 @@ locals {
     bootstrapTokens = []
     kind            = "InitConfiguration"
     localAPIEndpoint = {
-      advertiseAddress = "__IPV4_ADDRESS__"
+      advertiseAddress = "{{ipv4_address}}"
       bindPort         = 6443
     }
     nodeRegistration = {
@@ -151,16 +151,16 @@ locals {
           },
           {
             name  = "name"
-            value = "${local.etcd_prefix}-__AVAILABILITY_ZONE__"
+            value = "${local.etcd_prefix}-{{availability_zone}}"
           },
         ]
         peerCertSANs = [
-          "__IPV4_ADDRESS__",
-          "${local.etcd_prefix}-__AVAILABILITY_ZONE__.${var.etcd_domain}",
+          "{{ipv4_address}}",
+          "${local.etcd_prefix}-{{availability_zone}}.${var.etcd_domain}",
         ]
         serverCertSANs = [
-          "__IPV4_ADDRESS__",
-          "${local.etcd_prefix}-__AVAILABILITY_ZONE__.${var.etcd_domain}",
+          "{{ipv4_address}}",
+          "${local.etcd_prefix}-{{availability_zone}}.${var.etcd_domain}",
         ]
       }
     }
@@ -280,59 +280,10 @@ locals {
     },
   ]
 
-  volumes_addon_values = [
-    {
-      s3 = {
-        bucket     = var.s3_bucket
-        key-prefix = local.aws_cloud_controller_manager_values_key_s3
-        mount = {
-          destination = "/etc/kubernetes/charts/${local.aws_cloud_controller_manager_yaml}"
-        }
-      }
-    },
-    {
-      s3 = {
-        bucket     = var.s3_bucket
-        key-prefix = local.aws_ebs_csi_driver_values_key_s3
-        mount = {
-          destination = "/etc/kubernetes/charts/${local.aws_ebs_csi_driver_yaml}"
-        }
-      }
-    },
-    {
-      s3 = {
-        bucket     = var.s3_bucket
-        key-prefix = local.aws_iam_authenticator_values_key_s3
-        mount = {
-          destination = "/etc/kubernetes/charts/${local.aws_iam_authenticator_yaml}"
-        }
-      }
-    },
-    {
-      s3 = {
-        bucket     = var.s3_bucket
-        key-prefix = local.aws_vpc_cni_values_key_s3
-        mount = {
-          destination = "/etc/kubernetes/charts/${local.aws_vpc_cni_yaml}"
-        }
-      }
-    },
-    {
-      s3 = {
-        bucket     = var.s3_bucket
-        key-prefix = local.cert_manager_values_key_s3
-        mount = {
-          destination = "/etc/kubernetes/charts/${local.cert_manager_yaml}"
-        }
-      }
-    },
-  ]
-
   volumes_irsa = var.irsa != null ? [
     {
-      s3 = {
-        bucket     = var.s3_bucket
-        key-prefix = local.pod_identity_webhook_values_key_s3
+      template = {
+        content = local.pod_identity_webhook_values
         mount = {
           destination = "/etc/kubernetes/charts/${local.pod_identity_webhook_yaml}"
         }
@@ -340,27 +291,7 @@ locals {
     },
   ] : []
 
-  volumes_config = [
-    {
-      s3 = {
-        bucket     = var.s3_bucket
-        key-prefix = local.kubeadm_init_config_key_s3
-        mount = {
-          destination = local.kubeadm_init_config_path_host
-        }
-      }
-    },
-  ]
-
   volumes_pki = [
-    {
-      ssm = {
-        path = "/keights/${var.cluster_name}/cluster/ca.crt"
-        mount = {
-          destination = "/etc/kubernetes/pki/ca.crt"
-        }
-      }
-    },
     {
       ssm = {
         path = "/keights/${var.cluster_name}/controller/ca.key"
@@ -371,25 +302,9 @@ locals {
     },
     {
       ssm = {
-        path = "/keights/${var.cluster_name}/controller/etcd-ca.crt"
-        mount = {
-          destination = "/etc/kubernetes/pki/etcd/ca.crt"
-        }
-      }
-    },
-    {
-      ssm = {
         path = "/keights/${var.cluster_name}/controller/etcd-ca.key"
         mount = {
           destination = "/etc/kubernetes/pki/etcd/ca.key"
-        }
-      }
-    },
-    {
-      ssm = {
-        path = "/keights/${var.cluster_name}/controller/front-proxy-ca.crt"
-        mount = {
-          destination = "/etc/kubernetes/pki/front-proxy-ca.crt"
         }
       }
     },
@@ -409,9 +324,115 @@ locals {
         }
       }
     },
+  ]
+
+  volumes_templates = [
     {
-      ssm = {
-        path = "/keights/${var.cluster_name}/controller/sa.pub"
+      template = {
+        content = <<-EOS
+          {{hostname}}
+        EOS
+        mount = {
+          destination = "/etc/hostname"
+        }
+        variables = {
+          hostname = "$(HOSTNAME)"
+        }
+      }
+    },
+    {
+      template = {
+        content = <<-EOS
+          CFN_STACK_NAME=${local.name}
+          IPV4_ADDRESS={{ipv4_address}}
+        EOS
+        mount = {
+          destination = "/etc/sv/cfn-signal-control-plane/environment"
+        }
+        variables = {
+          ipv4_address = "$(IPV4_ADDRESS)"
+        }
+      }
+    },
+    {
+      template = {
+        content = local.kubeadm_init_config
+        mount = {
+          destination = local.kubeadm_init_config_path_host
+        }
+        variables = {
+          ipv4_address      = "$(IPV4_ADDRESS)"
+          availability_zone = "$(AVAILABILITY_ZONE)"
+        }
+      }
+    },
+    {
+      template = {
+        content = local.aws_cloud_controller_manager_values
+        mount = {
+          destination = "/etc/kubernetes/charts/${local.aws_cloud_controller_manager_yaml}"
+        }
+      }
+    },
+    {
+      template = {
+        content = local.aws_ebs_csi_driver_values
+        mount = {
+          destination = "/etc/kubernetes/charts/${local.aws_ebs_csi_driver_yaml}"
+        }
+      }
+    },
+    {
+      template = {
+        content = local.aws_iam_authenticator_values
+        mount = {
+          destination = "/etc/kubernetes/charts/${local.aws_iam_authenticator_yaml}"
+        }
+      }
+    },
+    {
+      template = {
+        content = local.aws_vpc_cni_values
+        mount = {
+          destination = "/etc/kubernetes/charts/${local.aws_vpc_cni_yaml}"
+        }
+      }
+    },
+    {
+      template = {
+        content = local.cert_manager_values
+        mount = {
+          destination = "/etc/kubernetes/charts/${local.cert_manager_yaml}"
+        }
+      }
+    },
+    {
+      template = {
+        content = data.aws_ssm_parameter.ca_crt.value
+        mount = {
+          destination = "/etc/kubernetes/pki/ca.crt"
+        }
+      }
+    },
+    {
+      template = {
+        content = data.aws_ssm_parameter.etcd_ca_crt.value
+        mount = {
+          destination = "/etc/kubernetes/pki/etcd/ca.crt"
+        }
+      }
+    },
+    {
+      template = {
+        content = data.aws_ssm_parameter.front_proxy_ca_crt.value
+        mount = {
+          destination = "/etc/kubernetes/pki/front-proxy-ca.crt"
+        }
+      }
+    },
+    {
+      template = {
+        content = data.aws_ssm_parameter.sa_pub.value
         mount = {
           destination = "/etc/kubernetes/pki/sa.pub"
         }
@@ -421,9 +442,8 @@ locals {
 
   volumes = concat(
     local.volumes_ebs,
-    local.volumes_addon_values,
     local.volumes_irsa,
-    local.volumes_config,
     local.volumes_pki,
+    local.volumes_templates,
   )
 }
