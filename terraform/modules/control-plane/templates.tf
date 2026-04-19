@@ -56,6 +56,10 @@ locals {
           name  = "image-credential-provider-config"
           value = "/etc/kubernetes/ecr-credential-provider.yaml"
         },
+        {
+          name  = "node-ip"
+          value = "{{ipv4_address}}"
+        },
       ]
       taints = [
         {

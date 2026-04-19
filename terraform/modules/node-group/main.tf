@@ -46,6 +46,12 @@ module "user_data" {
         path = "hostname"
       }
     },
+    {
+      imds = {
+        name = "IPV4_ADDRESS"
+        path = "local-ipv4"
+      }
+    },
   ]
   init-scripts = [
     <<-EOS
@@ -91,6 +97,19 @@ module "user_data" {
         content = local.kubelet_bootstrap_kubeconfig
         mount = {
           destination = "/etc/kubernetes/${local.bootstrap_kubelet_conf}"
+        }
+      }
+    },
+    {
+      template = {
+        content = <<-EOS
+          KUBELET_KEIGHTS_ARGS="--node-ip={{ipv4_address}}"
+        EOS
+        mount = {
+          destination = "/var/lib/kubelet/keights-flags.env"
+        }
+        variables = {
+          ipv4_address = "$(IPV4_ADDRESS)"
         }
       }
     },
