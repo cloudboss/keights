@@ -18,6 +18,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+module "kms_key" {
+  source = "./modules/kms-key"
+  count  = var.kms_key_id == null ? 1 : 0
+
+  aws_account_id = local.aws_account_id
+  aws_partition  = local.aws_partition
+  aws_region     = local.aws_region
+  cluster_name   = var.cluster_name
+  tags           = var.tags
+}
+
 module "s3" {
   source = "./modules/s3"
   count  = local.s3_bucket_count
@@ -57,7 +68,7 @@ module "iam" {
     irsa          = var.irsa_enabled
     lambda_vpc    = local.is_lambda_vpc
   }
-  kms_key_id             = data.aws_kms_key.it.id
+  kms_key_id             = local.kms_key_id
   route53_hosted_zone_id = module.route53.hosted_zone_id
   s3_bucket              = local.s3_bucket
   s3_bucket_prefix       = "keights"
@@ -125,7 +136,7 @@ module "lambda_kube_ca" {
 
   encryption_algorithm = var.encryption_algorithm
   iam_role_arn         = module.iam.iam_role_lambda_kube_ca.arn
-  kms_key_id           = data.aws_kms_key.it.id
+  kms_key_id           = local.kms_key_id
   s3 = {
     bucket = var.lambda.s3.bucket
     key    = local.lambda_s3_keys.kube_ca
@@ -183,6 +194,7 @@ module "control_plane" {
   security_group_ids = [module.security_groups.security_group_control_plane.id]
   service_subnet     = var.kubernetes_configuration.service_subnet
   storage = {
+    kms_key_id = try(data.aws_kms_key.storage_control_plane[0].arn, local.kms_key_id_storage)
     containerd = {
       device = try(var.control_plane.storage.containerd.device, var.storage.containerd.device)
       iops   = try(var.control_plane.storage.containerd.iops, var.storage.containerd.iops)

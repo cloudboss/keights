@@ -34,6 +34,18 @@ locals {
 
   is_lambda_vpc = var.lambda.subnet_ids != null && length(var.lambda.subnet_ids) > 0
 
+  kms_key_id = (
+    var.kms_key_id != null
+    ? data.aws_kms_key.it[0].id
+    : module.kms_key[0].key_id
+  )
+
+  kms_key_id_storage = (
+    var.storage.kms_key_id != null
+    ? data.aws_kms_key.storage[0].arn
+    : (var.kms_key_id == null ? module.kms_key[0].key_arn : null)
+  )
+
   lambda_s3_keys = {
     auto_namer    = "${var.lambda.s3.prefix}/${local.lambda_version}/auto-namer-${local.lambda_version}.zip"
     instance_attr = "${var.lambda.s3.prefix}/${local.lambda_version}/instance-attr-${local.lambda_version}.zip"
@@ -95,6 +107,7 @@ locals {
         coalesce(group.extra_security_group_ids, []),
       ))
       storage = {
+        kms_key_id = try(data.aws_kms_key.storage_node_groups[name].arn, local.kms_key_id_storage)
         containerd = {
           device = try(group.storage.containerd.device, var.storage.containerd.device)
           iops   = try(group.storage.containerd.iops, var.storage.containerd.iops)

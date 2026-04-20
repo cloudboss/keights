@@ -425,6 +425,7 @@ resource "aws_ebs_volume" "etcd" {
 
   availability_zone = local.azs_autoscaling_group[each.value]
   encrypted         = true
+  kms_key_id        = var.storage.kms_key_id
   size              = var.storage.etcd.size
   tags              = local.volume_tags
   type              = var.storage.etcd.type
@@ -458,6 +459,7 @@ resource "aws_launch_template" "it" {
       delete_on_termination = true
       encrypted             = true
       iops                  = var.storage.containerd.iops
+      kms_key_id            = var.storage.kms_key_id
       volume_size           = var.storage.containerd.size
       volume_type           = var.storage.containerd.type
     }

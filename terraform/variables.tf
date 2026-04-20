@@ -143,7 +143,9 @@ variable "irsa_enabled" {
 
 variable "kms_key_id" {
   type        = string
-  description = "The KMS Key ID used for cluster encryption."
+  description = "The KMS Key ID used for cluster encryption. Can be an ID or alias. If not provided, a new key will be created with the alias `keights-cluster-$${var.cluster_name}`."
+
+  default = null
 }
 
 variable "kubernetes_configuration" {
@@ -221,6 +223,7 @@ variable "s3" {
 
 variable "storage" {
   type = object({
+    kms_key_id = optional(string)
     containerd = optional(object({
       device = optional(string, "/dev/sdf")
       iops   = optional(number)
@@ -234,7 +237,7 @@ variable "storage" {
       type   = optional(string, "gp3")
     }), {})
   })
-  description = "Configuration for storage. The containerd block configures the storage defaults for all cluster machines, but can be overridden individually on the control plane and node groups."
+  description = "Configuration for storage. The containerd block configures the storage defaults for all cluster machines, but can be overridden individually on the control plane and node groups. `kms_key_id` is the KMS key used to encrypt EBS volumes (can be an ID, ARN, or alias). If null and `var.kms_key_id` is also null, the auto-created cluster key will be used; otherwise volumes are encrypted with the account's default EBS key."
 
   default = {}
 }

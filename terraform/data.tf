@@ -26,5 +26,28 @@ data "aws_region" "current" {}
 
 # Use a lookup to get actual ID if alias is passed in `var.kms_key_id`.
 data "aws_kms_key" "it" {
+  count = var.kms_key_id != null ? 1 : 0
+
   key_id = var.kms_key_id
+}
+
+data "aws_kms_key" "storage" {
+  count = var.storage.kms_key_id != null ? 1 : 0
+
+  key_id = var.storage.kms_key_id
+}
+
+data "aws_kms_key" "storage_control_plane" {
+  count = try(var.control_plane.storage.kms_key_id, null) != null ? 1 : 0
+
+  key_id = var.control_plane.storage.kms_key_id
+}
+
+data "aws_kms_key" "storage_node_groups" {
+  for_each = {
+    for name, group in var.node_groups : name => group.storage.kms_key_id
+    if try(group.storage.kms_key_id, null) != null
+  }
+
+  key_id = each.value
 }

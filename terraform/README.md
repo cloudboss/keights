@@ -24,7 +24,7 @@ See the [example](./example) directory for a sample that follows the [DELAR](htt
 | etcd\_mode | The etcd cluster deployment mode. Must be one of `external` or `stacked`. In `stacked` mode, etcd runs on the control plane nodes. In `external` mode, etcd runs on separate instances. | string | `stacked` | no |
 | identity\_mappings | Configuration for aws-iam-authenticator identity mappings. By default the IAM identity of the cluster creator will have administrative access and nodes will have access to join the cluster. | list([object](#identity_mappings-object)) | `[]` | no |
 | irsa\_enabled | Whether or not IAM Roles for Service Accounts (IRSA) will be enabled. When true, an S3 bucket for OIDC discovery documents and an IAM OIDC provider will be created. | bool | `true` | no |
-| kms\_key\_id | The KMS Key ID used for cluster encryption. | string | N/A | yes |
+| kms\_key\_id | The KMS Key ID used for cluster encryption. Can be an ID or alias. If not provided, a new key will be created with the alias `keights-cluster-${cluster_name}`. | string | `null` | no |
 | kubernetes\_configuration | Kubernetes configuration options. | [object](#kubernetes_configuration-object) | `{}` | no |
 | lambda | Configuration for Lambda functions. If `subnet_ids` are not provided, they will be deployed without VPC configuration. | [object](#lambda-object) | `{}` | no |
 | node\_groups | Configuration for node groups. Each key is the name of a node group and the value is a configuration object. | map([object](#node_group-object)) | `{}` | no |
@@ -217,12 +217,13 @@ An object to configure settings for the S3 bucket used to host cluster resources
 
 ## storage object
 
-An object to configure storage. The `contained` object defines defaults for the whole cluster, but can be overridden at the control plane or node group levels.
+An object to configure storage. The `containerd` and `etcd` objects define defaults for the whole cluster, but can be overridden at the control plane or node group levels.
 
 | Name | Description | Type | Default | Required |
 |------|-------------|:----:|:-------:|:--------:|
 | containerd | Storage configuration for the containerd data volume. | [object](#storage-volume-object) | `{}` | no |
 | etcd | Storage configuration for the etcd data volume. | [object](#storage-volume-object) | `{}` | no |
+| kms\_key\_id | KMS key used to encrypt EBS volumes. Can be an ID, ARN, or alias. If null and `var.kms_key_id` is also null, the auto-created cluster key is used; otherwise volumes are encrypted with the account's default EBS key. | string | `null` | no |
 
 ## storage volume object
 
