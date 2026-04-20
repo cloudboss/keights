@@ -36,7 +36,7 @@ func TestRender(t *testing.T) {
 		ClusterName: "demo",
 		Region:      "us-east-1",
 		VPCID:       "vpc-abc",
-		AccessCIDR:  "10.0.0.0/16",
+		AccessCIDRs: []string{"10.0.0.0/16", "192.168.0.0/16"},
 		AMIName:     "keights-1.34.1",
 		AMIOwnerID:  "123456789012",
 		IRSAEnabled: true,
@@ -80,7 +80,7 @@ func TestRender(t *testing.T) {
 	assert.Contains(t, v, `irsa_enabled = true`)
 	assert.Contains(t, v, `kms_key_id = "alias/keights-demo"`)
 	assert.Contains(t, mainStr, `oidc_provider_arn`)
-	assert.Contains(t, v, `api        = ["10.0.0.0/16"]`)
+	assert.Contains(t, v, `api        = ["10.0.0.0/16", "192.168.0.0/16"]`)
 	assert.Contains(t, v, `node_ports = []`)
 	assert.Contains(t, v, `ssh        = []`)
 	assert.Contains(t, v, `instance_type = "m5.large"`)
@@ -96,7 +96,7 @@ func TestRenderNoSSHKey(t *testing.T) {
 	dir := t.TempDir()
 	a := Answers{
 		ClusterName: "demo", Region: "us-east-1", VPCID: "vpc-x",
-		AccessCIDR: "0.0.0.0/0", KMSKeyID: "alias/k",
+		AccessCIDRs: []string{"0.0.0.0/0"}, KMSKeyID: "alias/k",
 		ControlPlane: ControlPlane{
 			InstanceType: "m5.large",
 			SubnetIDs:    []string{"subnet-a"},
@@ -115,6 +115,88 @@ func TestRenderNoSSHKey(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, strings.Contains(string(vars), "key_pair"),
 		"expected no key_pair when SSHKeyPair is empty")
+}
+
+func TestRenderNoKMSKey(t *testing.T) {
+	dir := t.TempDir()
+	a := Answers{
+		ClusterName: "demo", Region: "us-east-1", VPCID: "vpc-x",
+		AccessCIDRs: []string{"0.0.0.0/0"},
+		ControlPlane: ControlPlane{
+			InstanceType: "m5.large",
+			SubnetIDs:    []string{"subnet-a"},
+		},
+		NodeGroups: []NodeGroup{
+			{
+				Name: "default", InstanceType: "m5.large",
+				MinSize: 1, DesiredSize: 1, MaxSize: 1,
+				SubnetIDs: []string{"subnet-a"},
+			},
+		},
+		OutputDir: dir,
+	}
+	require.NoError(t, Render(a, RenderOptions{}))
+	vars, err := os.ReadFile(filepath.Join(dir, "vars.tf"))
+	require.NoError(t, err)
+	v := string(vars)
+	assert.Contains(t, v, `kms_key_id = null`)
+	assert.False(t, strings.Contains(v, `kms_key_id = ""`),
+		"expected null (unquoted) when KMSKeyID is empty")
+}
+
+func TestRenderLocalStateHasNoStateFile(t *testing.T) {
+	dir := t.TempDir()
+	a := Answers{
+		ClusterName: "demo", Region: "us-east-1", VPCID: "vpc-x",
+		AccessCIDRs: []string{"0.0.0.0/0"},
+		ControlPlane: ControlPlane{
+			InstanceType: "m5.large",
+			SubnetIDs:    []string{"subnet-a"},
+		},
+		NodeGroups: []NodeGroup{{
+			Name: "default", InstanceType: "m5.large",
+			MinSize: 1, DesiredSize: 1, MaxSize: 1,
+			SubnetIDs: []string{"subnet-a"},
+		}},
+		OutputDir: dir,
+	}
+	require.NoError(t, Render(a, RenderOptions{}))
+	_, err := os.Stat(filepath.Join(dir, "state.tf"))
+	assert.True(t, os.IsNotExist(err),
+		"expected no state.tf for local backend, got err=%v", err)
+}
+
+func TestRenderS3Backend(t *testing.T) {
+	dir := t.TempDir()
+	a := Answers{
+		ClusterName: "demo", Region: "us-east-1", VPCID: "vpc-x",
+		AccessCIDRs: []string{"0.0.0.0/0"},
+		ControlPlane: ControlPlane{
+			InstanceType: "m5.large",
+			SubnetIDs:    []string{"subnet-a"},
+		},
+		NodeGroups: []NodeGroup{{
+			Name: "default", InstanceType: "m5.large",
+			MinSize: 1, DesiredSize: 1, MaxSize: 1,
+			SubnetIDs: []string{"subnet-a"},
+		}},
+		StateBackend: StateBackend{
+			Type:   "s3",
+			Bucket: "my-tfstate",
+			Key:    "demo/terraform.tfstate",
+			Region: "us-east-1",
+		},
+		OutputDir: dir,
+	}
+	require.NoError(t, Render(a, RenderOptions{}))
+	state, err := os.ReadFile(filepath.Join(dir, "state.tf"))
+	require.NoError(t, err)
+	s := string(state)
+	assert.Contains(t, s, `backend "s3"`)
+	assert.Contains(t, s, `bucket       = "my-tfstate"`)
+	assert.Contains(t, s, `key          = "demo/terraform.tfstate"`)
+	assert.Contains(t, s, `region       = "us-east-1"`)
+	assert.Contains(t, s, `use_lockfile = true`)
 }
 
 func TestQuotedList(t *testing.T) {

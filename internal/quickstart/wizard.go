@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -34,6 +35,10 @@ import (
 )
 
 var clusterNameRE = regexp.MustCompile(`^[a-z][a-z0-9-]{0,61}[a-z0-9]$`)
+
+var instanceTypeRE = regexp.MustCompile(`^[a-z0-9]+\.[a-z0-9-]+$`)
+
+const customInstanceType = "__other__"
 
 var instanceTypes = []string{
 	"t3.medium", "t3.large", "t3.xlarge",
@@ -54,16 +59,18 @@ var instanceTypes = []string{
 
 // RunWizard collects cluster configuration interactively.
 // Returns (nil, nil) if the user aborts before the final confirmation.
+//
+// The wizard runs in three consolidated forms separated by AWS discovery:
+// pre-discovery (basics + VPC), main (AMI + KMS + key pair + SSH + control
+// plane), and tail (state backend + output + confirms). shift+tab provides
+// back-navigation between groups within each form. The node-group loop and
+// the boundaries between the three forms are one-way.
 func RunWizard(ctx context.Context, disc *Discoverer, defs Defaults) (*Answers, error) {
 	a := &Answers{
 		Region:      defs.Region,
 		ClusterName: defs.ClusterName,
-		AccessCIDR:  "0.0.0.0/0",
+		AccessCIDRs: []string{"0.0.0.0/0"},
 		IRSAEnabled: true,
-	}
-
-	if err := runBasics(a); err != nil {
-		return nil, err
 	}
 
 	vpcs, err := disc.VPCs(ctx)
@@ -74,9 +81,16 @@ func RunWizard(ctx context.Context, disc *Discoverer, defs Defaults) (*Answers, 
 		return nil, errors.New("no vpcs found in region " + a.Region)
 	}
 
-	subnets, err := runVPCAndSubnets(ctx, disc, vpcs, a)
+	if err := runPreDiscovery(vpcs, a); err != nil {
+		return nil, err
+	}
+
+	subnets, err := disc.Subnets(ctx, a.VPCID)
 	if err != nil {
 		return nil, err
+	}
+	if len(subnets) == 0 {
+		return nil, fmt.Errorf("no subnets found in %s", a.VPCID)
 	}
 
 	amis, err := disc.AMIs(ctx)
@@ -91,35 +105,14 @@ func RunWizard(ctx context.Context, disc *Discoverer, defs Defaults) (*Answers, 
 	if err != nil {
 		return nil, err
 	}
-	if len(kmsKeys) == 0 {
-		return nil, errors.New("no customer-managed kms keys found in this region")
-	}
 
 	keyPairs, err := disc.KeyPairs(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := runAMI(amis, a); err != nil {
+	if err := runMain(amis, kmsKeys, keyPairs, subnets, a); err != nil {
 		return nil, err
-	}
-
-	if err := runKMSKey(kmsKeys, a); err != nil {
-		return nil, err
-	}
-
-	if err := runControlPlane(subnets, a); err != nil {
-		return nil, err
-	}
-
-	if err := runCredentials(keyPairs, a); err != nil {
-		return nil, err
-	}
-
-	if a.SSHKeyPair != "" {
-		if err := runSSHAccess(a); err != nil {
-			return nil, err
-		}
 	}
 
 	if err := runNodeGroups(subnets, a); err != nil {
@@ -130,7 +123,7 @@ func RunWizard(ctx context.Context, disc *Discoverer, defs Defaults) (*Answers, 
 		a.OutputDir = filepath.Clean("./" + a.ClusterName)
 	}
 
-	confirmed, err := runConfirm(a)
+	confirmed, err := runTail(a)
 	if err != nil {
 		return nil, err
 	}
@@ -141,15 +134,24 @@ func RunWizard(ctx context.Context, disc *Discoverer, defs Defaults) (*Answers, 
 	return a, nil
 }
 
-func runBasics(a *Answers) error {
+// runPreDiscovery collects the fields that must be known before AWS
+// discovery can populate the remaining options: cluster identity, API/
+// node-port CIDRs, IRSA, and VPC.
+func runPreDiscovery(vpcs []VPC, a *Answers) error {
+	accessInput := joinCIDRs(a.AccessCIDRs)
 	nodePortsInput := joinCIDRs(a.NodePortsCIDRs)
+	vpcOpts := make([]huh.Option[string], 0, len(vpcs))
+	for _, v := range vpcs {
+		vpcOpts = append(vpcOpts, huh.NewOption(v.Label(), v.ID))
+	}
+
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Cluster name").
 				Description("Lowercase letters, digits, and hyphens.").
 				Value(&a.ClusterName).
-				Validate(validateK8sName),
+				Validate(validateClusterName),
 			huh.NewInput().
 				Title("AWS region").
 				Description("The AWS region where the cluster is located.").
@@ -157,10 +159,11 @@ func runBasics(a *Answers) error {
 				Value(&a.Region).
 				Validate(nonEmpty("region")),
 			huh.NewInput().
-				Title("API access CIDR").
-				Description("Who can reach the Kubernetes API.").
-				Value(&a.AccessCIDR).
-				Validate(validateCIDR),
+				Title("API access CIDRs").
+				Description("Comma separated list of CIDRs that can reach the "+
+					"Kubernetes API.").
+				Value(&accessInput).
+				Validate(validateCIDRListRequired),
 			huh.NewInput().
 				Title("Node port access CIDRs").
 				Description("Comma separated list. Leave blank to disable.").
@@ -172,26 +175,6 @@ func runBasics(a *Answers) error {
 				Affirmative("Yes").Negative("No").
 				Value(&a.IRSAEnabled),
 		),
-	)
-	if err := form.Run(); err != nil {
-		return err
-	}
-	a.NodePortsCIDRs = parseCIDRList(nodePortsInput)
-	return nil
-}
-
-func runVPCAndSubnets(
-	ctx context.Context,
-	disc *Discoverer,
-	vpcs []VPC,
-	a *Answers,
-) ([]Subnet, error) {
-	vpcOpts := make([]huh.Option[string], 0, len(vpcs))
-	for _, v := range vpcs {
-		vpcOpts = append(vpcOpts, huh.NewOption(v.Label(), v.ID))
-	}
-
-	vpcForm := huh.NewForm(
 		huh.NewGroup(
 			huh.NewSelect[string]().
 				Title("VPC").
@@ -201,165 +184,235 @@ func runVPCAndSubnets(
 				Value(&a.VPCID),
 		),
 	)
-	if err := vpcForm.Run(); err != nil {
-		return nil, err
+	if err := form.Run(); err != nil {
+		return err
 	}
-
-	subnets, err := disc.Subnets(ctx, a.VPCID)
-	if err != nil {
-		return nil, err
-	}
-	if len(subnets) == 0 {
-		return nil, fmt.Errorf("no subnets found in %s", a.VPCID)
-	}
-	return subnets, nil
+	a.AccessCIDRs = parseCIDRList(accessInput)
+	a.NodePortsCIDRs = parseCIDRList(nodePortsInput)
+	return nil
 }
 
-func runControlPlane(subnets []Subnet, a *Answers) error {
-	instanceType := "m5.large"
+// runMain collects the middle section of the wizard — AMI, KMS key, SSH
+// key pair, SSH access CIDRs (shown only when a key pair is chosen), and
+// the control plane configuration (count, instance type, optional custom
+// type, subnets) — in a single form with multiple groups so shift+tab
+// provides back-navigation across all of them.
+func runMain(
+	amis []AMI,
+	kmsKeys []KMSKey,
+	keyPairs []KeyPair,
+	subnets []Subnet,
+	a *Answers,
+) error {
+	amiOpts := make([]huh.Option[string], 0, len(amis))
+	amisByID := make(map[string]AMI, len(amis))
+	for _, img := range amis {
+		amiOpts = append(amiOpts, huh.NewOption(img.Label(), img.ID))
+		amisByID[img.ID] = img
+	}
+	amiID := amis[0].ID
+
+	kmsOpts := []huh.Option[string]{huh.NewOption("(create new)", "")}
+	for _, k := range kmsKeys {
+		value := k.AliasName
+		if value == "" {
+			value = k.TargetKeyID
+		}
+		kmsOpts = append(kmsOpts, huh.NewOption(k.Label(), value))
+	}
+
+	keyOpts := []huh.Option[string]{huh.NewOption("(none)", "")}
+	for _, k := range keyPairs {
+		keyOpts = append(keyOpts, huh.NewOption(k.Name, k.Name))
+	}
+
+	sshInput := joinCIDRs(a.SSHCIDRs)
 	cpCountStr := "1"
+	cpTypeSelected := "m5.large"
+	cpTypeCustom := ""
 	subnetOpts := subnetOptions(subnets)
 
 	form := huh.NewForm(
 		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("AMI").
+				Description("Keights AMIs available in this region.").
+				Options(amiOpts...).
+				Height(8).
+				Value(&amiID),
+		),
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("KMS key").
+				Description("KMS key for cluster encryption. "+
+					"Choose (create new) to have one created automatically.").
+				Options(kmsOpts...).
+				Height(8).
+				Value(&a.KMSKeyID),
+		),
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("SSH key pair").
+				Description("SSH key pair for instance access. "+
+					"Choose (none) to disable sshd on instances.").
+				Options(keyOpts...).
+				Height(8).
+				Value(&a.SSHKeyPair),
+		),
+		huh.NewGroup(
+			huh.NewInput().
+				Title("SSH access CIDRs").
+				Description("Comma separated. Leave blank to block SSH access.").
+				Value(&sshInput).
+				Validate(validateCIDRList),
+		).WithHideFunc(func() bool { return a.SSHKeyPair == "" }),
+		huh.NewGroup(
 			huh.NewInput().
 				Title("Control plane instance count").
-				Description("Enter the number of control plane instances. "+
-					"Use 1 for development or short lived clusters. 3 is "+
-					"recommended to tolerate control plane failures.").
+				Description("Use 1 for development or short lived clusters. 3 "+
+					"is recommended to tolerate control plane failures.").
 				Value(&cpCountStr).
 				Validate(validateOddPositive),
 			huh.NewSelect[string]().
-				Title("Instance type").
+				Title("Control plane instance type").
 				Description("The EC2 instance type for control plane instances.").
 				Options(instanceTypeOptions(instanceTypes)...).
 				Height(8).
-				Value(&instanceType),
+				Value(&cpTypeSelected),
 		),
-	)
-	if err := form.Run(); err != nil {
-		return err
-	}
-	cpCount, _ := strconv.Atoi(cpCountStr)
-
-	s := ""
-	if cpCount > 1 {
-		s = "s"
-	}
-	subnetDescription := "Select " + cpCountStr + " subnet" + s
-	if cpCount > 1 {
-		subnetDescription += ", one per availability zone."
-	}
-
-	subnetForm := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Custom control plane instance type").
+				Description("Enter an EC2 instance type, e.g. m6a.4xlarge.").
+				Value(&cpTypeCustom).
+				Validate(validateInstanceType),
+		).WithHideFunc(func() bool { return cpTypeSelected != customInstanceType }),
 		huh.NewGroup(
 			huh.NewMultiSelect[string]().
 				Title("Control plane subnets").
-				Description(subnetDescription).
+				DescriptionFunc(func() string {
+					return cpSubnetDescription(cpCountStr)
+				}, &cpCountStr).
 				Options(subnetOpts...).
 				Height(8).
 				Value(&a.ControlPlane.SubnetIDs).
 				Validate(func(ids []string) error {
+					cpCount, _ := strconv.Atoi(cpCountStr)
 					if len(ids) != cpCount {
-						return fmt.Errorf("select exactly %d subnet%s",
+						s := ""
+						if cpCount != 1 {
+							s = "s"
+						}
+						return fmt.Errorf("%d subnet%s required",
 							cpCount, s)
 					}
 					return nil
 				}),
 		),
 	)
-	if err := subnetForm.Run(); err != nil {
-		return err
-	}
-	a.ControlPlane.InstanceType = instanceType
-	return nil
-}
-
-func runAMI(amis []AMI, a *Answers) error {
-	opts := make([]huh.Option[string], 0, len(amis))
-	byID := make(map[string]AMI, len(amis))
-	for _, img := range amis {
-		opts = append(opts, huh.NewOption(img.Label(), img.ID))
-		byID[img.ID] = img
-	}
-	selected := amis[0].ID
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("AMI").
-				Description("Keights AMIs available in this region.").
-				Options(opts...).
-				Height(8).
-				Value(&selected),
-		),
-	)
 	if err := form.Run(); err != nil {
 		return err
 	}
-	img := byID[selected]
+
+	img := amisByID[amiID]
 	a.AMIName = img.Name
 	a.AMIOwnerID = img.OwnerID
+	a.SSHCIDRs = parseCIDRList(sshInput)
+	if cpTypeSelected == customInstanceType {
+		a.ControlPlane.InstanceType = cpTypeCustom
+	} else {
+		a.ControlPlane.InstanceType = cpTypeSelected
+	}
 	return nil
 }
 
-func runKMSKey(keys []KMSKey, a *Answers) error {
-	opts := make([]huh.Option[string], 0, len(keys))
-	for _, k := range keys {
-		value := k.AliasName
-		if value == "" {
-			value = k.TargetKeyID
-		}
-		opts = append(opts, huh.NewOption(k.Label(), value))
+// runTail collects state backend, output directory, and final confirms.
+// Groups support shift+tab back-navigation; groups conditional on earlier
+// choices (S3 details, deploy confirm) are hidden when not applicable.
+func runTail(a *Answers) (bool, error) {
+	if a.StateBackend.Key == "" {
+		a.StateBackend.Key = a.ClusterName + "/terraform.tfstate"
 	}
+	if a.StateBackend.Region == "" {
+		a.StateBackend.Region = a.Region
+	}
+	confirmed := true
+	backendNote := "Terraform state backend (optional, but recommended).\n\n" +
+		"Remote state prevents conflicts when multiple people or machines\n" +
+		"run Terraform. This wizard can configure an S3 backend directly.\n" +
+		"Other backends (azurerm, gcs, remote, etc.) can be configured\n" +
+		"by creating a state.tf file in the generated project."
+
 	form := huh.NewForm(
 		huh.NewGroup(
+			huh.NewNote().Title("State backend").Description(backendNote),
 			huh.NewSelect[string]().
-				Title("KMS key").
-				Description("Customer managed KMS key for cluster encryption.").
-				Options(opts...).
-				Height(8).
-				Value(&a.KMSKeyID),
+				Title("Backend type").
+				Options(
+					huh.NewOption("Local (no remote state)", ""),
+					huh.NewOption("S3", "s3"),
+				).
+				Value(&a.StateBackend.Type),
 		),
-	)
-	return form.Run()
-}
-
-func runSSHAccess(a *Answers) error {
-	input := joinCIDRs(a.SSHCIDRs)
-	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
-				Title("SSH access CIDRs").
-				Description("Comma separated. Leave blank to block SSH access.").
-				Value(&input).
-				Validate(validateCIDRList),
+				Title("S3 bucket").
+				Description("Name of the existing S3 bucket for state.").
+				Value(&a.StateBackend.Bucket).
+				Validate(nonEmpty("bucket")),
+			huh.NewInput().
+				Title("State key").
+				Description("Path within the bucket for the state file.").
+				Value(&a.StateBackend.Key).
+				Validate(nonEmpty("key")),
+			huh.NewInput().
+				Title("Bucket region").
+				Description("AWS region where the bucket is located.").
+				Value(&a.StateBackend.Region).
+				Validate(nonEmpty("region")),
+		).WithHideFunc(func() bool { return a.StateBackend.Type != "s3" }),
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Output directory").
+				Description("Directory to write Terraform configuration to.").
+				Value(&a.OutputDir).
+				Validate(validateOutputDir),
+			huh.NewConfirm().
+				Title("Generate Terraform configuration?").
+				Affirmative("Yes").Negative("Cancel").
+				Value(&confirmed),
 		),
+		huh.NewGroup(
+			huh.NewConfirm().
+				TitleFunc(func() string {
+					return "Run terraform apply now?"
+				}, &a.OutputDir).
+				DescriptionFunc(func() string {
+					return "If no, you can deploy later with: keights deploy " +
+						a.OutputDir
+				}, &a.OutputDir).
+				Affirmative("Yes").Negative("No").
+				Value(&a.DeployNow),
+		).WithHideFunc(func() bool { return !confirmed }),
 	)
 	if err := form.Run(); err != nil {
-		return err
+		return false, err
 	}
-	a.SSHCIDRs = parseCIDRList(input)
-	return nil
+	return confirmed, nil
 }
 
-func runCredentials(keyPairs []KeyPair, a *Answers) error {
-	const noneKey = ""
-	keyOpts := []huh.Option[string]{huh.NewOption("(none)", noneKey)}
-	for _, k := range keyPairs {
-		keyOpts = append(keyOpts, huh.NewOption(k.Name, k.Name))
+func cpSubnetDescription(cpCountStr string) string {
+	cpCount, _ := strconv.Atoi(cpCountStr)
+	s := ""
+	if cpCount != 1 {
+		s = "s"
 	}
-
-	return huh.NewForm(
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("SSH key pair").
-				Description("SSH key pair for instance access. " +
-					"Choose (none) for no SSH access.").
-				Options(keyOpts...).
-				Height(8).
-				Value(&a.SSHKeyPair),
-		),
-	).Run()
+	desc := fmt.Sprintf(
+		"Use space to select %d subnet%s, enter to confirm.", cpCount, s)
+	if cpCount > 1 {
+		desc += " Choose one subnet per availability zone."
+	}
+	return desc
 }
 
 func runNodeGroups(subnets []Subnet, a *Answers) error {
@@ -380,6 +433,8 @@ func runNodeGroups(subnets []Subnet, a *Answers) error {
 			MaxSize:      5,
 			SubnetIDs:    defaultSubnets,
 		}
+		typeSelected := ng.InstanceType
+		typeCustom := ""
 		min := strconv.Itoa(ng.MinSize)
 		desired := strconv.Itoa(ng.DesiredSize)
 		max := strconv.Itoa(ng.MaxSize)
@@ -398,8 +453,15 @@ func runNodeGroups(subnets []Subnet, a *Answers) error {
 					Description("The EC2 instance type for the group.").
 					Options(instanceTypeOptions(instanceTypes)...).
 					Height(8).
-					Value(&ng.InstanceType),
+					Value(&typeSelected),
 			),
+			huh.NewGroup(
+				huh.NewInput().
+					Title("Custom instance type").
+					Description("Enter an EC2 instance type, e.g. m6a.4xlarge.").
+					Value(&typeCustom).
+					Validate(validateInstanceType),
+			).WithHideFunc(func() bool { return typeSelected != customInstanceType }),
 			huh.NewGroup(
 				huh.NewInput().Title("Min count").Value(&min).
 					Description("Minimum number of nodes in the group.").
@@ -425,6 +487,11 @@ func runNodeGroups(subnets []Subnet, a *Answers) error {
 		)
 		if err := form.Run(); err != nil {
 			return err
+		}
+		if typeSelected == customInstanceType {
+			ng.InstanceType = typeCustom
+		} else {
+			ng.InstanceType = typeSelected
 		}
 		ng.MinSize, _ = strconv.Atoi(min)
 		ng.DesiredSize, _ = strconv.Atoi(desired)
@@ -453,36 +520,6 @@ func runNodeGroups(subnets []Subnet, a *Answers) error {
 	}
 }
 
-func runConfirm(a *Answers) (bool, error) {
-	confirmed := true
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewInput().
-				Title("Output directory").
-				Description("Directory to write Terraform configuration to.").
-				Value(&a.OutputDir).
-				Validate(nonEmpty("output directory")),
-			huh.NewConfirm().
-				Title("Generate Terraform configuration?").
-				Affirmative("Yes").Negative("Cancel").
-				Value(&confirmed),
-		),
-	)
-	if err := form.Run(); err != nil {
-		return false, err
-	}
-	if !confirmed {
-		return false, nil
-	}
-	return huh.NewForm(huh.NewGroup(
-		huh.NewConfirm().
-			Title("Run terraform apply now?").
-			Description("If no, you can deploy later with: keights deploy "+a.OutputDir).
-			Affirmative("Yes").Negative("No").
-			Value(&a.DeployNow),
-	)).Run() == nil, nil
-}
-
 func subnetOptions(subnets []Subnet) []huh.Option[string] {
 	out := make([]huh.Option[string], 0, len(subnets))
 	for _, s := range subnets {
@@ -492,11 +529,18 @@ func subnetOptions(subnets []Subnet) []huh.Option[string] {
 }
 
 func instanceTypeOptions(types []string) []huh.Option[string] {
-	out := make([]huh.Option[string], 0, len(types))
+	out := make([]huh.Option[string], 0, len(types)+1)
 	for _, t := range types {
 		out = append(out, huh.NewOption(t, t))
 	}
-	return out
+	return append(out, huh.NewOption("Other (type manually)", customInstanceType))
+}
+
+func validateInstanceType(s string) error {
+	if !instanceTypeRE.MatchString(s) {
+		return errors.New("must look like an EC2 instance type, e.g. m5.large")
+	}
+	return nil
 }
 
 func defaultGroupName(i int) string {
@@ -513,6 +557,35 @@ func validateK8sName(s string) error {
 	return nil
 }
 
+func validateClusterName(s string) error {
+	if err := validateK8sName(s); err != nil {
+		return err
+	}
+	return validateDirDoesNotExist(filepath.Clean("./" + s))
+}
+
+func validateOutputDir(s string) error {
+	if s == "" {
+		return errors.New("output directory is required")
+	}
+	return validateDirDoesNotExist(s)
+}
+
+func validateDirDoesNotExist(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	if info.IsDir() {
+		return fmt.Errorf("directory %q already exists; pick a different "+
+			"name or remove it", path)
+	}
+	return fmt.Errorf("%q exists and is not a directory", path)
+}
+
 func validateCIDR(s string) error {
 	if _, _, err := net.ParseCIDR(s); err != nil {
 		return errors.New("cidr must be a network address and netmask, " +
@@ -523,6 +596,19 @@ func validateCIDR(s string) error {
 
 func validateCIDRList(s string) error {
 	for _, c := range parseCIDRList(s) {
+		if err := validateCIDR(c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateCIDRListRequired(s string) error {
+	list := parseCIDRList(s)
+	if len(list) == 0 {
+		return errors.New("at least one cidr is required")
+	}
+	for _, c := range list {
 		if err := validateCIDR(c); err != nil {
 			return err
 		}

@@ -21,7 +21,7 @@ locals {
     }
   }
   irsa_enabled = {{.IRSAEnabled}}
-  kms_key_id = "{{.KMSKeyID}}"
+  kms_key_id = {{if .KMSKeyID}}"{{.KMSKeyID}}"{{else}}null{{end}}
   node_groups = {
 {{- range .NodeGroups}}
     {{.Name}} = {

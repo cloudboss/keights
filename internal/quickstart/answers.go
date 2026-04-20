@@ -31,7 +31,7 @@ type Answers struct {
 	ClusterName    string
 	Region         string
 	VPCID          string
-	AccessCIDR     string
+	AccessCIDRs    []string
 	NodePortsCIDRs []string
 	SSHCIDRs       []string
 	AMIName        string
@@ -41,8 +41,18 @@ type Answers struct {
 	IRSAEnabled    bool
 	ControlPlane   ControlPlane
 	NodeGroups     []NodeGroup
+	StateBackend   StateBackend
 	OutputDir      string
 	DeployNow      bool
+}
+
+// StateBackend describes the Terraform state backend to configure in the
+// generated project. Type is "" for local state or "s3" for S3-backed state.
+type StateBackend struct {
+	Type   string
+	Bucket string
+	Key    string
+	Region string
 }
 
 type ControlPlane struct {
@@ -73,13 +83,14 @@ func PrintSummary(w io.Writer, a Answers) {
 	fmt.Fprintf(w, "  Cluster name:   %s\n", a.ClusterName)
 	fmt.Fprintf(w, "  Region:         %s\n", a.Region)
 	fmt.Fprintf(w, "  VPC:            %s\n", a.VPCID)
-	fmt.Fprintf(w, "  API access:     %s\n", a.AccessCIDR)
+	fmt.Fprintf(w, "  API access:     %s\n", orNoneList(a.AccessCIDRs))
 	fmt.Fprintf(w, "  Node ports:     %s\n", orNoneList(a.NodePortsCIDRs))
 	fmt.Fprintf(w, "  SSH access:     %s\n", orNoneList(a.SSHCIDRs))
 	fmt.Fprintf(w, "  AMI:            %s (owner %s)\n", a.AMIName, a.AMIOwnerID)
-	fmt.Fprintf(w, "  KMS key:        %s\n", a.KMSKeyID)
+	fmt.Fprintf(w, "  KMS key:        %s\n", orCreateNew(a.KMSKeyID))
 	fmt.Fprintf(w, "  IRSA:           %s\n", enabledOrDisabled(a.IRSAEnabled))
 	fmt.Fprintf(w, "  SSH key pair:   %s\n", orNone(a.SSHKeyPair))
+	fmt.Fprintf(w, "  State backend:  %s\n", stateBackendSummary(a.StateBackend))
 	fmt.Fprintf(w, "  Output dir:     %s\n", a.OutputDir)
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Control plane")
@@ -110,6 +121,21 @@ func enabledOrDisabled(b bool) string {
 func orNone(s string) string {
 	if s == "" {
 		return "(none)"
+	}
+	return s
+}
+
+func stateBackendSummary(b StateBackend) string {
+	if b.Type == "s3" {
+		return fmt.Sprintf("s3 (bucket=%s key=%s region=%s)",
+			b.Bucket, b.Key, b.Region)
+	}
+	return "local"
+}
+
+func orCreateNew(s string) string {
+	if s == "" {
+		return "(create new)"
 	}
 	return s
 }

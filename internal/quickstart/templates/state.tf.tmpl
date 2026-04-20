@@ -1,0 +1,8 @@
+terraform {
+  backend "s3" {
+    bucket       = "{{.StateBackend.Bucket}}"
+    key          = "{{.StateBackend.Key}}"
+    region       = "{{.StateBackend.Region}}"
+    use_lockfile = true
+  }
+}

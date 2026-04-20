@@ -65,6 +65,7 @@ type templateData struct {
 	SSHCIDRs       []string
 	ControlPlane   ControlPlane
 	NodeGroups     []NodeGroup
+	StateBackend   StateBackend
 }
 
 // Render writes main.tf and vars.tf into outputDir using the answers.
@@ -84,14 +85,18 @@ func Render(a Answers, opts RenderOptions) error {
 		IRSAEnabled:    a.IRSAEnabled,
 		KMSKeyID:       a.KMSKeyID,
 		SSHKeyPair:     a.SSHKeyPair,
-		APICIDRs:       []string{a.AccessCIDR},
+		APICIDRs:       a.AccessCIDRs,
 		NodePortsCIDRs: a.NodePortsCIDRs,
 		SSHCIDRs:       a.SSHCIDRs,
 		ControlPlane:   a.ControlPlane,
 		NodeGroups:     a.NodeGroups,
+		StateBackend:   a.StateBackend,
 	}
 
 	files := []string{"main.tf.tmpl", "vars.tf.tmpl"}
+	if a.StateBackend.Type == "s3" {
+		files = append(files, "state.tf.tmpl")
+	}
 	for _, name := range files {
 		out, err := renderTemplate(name, data)
 		if err != nil {
