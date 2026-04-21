@@ -69,7 +69,7 @@ func RunWizard(ctx context.Context, disc *Discoverer, defs Defaults) (*Answers, 
 	a := &Answers{
 		Region:      defs.Region,
 		ClusterName: defs.ClusterName,
-		AccessCIDRs: []string{"0.0.0.0/0"},
+		AccessCIDRsAPI: []string{"0.0.0.0/0"},
 		IRSAEnabled: true,
 	}
 
@@ -138,8 +138,8 @@ func RunWizard(ctx context.Context, disc *Discoverer, defs Defaults) (*Answers, 
 // discovery can populate the remaining options: cluster identity, API/
 // node-port CIDRs, IRSA, and VPC.
 func runPreDiscovery(vpcs []VPC, a *Answers) error {
-	accessInput := joinCIDRs(a.AccessCIDRs)
-	nodePortsInput := joinCIDRs(a.NodePortsCIDRs)
+	accessInput := joinCIDRs(a.AccessCIDRsAPI)
+	nodePortsInput := joinCIDRs(a.AccessCIDRsNodePorts)
 	vpcOpts := make([]huh.Option[string], 0, len(vpcs))
 	for _, v := range vpcs {
 		vpcOpts = append(vpcOpts, huh.NewOption(v.Label(), v.ID))
@@ -187,8 +187,8 @@ func runPreDiscovery(vpcs []VPC, a *Answers) error {
 	if err := form.Run(); err != nil {
 		return err
 	}
-	a.AccessCIDRs = parseCIDRList(accessInput)
-	a.NodePortsCIDRs = parseCIDRList(nodePortsInput)
+	a.AccessCIDRsAPI = parseCIDRList(accessInput)
+	a.AccessCIDRsNodePorts = parseCIDRList(nodePortsInput)
 	return nil
 }
 
@@ -226,7 +226,7 @@ func runMain(
 		keyOpts = append(keyOpts, huh.NewOption(k.Name, k.Name))
 	}
 
-	sshInput := joinCIDRs(a.SSHCIDRs)
+	sshInput := joinCIDRs(a.AccessCIDRsSSH)
 	cpCountStr := "1"
 	cpTypeSelected := "m5.large"
 	cpTypeCustom := ""
@@ -317,7 +317,7 @@ func runMain(
 	img := amisByID[amiID]
 	a.AMIName = img.Name
 	a.AMIOwnerID = img.OwnerID
-	a.SSHCIDRs = parseCIDRList(sshInput)
+	a.AccessCIDRsSSH = parseCIDRList(sshInput)
 	if cpTypeSelected == customInstanceType {
 		a.ControlPlane.InstanceType = cpTypeCustom
 	} else {

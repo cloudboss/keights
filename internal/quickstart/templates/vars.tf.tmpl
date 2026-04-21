@@ -1,8 +1,8 @@
 locals {
   access_cidrs = {
-    api        = {{quotedList .APICIDRs}}
-    node_ports = {{quotedList .NodePortsCIDRs}}
-    ssh        = {{quotedList .SSHCIDRs}}
+    api        = {{quotedList .AccessCIDRsAPI}}
+    node_ports = {{quotedList .AccessCIDRsNodePorts}}
+    ssh        = {{quotedList .AccessCIDRsSSH}}
   }
   ami = {
     name  = "{{.AMIName}}"

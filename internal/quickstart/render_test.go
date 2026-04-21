@@ -36,7 +36,7 @@ func TestRender(t *testing.T) {
 		ClusterName: "demo",
 		Region:      "us-east-1",
 		VPCID:       "vpc-abc",
-		AccessCIDRs: []string{"10.0.0.0/16", "192.168.0.0/16"},
+		AccessCIDRsAPI: []string{"10.0.0.0/16", "192.168.0.0/16"},
 		AMIName:     "keights-1.34.1",
 		AMIOwnerID:  "123456789012",
 		IRSAEnabled: true,
@@ -96,7 +96,7 @@ func TestRenderNoSSHKey(t *testing.T) {
 	dir := t.TempDir()
 	a := Answers{
 		ClusterName: "demo", Region: "us-east-1", VPCID: "vpc-x",
-		AccessCIDRs: []string{"0.0.0.0/0"}, KMSKeyID: "alias/k",
+		AccessCIDRsAPI: []string{"0.0.0.0/0"}, KMSKeyID: "alias/k",
 		ControlPlane: ControlPlane{
 			InstanceType: "m5.large",
 			SubnetIDs:    []string{"subnet-a"},
@@ -121,7 +121,7 @@ func TestRenderNoKMSKey(t *testing.T) {
 	dir := t.TempDir()
 	a := Answers{
 		ClusterName: "demo", Region: "us-east-1", VPCID: "vpc-x",
-		AccessCIDRs: []string{"0.0.0.0/0"},
+		AccessCIDRsAPI: []string{"0.0.0.0/0"},
 		ControlPlane: ControlPlane{
 			InstanceType: "m5.large",
 			SubnetIDs:    []string{"subnet-a"},
@@ -148,7 +148,7 @@ func TestRenderLocalStateHasNoStateFile(t *testing.T) {
 	dir := t.TempDir()
 	a := Answers{
 		ClusterName: "demo", Region: "us-east-1", VPCID: "vpc-x",
-		AccessCIDRs: []string{"0.0.0.0/0"},
+		AccessCIDRsAPI: []string{"0.0.0.0/0"},
 		ControlPlane: ControlPlane{
 			InstanceType: "m5.large",
 			SubnetIDs:    []string{"subnet-a"},
@@ -170,7 +170,7 @@ func TestRenderS3Backend(t *testing.T) {
 	dir := t.TempDir()
 	a := Answers{
 		ClusterName: "demo", Region: "us-east-1", VPCID: "vpc-x",
-		AccessCIDRs: []string{"0.0.0.0/0"},
+		AccessCIDRsAPI: []string{"0.0.0.0/0"},
 		ControlPlane: ControlPlane{
 			InstanceType: "m5.large",
 			SubnetIDs:    []string{"subnet-a"},

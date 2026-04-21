@@ -31,9 +31,9 @@ type Answers struct {
 	ClusterName    string
 	Region         string
 	VPCID          string
-	AccessCIDRs    []string
-	NodePortsCIDRs []string
-	SSHCIDRs       []string
+	AccessCIDRsAPI    []string
+	AccessCIDRsNodePorts []string
+	AccessCIDRsSSH       []string
 	AMIName        string
 	AMIOwnerID     string
 	KMSKeyID       string
@@ -83,9 +83,9 @@ func PrintSummary(w io.Writer, a Answers) {
 	fmt.Fprintf(w, "  Cluster name:   %s\n", a.ClusterName)
 	fmt.Fprintf(w, "  Region:         %s\n", a.Region)
 	fmt.Fprintf(w, "  VPC:            %s\n", a.VPCID)
-	fmt.Fprintf(w, "  API access:     %s\n", orNoneList(a.AccessCIDRs))
-	fmt.Fprintf(w, "  Node ports:     %s\n", orNoneList(a.NodePortsCIDRs))
-	fmt.Fprintf(w, "  SSH access:     %s\n", orNoneList(a.SSHCIDRs))
+	fmt.Fprintf(w, "  API access:     %s\n", orNoneList(a.AccessCIDRsAPI))
+	fmt.Fprintf(w, "  Node ports:     %s\n", orNoneList(a.AccessCIDRsNodePorts))
+	fmt.Fprintf(w, "  SSH access:     %s\n", orNoneList(a.AccessCIDRsSSH))
 	fmt.Fprintf(w, "  AMI:            %s (owner %s)\n", a.AMIName, a.AMIOwnerID)
 	fmt.Fprintf(w, "  KMS key:        %s\n", orCreateNew(a.KMSKeyID))
 	fmt.Fprintf(w, "  IRSA:           %s\n", enabledOrDisabled(a.IRSAEnabled))

@@ -60,9 +60,9 @@ type templateData struct {
 	IRSAEnabled    bool
 	KMSKeyID       string
 	SSHKeyPair     string
-	APICIDRs       []string
-	NodePortsCIDRs []string
-	SSHCIDRs       []string
+	AccessCIDRsAPI       []string
+	AccessCIDRsNodePorts []string
+	AccessCIDRsSSH       []string
 	ControlPlane   ControlPlane
 	NodeGroups     []NodeGroup
 	StateBackend   StateBackend
@@ -85,9 +85,9 @@ func Render(a Answers, opts RenderOptions) error {
 		IRSAEnabled:    a.IRSAEnabled,
 		KMSKeyID:       a.KMSKeyID,
 		SSHKeyPair:     a.SSHKeyPair,
-		APICIDRs:       a.AccessCIDRs,
-		NodePortsCIDRs: a.NodePortsCIDRs,
-		SSHCIDRs:       a.SSHCIDRs,
+		AccessCIDRsAPI:       a.AccessCIDRsAPI,
+		AccessCIDRsNodePorts: a.AccessCIDRsNodePorts,
+		AccessCIDRsSSH:       a.AccessCIDRsSSH,
 		ControlPlane:   a.ControlPlane,
 		NodeGroups:     a.NodeGroups,
 		StateBackend:   a.StateBackend,
