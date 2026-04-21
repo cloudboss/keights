@@ -21,44 +21,27 @@
 package tree
 
 import (
-	"context"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/cloudboss/keights/internal/deploy"
 	"github.com/spf13/cobra"
 )
 
-var (
-	ClusterName string
-	Region      string
+var autoApprove bool
 
-	RootCmd = &cobra.Command{
-		Use:              "keights",
-		Short:            "Self hosted Kubernetes on AWS",
-		SilenceUsage:     true,
-		TraverseChildren: true,
-	}
-)
-
-func init() {
-	RootCmd.PersistentFlags().StringVar(
-		&ClusterName, "cluster-name", "", "name of the cluster",
-	)
-	RootCmd.PersistentFlags().StringVar(
-		&Region, "region", "", "AWS region (overrides SDK defaults)",
-	)
-	RootCmd.AddCommand(DeployCmd)
-	RootCmd.AddCommand(KubeconfigCmd)
-	RootCmd.AddCommand(KubectlCmd)
-	RootCmd.AddCommand(QuickstartCmd)
-	RootCmd.AddCommand(TokenCmd)
-	RootCmd.AddCommand(VersionCmd)
+var DeployCmd = &cobra.Command{
+	Use:   "deploy <directory>",
+	Short: "Deploy a keights cluster using Terraform",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return deploy.Run(deploy.Options{
+			Dir:         args[0],
+			AutoApprove: autoApprove,
+		})
+	},
 }
 
-func loadAWSConfig(ctx context.Context) (aws.Config, error) {
-	var opts []func(*config.LoadOptions) error
-	if Region != "" {
-		opts = append(opts, config.WithRegion(Region))
-	}
-	return config.LoadDefaultConfig(ctx, opts...)
+func init() {
+	DeployCmd.Flags().BoolVar(
+		&autoApprove, "auto-approve", false,
+		"skip interactive approval for terraform apply",
+	)
 }

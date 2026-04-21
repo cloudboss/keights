@@ -18,47 +18,50 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tree
+package deploy
 
 import (
-	"context"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/spf13/cobra"
+	"os"
+	"path/filepath"
+	"testing"
 )
 
-var (
-	ClusterName string
-	Region      string
-
-	RootCmd = &cobra.Command{
-		Use:              "keights",
-		Short:            "Self hosted Kubernetes on AWS",
-		SilenceUsage:     true,
-		TraverseChildren: true,
+func TestValidateDir_NonexistentDir(t *testing.T) {
+	err := validateDir("/nonexistent/path")
+	if err == nil {
+		t.Fatal("expected error for nonexistent directory")
 	}
-)
-
-func init() {
-	RootCmd.PersistentFlags().StringVar(
-		&ClusterName, "cluster-name", "", "name of the cluster",
-	)
-	RootCmd.PersistentFlags().StringVar(
-		&Region, "region", "", "AWS region (overrides SDK defaults)",
-	)
-	RootCmd.AddCommand(DeployCmd)
-	RootCmd.AddCommand(KubeconfigCmd)
-	RootCmd.AddCommand(KubectlCmd)
-	RootCmd.AddCommand(QuickstartCmd)
-	RootCmd.AddCommand(TokenCmd)
-	RootCmd.AddCommand(VersionCmd)
 }
 
-func loadAWSConfig(ctx context.Context) (aws.Config, error) {
-	var opts []func(*config.LoadOptions) error
-	if Region != "" {
-		opts = append(opts, config.WithRegion(Region))
+func TestValidateDir_NotADirectory(t *testing.T) {
+	f, err := os.CreateTemp("", "not-a-dir-*")
+	if err != nil {
+		t.Fatal(err)
 	}
-	return config.LoadDefaultConfig(ctx, opts...)
+	defer os.Remove(f.Name())
+	f.Close()
+
+	err = validateDir(f.Name())
+	if err == nil {
+		t.Fatal("expected error for non-directory path")
+	}
+}
+
+func TestValidateDir_NoTerraformFiles(t *testing.T) {
+	dir := t.TempDir()
+	err := validateDir(dir)
+	if err == nil {
+		t.Fatal("expected error for directory with no .tf files")
+	}
+}
+
+func TestValidateDir_WithTerraformFiles(t *testing.T) {
+	dir := t.TempDir()
+	tfFile := filepath.Join(dir, "main.tf")
+	if err := os.WriteFile(tfFile, []byte(""), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateDir(dir); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 }

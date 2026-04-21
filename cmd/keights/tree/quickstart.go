@@ -25,6 +25,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
+	"github.com/cloudboss/keights/internal/deploy"
 	"github.com/cloudboss/keights/internal/quickstart"
 	"github.com/spf13/cobra"
 )
@@ -65,8 +66,15 @@ var QuickstartCmd = &cobra.Command{
 		fmt.Fprintf(cmd.OutOrStdout(),
 			"Wrote Terraform configuration to %s\n", answers.OutputDir,
 		)
+
+		if answers.DeployNow {
+			return deploy.Run(deploy.Options{
+				Dir: answers.OutputDir,
+			})
+		}
+
 		fmt.Fprintf(cmd.OutOrStdout(),
-			"Next: cd %s && terraform init && terraform apply\n", answers.OutputDir,
+			"Next: keights deploy %s\n", answers.OutputDir,
 		)
 		return nil
 	},

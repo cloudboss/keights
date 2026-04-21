@@ -51,6 +51,7 @@ ARCH = $(shell uname -m | sed 's/x86_64/amd64/')
 KEIGHTS_GO_DEPS = \
 	go.mod \
 	$(shell find cmd/keights -type f -path '*.go' ! -path '*_test.go') \
+	$(shell find internal/deploy -type f -path '*.go' ! -path '*_test.go') \
 	$(shell find internal/deps -type f -path '*.go' ! -path '*_test.go') \
 	$(shell find internal/nlb -type f -path '*.go' ! -path '*_test.go') \
 	$(shell find internal/quickstart -type f -path '*.go' ! -path '*_test.go') \
