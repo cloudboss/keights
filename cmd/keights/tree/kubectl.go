@@ -21,9 +21,10 @@
 package tree
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"syscall"
+	"os/exec"
 
 	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/cloudboss/keights/internal/deps"
@@ -43,21 +44,28 @@ var KubectlCmd = &cobra.Command{
 			return fmt.Errorf("unable to cache kubectl: %w", err)
 		}
 
-		env := os.Environ()
-
 		if ClusterName != "" {
 			kubeconfigPath, err := generateTempKubeconfig()
 			if err != nil {
 				return err
 			}
-			env = append(env, fmt.Sprintf("KUBECONFIG=%s", kubeconfigPath))
+			defer os.Remove(kubeconfigPath)
+			os.Setenv("KUBECONFIG", kubeconfigPath)
 		}
 
-		return syscall.Exec(
-			kubectlPath,
-			append([]string{"kubectl"}, args...),
-			env,
-		)
+		kc := exec.Command(kubectlPath, args...)
+		kc.Stdin = os.Stdin
+		kc.Stdout = os.Stdout
+		kc.Stderr = os.Stderr
+
+		if err := kc.Run(); err != nil {
+			var exitErr *exec.ExitError
+			if errors.As(err, &exitErr) {
+				os.Exit(exitErr.ExitCode())
+			}
+			return fmt.Errorf("kubectl failed: %w", err)
+		}
+		return nil
 	},
 }
 
