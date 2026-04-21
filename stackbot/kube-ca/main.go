@@ -35,7 +35,6 @@ import (
 	"github.com/cloudboss/keights/internal/whisperer"
 	certutil "k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/keyutil"
-	tokenutil "k8s.io/cluster-bootstrap/token/util"
 	kubeadmapi "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm"
 	kubeadmconstants "k8s.io/kubernetes/cmd/kubeadm/app/constants"
 	"k8s.io/kubernetes/cmd/kubeadm/app/util/pkiutil"
@@ -48,7 +47,6 @@ const (
 	controllerPrefixTemplate = "/keights/%s/controller"
 	etcdCACertName           = "etcd-ca.crt"
 	etcdCAKeyName            = "etcd-ca.key"
-	bootstrapTokenName       = "bootstrap-token"
 	tfActionDelete           = "delete"
 )
 
@@ -215,21 +213,6 @@ func genServiceAccountArtifacts(
 	return saSigningKey.Public(), nil
 }
 
-func genBootstrapToken(
-	ctx context.Context,
-	whisp whisperer.Whisperer,
-	path, kmsKeyID string,
-) error {
-	log.Printf("Generating bootstrap token\n")
-
-	token, err := tokenutil.GenerateBootstrapToken()
-	if err != nil {
-		return err
-	}
-	log.Printf("Storing %s\n", path)
-	return whisp.StoreParameter(ctx, path, kmsKeyID, token)
-}
-
 func genAPIServerKubeletClientCert(
 	ctx context.Context,
 	whisp whisperer.Whisperer,
@@ -290,7 +273,6 @@ func createOrUpdateCerts(
 	clusterScopedPath := pathFormatter(clusterPathTemplate, props.ClusterName)
 	controllerScopedPath := pathFormatter(controllerPathTemplate, props.ClusterName)
 
-	bootstrapTokenPath := clusterScopedPath(bootstrapTokenName)
 	caCertPath := clusterScopedPath(kubeadmconstants.CACertName)
 	caKeyPath := controllerScopedPath(kubeadmconstants.CAKeyName)
 	etcdCACertPath := controllerScopedPath(etcdCACertName)
@@ -396,19 +378,6 @@ func createOrUpdateCerts(
 			saPubKey, err = genServiceAccountArtifacts(ctx, whisp, saSigningKeyPath,
 				saSigningPubKeyPath, props.KMSKeyID, props.EncryptionAlgorithm)
 			return err
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Bootstrap token.
-	err = doUnless(
-		func() (bool, error) {
-			return whisp.HasParameters(ctx, bootstrapTokenPath)
-		},
-		func() error {
-			return genBootstrapToken(ctx, whisp, bootstrapTokenPath, props.KMSKeyID)
 		},
 	)
 	if err != nil {
