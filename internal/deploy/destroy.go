@@ -18,48 +18,39 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package tree
+package deploy
 
 import (
-	"context"
+	"fmt"
+	"os"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/spf13/cobra"
+	"github.com/cloudboss/keights/internal/deps"
 )
 
-var (
-	ClusterName string
-	Region      string
-
-	RootCmd = &cobra.Command{
-		Use:              "keights",
-		Short:            "Self hosted Kubernetes on AWS",
-		SilenceUsage:     true,
-		TraverseChildren: true,
+func Destroy(opts Options) error {
+	if err := validateDir(opts.Dir); err != nil {
+		return err
 	}
-)
 
-func init() {
-	RootCmd.PersistentFlags().StringVar(
-		&ClusterName, "cluster-name", "", "name of the cluster",
-	)
-	RootCmd.PersistentFlags().StringVar(
-		&Region, "region", "", "AWS region (overrides SDK defaults)",
-	)
-	RootCmd.AddCommand(DeployCmd)
-	RootCmd.AddCommand(DestroyCmd)
-	RootCmd.AddCommand(KubeconfigCmd)
-	RootCmd.AddCommand(KubectlCmd)
-	RootCmd.AddCommand(QuickstartCmd)
-	RootCmd.AddCommand(TokenCmd)
-	RootCmd.AddCommand(VersionCmd)
-}
-
-func loadAWSConfig(ctx context.Context) (aws.Config, error) {
-	var opts []func(*config.LoadOptions) error
-	if Region != "" {
-		opts = append(opts, config.WithRegion(Region))
+	tfPath, err := deps.Ensure(deps.Terraform)
+	if err != nil {
+		return fmt.Errorf("unable to cache terraform: %w", err)
 	}
-	return config.LoadDefaultConfig(ctx, opts...)
+
+	if err := runTerraform(tfPath, opts.Dir, "init"); err != nil {
+		return fmt.Errorf("terraform init failed: %w", err)
+	}
+
+	args := []string{"destroy"}
+	if opts.AutoApprove {
+		args = append(args, "-auto-approve")
+	}
+
+	if err := runTerraform(tfPath, opts.Dir, args...); err != nil {
+		return fmt.Errorf("terraform destroy failed: %w", err)
+	}
+
+	fmt.Fprintln(os.Stderr, "\nDestroy complete.")
+
+	return nil
 }
