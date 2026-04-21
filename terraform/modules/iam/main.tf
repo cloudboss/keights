@@ -534,7 +534,10 @@ resource "aws_iam_policy" "lambda_kube_ca" {
       {
         Effect = "Allow"
         Action = [
+          "ssm:DeleteParameter",
+          "ssm:DeleteParameters",
           "ssm:GetParameters",
+          "ssm:GetParametersByPath",
           "ssm:PutParameter",
         ]
         Resource = [

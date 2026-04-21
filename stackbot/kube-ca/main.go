@@ -42,11 +42,14 @@ import (
 )
 
 const (
-	clusterPathTemplate    = "/keights/%s/cluster/%s"
-	controllerPathTemplate = "/keights/%s/controller/%s"
-	etcdCACertName         = "etcd-ca.crt"
-	etcdCAKeyName          = "etcd-ca.key"
-	bootstrapTokenName     = "bootstrap-token"
+	clusterPathTemplate      = "/keights/%s/cluster/%s"
+	controllerPathTemplate   = "/keights/%s/controller/%s"
+	clusterPrefixTemplate    = "/keights/%s/cluster"
+	controllerPrefixTemplate = "/keights/%s/controller"
+	etcdCACertName           = "etcd-ca.crt"
+	etcdCAKeyName            = "etcd-ca.key"
+	bootstrapTokenName       = "bootstrap-token"
+	tfActionDelete           = "delete"
 )
 
 var (
@@ -64,6 +67,14 @@ type Properties struct {
 	ClusterName         string
 	EncryptionAlgorithm kubeadmapi.EncryptionAlgorithmType
 	KMSKeyID            string
+}
+
+// event is the payload delivered by aws_lambda_invocation with lifecycle_scope = "CRUD".
+// Terraform wraps the configured input in a "tf" envelope carrying the lifecycle action.
+type event struct {
+	TF struct {
+		Action string `json:"action"`
+	} `json:"tf"`
 }
 
 func pathFormatter(template, prefix string) func(string) string {
@@ -407,12 +418,27 @@ func createOrUpdateCerts(
 	return saPubKey, nil
 }
 
-func handleRequest(ctx context.Context) (map[string]string, error) {
+func deleteCerts(ctx context.Context, props Properties, whisp whisperer.Whisperer) error {
+	prefixes := []string{
+		fmt.Sprintf(clusterPrefixTemplate, props.ClusterName),
+		fmt.Sprintf(controllerPrefixTemplate, props.ClusterName),
+	}
+	for _, prefix := range prefixes {
+		log.Printf("Deleting SSM parameters under %s\n", prefix)
+		if err := whisp.DeleteByPath(ctx, prefix); err != nil {
+			return fmt.Errorf("deleting parameters under %s: %w", prefix, err)
+		}
+	}
+	return nil
+}
+
+func handleRequest(ctx context.Context, e event) (map[string]string, error) {
 	env, err := environment.EnsureEnvironment(requiredEnvironment)
 	if err != nil {
 		return nil, err
 	}
 	log.Printf("Environment: %+v\n", env)
+	log.Printf("Terraform action: %q\n", e.TF.Action)
 
 	clusterName := env["CLUSTER_NAME"]
 	encryptionAlgorithm := kubeadmapi.EncryptionAlgorithmType(env["ENCRYPTION_ALGORITHM"])
@@ -430,6 +456,10 @@ func handleRequest(ctx context.Context) (map[string]string, error) {
 	}
 
 	whisp := whisperer.NewSSMWhisperer(cfg)
+
+	if e.TF.Action == tfActionDelete {
+		return nil, deleteCerts(ctx, props, whisp)
+	}
 
 	saPubKey, err := createOrUpdateCerts(ctx, props, whisp)
 	if err != nil {

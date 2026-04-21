@@ -146,8 +146,17 @@ module "lambda_kube_ca" {
 }
 
 resource "aws_lambda_invocation" "kube_ca" {
-  function_name = module.lambda_kube_ca.lambda.function_name
-  input         = jsonencode({})
+  function_name   = module.lambda_kube_ca.lambda.function_name
+  input           = jsonencode({})
+  lifecycle_scope = "CRUD"
+
+  # Keep the role's policy attachment alive until after the delete invocation
+  # runs; otherwise Terraform may tear the attachment down first, stripping the
+  # Lambda's permissions mid-destroy.
+  depends_on = [
+    module.iam.iam_role_policy_attachment_lambda_kube_ca,
+    module.iam.iam_role_policy_attachment_lambda_kube_ca_logs,
+  ]
 }
 
 module "load_balancer" {

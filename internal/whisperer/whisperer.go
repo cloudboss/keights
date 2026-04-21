@@ -33,18 +33,32 @@ type Whisperer interface {
 	ForceStoreParameter(ctx context.Context, path, kmsKeyID, content string) error
 	StoreParameter(ctx context.Context, path, kmsKeyID, content string) error
 	DeleteParameter(ctx context.Context, path string) error
+	DeleteByPath(ctx context.Context, path string) error
 	HasParameters(ctx context.Context, paths ...string) (bool, error)
 	GetParameter(ctx context.Context, path string) (*string, error)
+}
+
+type ssmAPI interface {
+	ssm.DescribeParametersAPIClient
+	ssm.GetParametersByPathAPIClient
+	DeleteParameter(context.Context, *ssm.DeleteParameterInput,
+		...func(*ssm.Options)) (*ssm.DeleteParameterOutput, error)
+	DeleteParameters(context.Context, *ssm.DeleteParametersInput,
+		...func(*ssm.Options)) (*ssm.DeleteParametersOutput, error)
+	GetParameters(context.Context, *ssm.GetParametersInput,
+		...func(*ssm.Options)) (*ssm.GetParametersOutput, error)
+	PutParameter(context.Context, *ssm.PutParameterInput,
+		...func(*ssm.Options)) (*ssm.PutParameterOutput, error)
 }
 
 var _ Whisperer = (*whisperer)(nil)
 
 type whisperer struct {
-	SSMClient *ssm.Client
+	ssm ssmAPI
 }
 
 func NewSSMWhisperer(cfg aws.Config) *whisperer {
-	return &whisperer{SSMClient: ssm.NewFromConfig(cfg)}
+	return &whisperer{ssm: ssm.NewFromConfig(cfg)}
 }
 
 func (w *whisperer) storeParameter(
@@ -61,7 +75,7 @@ func (w *whisperer) storeParameter(
 	if kmsKeyID != "" {
 		input.KeyId = &kmsKeyID
 	}
-	_, err := w.SSMClient.PutParameter(ctx, input)
+	_, err := w.ssm.PutParameter(ctx, input)
 	return err
 }
 
@@ -77,8 +91,42 @@ func (w *whisperer) ForceStoreParameter(
 }
 
 func (w *whisperer) DeleteParameter(ctx context.Context, path string) error {
-	_, err := w.SSMClient.DeleteParameter(ctx, &ssm.DeleteParameterInput{Name: &path})
+	_, err := w.ssm.DeleteParameter(ctx, &ssm.DeleteParameterInput{Name: &path})
 	return err
+}
+
+// DeleteByPath deletes every parameter under the given path prefix, recursively. It is a
+// no-op when no parameters are found.
+func (w *whisperer) DeleteByPath(ctx context.Context, path string) error {
+	recursive := true
+	paginator := ssm.NewGetParametersByPathPaginator(w.ssm,
+		&ssm.GetParametersByPathInput{Path: &path, Recursive: &recursive})
+	names := []string{}
+	for paginator.HasMorePages() {
+		next, err := paginator.NextPage(ctx)
+		if err != nil {
+			return err
+		}
+		for _, parameter := range next.Parameters {
+			if parameter.Name != nil {
+				names = append(names, *parameter.Name)
+			}
+		}
+	}
+	// DeleteParameters accepts at most 10 names per call.
+	const batchSize = 10
+	for start := 0; start < len(names); start += batchSize {
+		end := start + batchSize
+		if end > len(names) {
+			end = len(names)
+		}
+		_, err := w.ssm.DeleteParameters(ctx,
+			&ssm.DeleteParametersInput{Names: names[start:end]})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // HasParameters checks SSM Parameter Store for the existence of the given parameters. All
@@ -93,7 +141,7 @@ func (w *whisperer) HasParameters(ctx context.Context, paths ...string) (bool, e
 		},
 	}
 	parameters := []types.ParameterMetadata{}
-	paginator := ssm.NewDescribeParametersPaginator(w.SSMClient,
+	paginator := ssm.NewDescribeParametersPaginator(w.ssm,
 		&ssm.DescribeParametersInput{ParameterFilters: filters})
 	for paginator.HasMorePages() {
 		next, err := paginator.NextPage(ctx)
@@ -108,7 +156,7 @@ func (w *whisperer) HasParameters(ctx context.Context, paths ...string) (bool, e
 
 func (w *whisperer) GetParameter(ctx context.Context, path string) (*string, error) {
 	withDecryption := true
-	response, err := w.SSMClient.GetParameters(ctx, &ssm.GetParametersInput{
+	response, err := w.ssm.GetParameters(ctx, &ssm.GetParametersInput{
 		Names:          []string{path},
 		WithDecryption: &withDecryption,
 	})

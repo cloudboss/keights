@@ -89,3 +89,11 @@ output "iam_policy_lambda_kube_ca" {
 output "iam_role_lambda_kube_ca" {
   value = aws_iam_role.lambda_kube_ca
 }
+
+output "iam_role_policy_attachment_lambda_kube_ca" {
+  value = aws_iam_role_policy_attachment.lambda_kube_ca
+}
+
+output "iam_role_policy_attachment_lambda_kube_ca_logs" {
+  value = aws_iam_role_policy_attachment.lambda_kube_ca_logs
+}
