@@ -112,10 +112,10 @@ func handleRecord(
 	}
 
 	// asgevent.Handle() has already validated map values
-	dnsTTL, _ := env[dnsTTLEnv]
-	hostBaseName, _ := env[hostBaseNameEnv]
-	hostedZoneName, _ := env[hostedZoneNameEnv]
-	hostedZoneID, _ := env[hostedZoneIDEnv]
+	dnsTTL := env[dnsTTLEnv]
+	hostBaseName := env[hostBaseNameEnv]
+	hostedZoneName := env[hostedZoneNameEnv]
+	hostedZoneID := env[hostedZoneIDEnv]
 
 	ttl, err := strconv.ParseInt(dnsTTL, 10, 64)
 	if err != nil {

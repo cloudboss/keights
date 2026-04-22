@@ -78,14 +78,27 @@ func ecdsaPublicKeyToJWK(pub *ecdsa.PublicKey) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	// pub.Bytes() returns SEC1 uncompressed form: 0x04 || X || Y.
+	raw, err := pub.Bytes()
+	if err != nil {
+		return nil, fmt.Errorf("unable to serialize ECDSA public key: %w", err)
+	}
+	if len(raw) != 1+2*size {
+		return nil, fmt.Errorf(
+			"unexpected ECDSA public key length: got %d, want %d",
+			len(raw), 1+2*size,
+		)
+	}
+	x := raw[1 : 1+size]
+	y := raw[1+size:]
 	jwk := map[string]string{
 		"kty": "EC",
 		"crv": crv,
 		"alg": alg,
 		"use": "sig",
 		"kid": kid,
-		"x":   b64EncodeURL(bigIntBytes(pub.X, size)),
-		"y":   b64EncodeURL(bigIntBytes(pub.Y, size)),
+		"x":   b64EncodeURL(x),
+		"y":   b64EncodeURL(y),
 	}
 	return jwk, nil
 }

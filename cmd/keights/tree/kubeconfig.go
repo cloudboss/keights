@@ -83,7 +83,7 @@ var KubeconfigCmd = &cobra.Command{
 func init() {
 	KubeconfigCmd.Flags().StringVarP(&kubeconfigOutput, "output", "o", "",
 		`output file path, or "-" for stdout`)
-	KubeconfigCmd.MarkFlagRequired("output")
+	_ = KubeconfigCmd.MarkFlagRequired("output")
 }
 
 func buildKubeconfig(

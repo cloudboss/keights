@@ -55,7 +55,7 @@ func dynamic(ctx context.Context, imdsClient *imds.Client, path string) ([]byte,
 	if err != nil {
 		return nil, err
 	}
-	defer response.Content.Close()
+	defer func() { _ = response.Content.Close() }()
 	return io.ReadAll(response.Content)
 }
 
@@ -64,7 +64,7 @@ func metadata(ctx context.Context, imdsClient *imds.Client, path string) ([]byte
 	if err != nil {
 		return nil, err
 	}
-	defer response.Content.Close()
+	defer func() { _ = response.Content.Close() }()
 	return io.ReadAll(response.Content)
 }
 
@@ -105,12 +105,15 @@ func DoIt(ctx context.Context, stackName, status, resource string) error {
 	}
 	earl := constructURL(stackName, status, resource, doc.InstanceID, string(region))
 	request, err := http.NewRequest("GET", earl, nil)
+	if err != nil {
+		return err
+	}
 	request.Header.Add("Authorization", header)
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return err

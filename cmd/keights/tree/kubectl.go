@@ -49,8 +49,10 @@ var KubectlCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			defer os.Remove(kubeconfigPath)
-			os.Setenv("KUBECONFIG", kubeconfigPath)
+			defer func() { _ = os.Remove(kubeconfigPath) }()
+			if err := os.Setenv("KUBECONFIG", kubeconfigPath); err != nil {
+				return fmt.Errorf("unable to set KUBECONFIG: %w", err)
+			}
 		}
 
 		kc := exec.Command(kubectlPath, args...)
@@ -97,7 +99,7 @@ func generateTempKubeconfig() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to create temp kubeconfig: %w", err)
 	}
-	defer tmpFile.Close()
+	defer func() { _ = tmpFile.Close() }()
 
 	if err := clientcmd.WriteToFile(kc, tmpFile.Name()); err != nil {
 		return "", fmt.Errorf("unable to write kubeconfig: %w", err)

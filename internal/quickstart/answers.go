@@ -77,40 +77,40 @@ type Defaults struct {
 }
 
 // PrintSummary writes a human-readable recap of the answers.
-func PrintSummary(w io.Writer, a Answers) {
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Cluster configuration")
-	fmt.Fprintln(w, "---------------------")
-	fmt.Fprintf(w, "  Cluster name:   %s\n", a.ClusterName)
-	fmt.Fprintf(w, "  Region:         %s\n", a.Region)
-	fmt.Fprintf(w, "  VPC:            %s\n", a.VPCID)
-	fmt.Fprintf(w, "  API access:     %s\n", orNoneList(a.AccessCIDRsAPI))
-	fmt.Fprintf(w, "  Node ports:     %s\n", orNoneList(a.AccessCIDRsNodePorts))
-	fmt.Fprintf(w, "  SSH access:     %s\n", orNoneList(a.AccessCIDRsSSH))
-	fmt.Fprintf(w, "  AMI:            %s (owner %s)\n", a.AMIName, a.AMIOwnerID)
-	fmt.Fprintf(w, "  K8s version:    %s\n", a.KubernetesVersion)
-	fmt.Fprintf(w, "  KMS key:        %s\n", orCreateNew(a.KMSKeyID))
-	fmt.Fprintf(w, "  IRSA:           %s\n", enabledOrDisabled(a.IRSAEnabled))
-	fmt.Fprintf(w, "  SSH key pair:   %s\n", orNone(a.SSHKeyPair))
-	fmt.Fprintf(w, "  State backend:  %s\n", stateBackendSummary(a.StateBackend))
-	fmt.Fprintf(w, "  Output dir:     %s\n", a.OutputDir)
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Control plane")
-	fmt.Fprintf(w, "  Instance type:  %s\n", a.ControlPlane.InstanceType)
-	fmt.Fprintf(w, "  Nodes:          %d\n", len(a.ControlPlane.SubnetIDs))
-	fmt.Fprintf(w, "  Subnets:        %s\n",
+func PrintSummary(w io.Writer, a Answers) error {
+	var b strings.Builder
+	b.WriteString("\nCluster configuration\n")
+	b.WriteString("---------------------\n")
+	fmt.Fprintf(&b, "  Cluster name:   %s\n", a.ClusterName)
+	fmt.Fprintf(&b, "  Region:         %s\n", a.Region)
+	fmt.Fprintf(&b, "  VPC:            %s\n", a.VPCID)
+	fmt.Fprintf(&b, "  API access:     %s\n", orNoneList(a.AccessCIDRsAPI))
+	fmt.Fprintf(&b, "  Node ports:     %s\n", orNoneList(a.AccessCIDRsNodePorts))
+	fmt.Fprintf(&b, "  SSH access:     %s\n", orNoneList(a.AccessCIDRsSSH))
+	fmt.Fprintf(&b, "  AMI:            %s (owner %s)\n", a.AMIName, a.AMIOwnerID)
+	fmt.Fprintf(&b, "  K8s version:    %s\n", a.KubernetesVersion)
+	fmt.Fprintf(&b, "  KMS key:        %s\n", orCreateNew(a.KMSKeyID))
+	fmt.Fprintf(&b, "  IRSA:           %s\n", enabledOrDisabled(a.IRSAEnabled))
+	fmt.Fprintf(&b, "  SSH key pair:   %s\n", orNone(a.SSHKeyPair))
+	fmt.Fprintf(&b, "  State backend:  %s\n", stateBackendSummary(a.StateBackend))
+	fmt.Fprintf(&b, "  Output dir:     %s\n", a.OutputDir)
+	b.WriteString("\nControl plane\n")
+	fmt.Fprintf(&b, "  Instance type:  %s\n", a.ControlPlane.InstanceType)
+	fmt.Fprintf(&b, "  Nodes:          %d\n", len(a.ControlPlane.SubnetIDs))
+	fmt.Fprintf(&b, "  Subnets:        %s\n",
 		strings.Join(a.ControlPlane.SubnetIDs, ", "))
-	fmt.Fprintln(w)
-	fmt.Fprintf(w, "Node groups (%d)\n", len(a.NodeGroups))
+	fmt.Fprintf(&b, "\nNode groups (%d)\n", len(a.NodeGroups))
 	for _, ng := range a.NodeGroups {
-		fmt.Fprintf(w, "  - %s\n", ng.Name)
-		fmt.Fprintf(w, "      instance_type:  %s\n", ng.InstanceType)
-		fmt.Fprintf(w, "      size:           min=%d desired=%d max=%d\n",
+		fmt.Fprintf(&b, "  - %s\n", ng.Name)
+		fmt.Fprintf(&b, "      instance_type:  %s\n", ng.InstanceType)
+		fmt.Fprintf(&b, "      size:           min=%d desired=%d max=%d\n",
 			ng.MinSize, ng.DesiredSize, ng.MaxSize)
-		fmt.Fprintf(w, "      subnets:        %s\n",
+		fmt.Fprintf(&b, "      subnets:        %s\n",
 			strings.Join(ng.SubnetIDs, ", "))
 	}
-	fmt.Fprintln(w)
+	b.WriteString("\n")
+	_, err := io.WriteString(w, b.String())
+	return err
 }
 
 func enabledOrDisabled(b bool) string {

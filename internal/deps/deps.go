@@ -106,7 +106,7 @@ func Ensure(dep Dependency) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to download %s: %w", dep.Name, err)
 	}
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	if err := verifyChecksum(tmpFile, expectedHash); err != nil {
 		return "", fmt.Errorf("unable to verify %s: %w", dep.Name, err)
@@ -142,7 +142,7 @@ func download(url, dir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("received http %d from %s", resp.StatusCode, url)
@@ -152,7 +152,7 @@ func download(url, dir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer tmp.Close()
+	defer func() { _ = tmp.Close() }()
 
 	var reader io.Reader = resp.Body
 	if size := contentLength(resp); size > 0 {
@@ -163,7 +163,7 @@ func download(url, dir string) (string, error) {
 	}
 
 	if _, err := io.Copy(tmp, reader); err != nil {
-		os.Remove(tmp.Name())
+		_ = os.Remove(tmp.Name())
 		return "", err
 	}
 
@@ -221,7 +221,7 @@ func verifyChecksum(path, expected string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
@@ -251,7 +251,7 @@ func extractZip(zipPath, destPath, binaryName string) error {
 	if err != nil {
 		return err
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	for _, f := range r.File {
 		if f.Name != binaryName {
@@ -261,13 +261,13 @@ func extractZip(zipPath, destPath, binaryName string) error {
 		if err != nil {
 			return err
 		}
-		defer rc.Close()
+		defer func() { _ = rc.Close() }()
 
 		out, err := os.Create(destPath)
 		if err != nil {
 			return err
 		}
-		defer out.Close()
+		defer func() { _ = out.Close() }()
 
 		_, err = io.Copy(out, rc)
 		return err

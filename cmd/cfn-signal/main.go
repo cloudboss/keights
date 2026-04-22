@@ -23,6 +23,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 
 	cfnsignal "github.com/cloudboss/keights/internal/cfn-signal"
 	"github.com/spf13/cobra"
@@ -54,5 +55,7 @@ func init() {
 }
 
 func main() {
-	cfnSignalCmd.Execute()
+	if err := cfnSignalCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

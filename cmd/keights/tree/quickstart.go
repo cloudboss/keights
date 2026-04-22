@@ -90,7 +90,9 @@ If you run with --non-interactive, you must provide configuration via flags. Exa
 			answers = a
 		}
 
-		quickstart.PrintSummary(cmd.OutOrStdout(), *answers)
+		if err := quickstart.PrintSummary(cmd.OutOrStdout(), *answers); err != nil {
+			return err
+		}
 
 		if len(moduleSource) == 0 {
 			moduleSource = quickstart.ModuleSourceForVersion(Version)
@@ -101,9 +103,11 @@ If you run with --non-interactive, you must provide configuration via flags. Exa
 		if err := quickstart.Render(*answers, opts); err != nil {
 			return fmt.Errorf("unable to render Terraform: %w", err)
 		}
-		fmt.Fprintf(cmd.OutOrStdout(),
+		if _, err := fmt.Fprintf(cmd.OutOrStdout(),
 			"Wrote Terraform configuration to %s\n", answers.OutputDir,
-		)
+		); err != nil {
+			return err
+		}
 
 		if answers.DeployNow {
 			return deploy.Run(deploy.Options{
@@ -111,10 +115,10 @@ If you run with --non-interactive, you must provide configuration via flags. Exa
 			})
 		}
 
-		fmt.Fprintf(cmd.OutOrStdout(),
+		_, err = fmt.Fprintf(cmd.OutOrStdout(),
 			"Next: keights deploy %s\n", answers.OutputDir,
 		)
-		return nil
+		return err
 	},
 }
 
@@ -153,5 +157,5 @@ func init() {
 	f.BoolVar(&qsCfg.Deploy, "deploy", false,
 		"run terraform apply after generating configuration")
 	f.StringVar(&moduleSource, "module-source", "", "override terraform module source URL")
-	QuickstartCmd.Flags().MarkHidden("module-source")
+	_ = QuickstartCmd.Flags().MarkHidden("module-source")
 }

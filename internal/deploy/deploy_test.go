@@ -38,8 +38,8 @@ func TestValidateDir_NotADirectory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(f.Name())
-	f.Close()
+	defer func() { _ = os.Remove(f.Name()) }()
+	_ = f.Close()
 
 	err = validateDir(f.Name())
 	if err == nil {

@@ -41,7 +41,7 @@ func (m *mockELBv2) DescribeLoadBalancers(
 	params *elbv2.DescribeLoadBalancersInput,
 	optFns ...func(*elbv2.Options),
 ) (*elbv2.DescribeLoadBalancersOutput, error) {
-	if params.Names != nil && len(params.Names) > 0 {
+	if len(params.Names) > 0 {
 		var filtered []types.LoadBalancer
 		for _, lb := range m.loadBalancers {
 			for _, name := range params.Names {

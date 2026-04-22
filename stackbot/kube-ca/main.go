@@ -51,8 +51,8 @@ const (
 )
 
 var (
-	certDecodeError = errors.New("could not decode CA certificate")
-	invalidKeyError = errors.New("private key is not in expected format")
+	errCertDecode = errors.New("could not decode CA certificate")
+	errInvalidKey = errors.New("private key is not in expected format")
 
 	requiredEnvironment = []string{
 		"CLUSTER_NAME",
@@ -97,7 +97,7 @@ func retrieveCA(
 	}
 	certBlock, _ := pem.Decode([]byte(*certString))
 	if certBlock == nil {
-		return nil, nil, certDecodeError
+		return nil, nil, errCertDecode
 	}
 	caCert, err = x509.ParseCertificate(certBlock.Bytes)
 	if err != nil {
@@ -113,7 +113,7 @@ func retrieveCA(
 	}
 	caKey, ok := parsedKey.(crypto.Signer)
 	if !ok {
-		return nil, nil, invalidKeyError
+		return nil, nil, errInvalidKey
 	}
 	return caCert, caKey, err
 }
@@ -155,6 +155,9 @@ func genCA(
 		EncryptionAlgorithm: encryptionAlgorithm,
 		Config:              certutil.Config{CommonName: commonName},
 	})
+	if err != nil {
+		return nil, nil, err
+	}
 	caCertPEMBytes, err := certutil.EncodeCertificates(caCert)
 	if err != nil {
 		return nil, nil, err
