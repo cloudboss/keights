@@ -21,6 +21,8 @@
 PROJECT = $(shell basename ${PWD})
 VERSION =
 DIR_OUT = _output
+DIR_STG = $(DIR_OUT)/staging
+DIR_RELEASE = $(DIR_OUT)/release
 DIR_ROOT = $(realpath $(CURDIR))
 
 KUBERNETES_VERSION = 1.34.5
@@ -48,6 +50,9 @@ TERRAFORM_TARBALL = $(DIR_OUT)/keights-terraform-$(VERSION).tar.gz
 OS = $(shell uname -s | tr '[:upper:]' '[:lower:]')
 ARCH = $(shell uname -m | sed 's/x86_64/amd64/')
 
+DIR_STG_KEIGHTS = $(DIR_STG)/keights/$(OS)/$(ARCH)
+KEIGHTS_TARBALL = $(DIR_RELEASE)/keights-$(VERSION)-$(OS)-$(ARCH).tar.gz
+
 KEIGHTS_GO_DEPS = \
 	go.mod \
 	$(shell find cmd/keights -type f -path '*.go' ! -path '*_test.go') \
@@ -67,7 +72,7 @@ STACKBOT_ZIPS = \
 	$(DIR_OUT)/instance-attr/instance-attr-$(VERSION).zip \
 	$(DIR_OUT)/kube-ca/kube-ca-$(VERSION).zip
 
-$(DIR_OUT)/keights-$(OS)-$(ARCH): $(KEIGHTS_GO_DEPS) | $(DIR_OUT) $(HAS_IMAGE_LOCAL)
+$(DIR_STG_KEIGHTS)/keights: $(KEIGHTS_GO_DEPS) | $(DIR_STG_KEIGHTS)/ $(HAS_IMAGE_LOCAL)
 	@[ -n "$(VERSION)" ] || (echo "VERSION is required"; exit 1)
 	@[ $$(echo $(VERSION) | cut -c 1) = v ] || (echo "VERSION must begin with a 'v'"; exit 1)
 	@docker run --rm -t \
@@ -80,18 +85,26 @@ $(DIR_OUT)/keights-$(OS)-$(ARCH): $(KEIGHTS_GO_DEPS) | $(DIR_OUT) $(HAS_IMAGE_LO
 		-w /code \
 		$(CTR_IMAGE_LOCAL) \
 		go build -ldflags "$(KEIGHTS_LDFLAGS)" \
-			-o /code/$(DIR_OUT)/keights-$(OS)-$(ARCH) \
+			-o /code/$(DIR_STG_KEIGHTS)/keights \
 			./cmd/keights
 
-keights: $(DIR_OUT)/keights-$(OS)-$(ARCH)
+$(KEIGHTS_TARBALL): $(DIR_STG_KEIGHTS)/keights | $(DIR_RELEASE)/ $(HAS_COMMAND_FAKEROOT)
+	@[ -n "$(VERSION)" ] || (echo "VERSION is required"; exit 1)
+	@[ $$(echo $(VERSION) | cut -c 1) = v ] || (echo "VERSION must begin with a 'v'"; exit 1)
+	@cd $(DIR_STG_KEIGHTS) && \
+		fakeroot tar -czf $(DIR_ROOT)/$(KEIGHTS_TARBALL) keights
 
-keights-linux-%:
-	@$(MAKE) keights OS=linux ARCH=$*
+keights: $(DIR_STG_KEIGHTS)/keights
 
-keights-darwin-%:
-	@$(MAKE) keights OS=darwin ARCH=$*
+release-one: $(KEIGHTS_TARBALL)
 
-keights-release: keights-linux-amd64 keights-darwin-amd64 keights-darwin-arm64
+release-linux-%:
+	@$(MAKE) OS=linux ARCH=$* VERSION=$(VERSION) release-one
+
+release-darwin-%:
+	@$(MAKE) OS=darwin ARCH=$* VERSION=$(VERSION) release-one
+
+release: release-linux-amd64 release-darwin-amd64 release-darwin-arm64
 
 .DEFAULT_GOAL = stackbot
 
@@ -225,4 +238,4 @@ clean:
 	@chmod -R +w $(DIR_OUT)/go
 	@rm -rf $(DIR_OUT)
 
-.PHONY: keights keights-release stackbot terraform-release test clean image
+.PHONY: keights release-one release stackbot terraform-release test clean image
