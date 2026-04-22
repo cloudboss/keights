@@ -30,7 +30,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var qsCfg quickstart.Config
+var (
+	qsCfg        quickstart.Config
+	moduleSource string
+)
 
 var QuickstartCmd = &cobra.Command{
 	Use:   "quickstart",
@@ -89,8 +92,11 @@ If you run with --non-interactive, you must provide configuration via flags. Exa
 
 		quickstart.PrintSummary(cmd.OutOrStdout(), *answers)
 
+		if len(moduleSource) == 0 {
+			moduleSource = quickstart.ModuleSourceForVersion(Version)
+		}
 		opts := quickstart.RenderOptions{
-			ModuleSource: quickstart.ModuleSourceForVersion(Version),
+			ModuleSource: moduleSource,
 		}
 		if err := quickstart.Render(*answers, opts); err != nil {
 			return fmt.Errorf("unable to render Terraform: %w", err)
@@ -144,4 +150,6 @@ func init() {
 		"directory to write Terraform configuration")
 	f.BoolVar(&qsCfg.Deploy, "deploy", false,
 		"run terraform apply after generating configuration")
+	f.StringVar(&moduleSource, "module-source", "", "override terraform module source URL")
+	QuickstartCmd.Flags().MarkHidden("module-source")
 }
