@@ -16,14 +16,15 @@ provider "aws" {
 module "keights" {
   source = "{{.ModuleSource}}"
 
-  access_cidrs  = local.access_cidrs
-  ami           = local.ami
-  cluster_name  = local.cluster_name
-  control_plane = local.control_plane
-  irsa_enabled  = local.irsa_enabled
-  kms_key_id    = local.kms_key_id
-  node_groups   = local.node_groups
-  vpc_id        = local.vpc_id
+  access_cidrs             = local.access_cidrs
+  ami                      = local.ami
+  cluster_name             = local.cluster_name
+  control_plane            = local.control_plane
+  irsa_enabled             = local.irsa_enabled
+  kms_key_id               = local.kms_key_id
+  kubernetes_configuration = { version = local.kubernetes_version }
+  node_groups              = local.node_groups
+  vpc_id                   = local.vpc_id
 }
 
 output "load_balancer_dns_name" {

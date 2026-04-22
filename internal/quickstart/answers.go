@@ -28,22 +28,23 @@ import (
 
 // Answers is the full set of user choices collected by the wizard.
 type Answers struct {
-	ClusterName    string
-	Region         string
-	VPCID          string
-	AccessCIDRsAPI    []string
+	ClusterName          string
+	Region               string
+	VPCID                string
+	AccessCIDRsAPI       []string
 	AccessCIDRsNodePorts []string
 	AccessCIDRsSSH       []string
-	AMIName        string
-	AMIOwnerID     string
-	KMSKeyID       string
-	SSHKeyPair     string
-	IRSAEnabled    bool
-	ControlPlane   ControlPlane
-	NodeGroups     []NodeGroup
-	StateBackend   StateBackend
-	OutputDir      string
-	DeployNow      bool
+	AMIName              string
+	AMIOwnerID           string
+	KMSKeyID             string
+	SSHKeyPair           string
+	IRSAEnabled          bool
+	KubernetesVersion    string
+	ControlPlane         ControlPlane
+	NodeGroups           []NodeGroup
+	StateBackend         StateBackend
+	OutputDir            string
+	DeployNow            bool
 }
 
 // StateBackend describes the Terraform state backend to configure in the
@@ -87,6 +88,7 @@ func PrintSummary(w io.Writer, a Answers) {
 	fmt.Fprintf(w, "  Node ports:     %s\n", orNoneList(a.AccessCIDRsNodePorts))
 	fmt.Fprintf(w, "  SSH access:     %s\n", orNoneList(a.AccessCIDRsSSH))
 	fmt.Fprintf(w, "  AMI:            %s (owner %s)\n", a.AMIName, a.AMIOwnerID)
+	fmt.Fprintf(w, "  K8s version:    %s\n", a.KubernetesVersion)
 	fmt.Fprintf(w, "  KMS key:        %s\n", orCreateNew(a.KMSKeyID))
 	fmt.Fprintf(w, "  IRSA:           %s\n", enabledOrDisabled(a.IRSAEnabled))
 	fmt.Fprintf(w, "  SSH key pair:   %s\n", orNone(a.SSHKeyPair))

@@ -67,19 +67,30 @@ type KeyPair struct {
 
 // AMI describes a keights AMI candidate for selection in the wizard.
 type AMI struct {
-	ID             string
-	Name           string
-	OwnerID        string
-	CreationDate   string
-	ContainerImage string
+	ID                string
+	Name              string
+	OwnerID           string
+	CreationDate      string
+	ContainerImage    string
+	KubernetesVersion string
 }
 
 func (a AMI) Label() string {
-	if a.ContainerImage != "" {
-		return fmt.Sprintf("%s  %s  (%s)", a.ID, a.Name, a.ContainerImage)
+	from := a.ContainerImage
+	if from == "" {
+		from = "unknown"
 	}
-	return fmt.Sprintf("%s  %s", a.ID, a.Name)
+	k8s := a.KubernetesVersion
+	if k8s == "" {
+		k8s = "unknown"
+	}
+	return fmt.Sprintf("id: %s, from: %s, kubernetes: %s", a.ID, from, k8s)
 }
+
+// kubernetesVersionTag is the AMI tag that records which Kubernetes version
+// the image was built for. Tooling reads it to pick an AMI for a given
+// Kubernetes version and to render the corresponding value into Terraform.
+const kubernetesVersionTag = "cloudboss.co/keights/kubernetes-version"
 
 // KMSKey describes a KMS key alias for selection in the wizard.
 type KMSKey struct {
@@ -193,11 +204,12 @@ func (d *Discoverer) AMIs(ctx context.Context) ([]AMI, error) {
 			continue
 		}
 		amis = append(amis, AMI{
-			ID:             aws(img.ImageId),
-			Name:           aws(img.Name),
-			OwnerID:        aws(img.OwnerId),
-			CreationDate:   aws(img.CreationDate),
-			ContainerImage: ci,
+			ID:                aws(img.ImageId),
+			Name:              aws(img.Name),
+			OwnerID:           aws(img.OwnerId),
+			CreationDate:      aws(img.CreationDate),
+			ContainerImage:    ci,
+			KubernetesVersion: tagValue(img.Tags, kubernetesVersionTag),
 		})
 	}
 	sort.Slice(amis, func(i, j int) bool {

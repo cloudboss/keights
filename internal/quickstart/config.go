@@ -31,26 +31,27 @@ import (
 
 // Config holds all inputs for non-interactive cluster configuration.
 type Config struct {
-	NonInteractive bool
-	ClusterName    string
-	Region         string
-	VPCID          string
-	AccessCIDRsAPI    []string
+	NonInteractive       bool
+	ClusterName          string
+	Region               string
+	VPCID                string
+	AccessCIDRsAPI       []string
 	AccessCIDRsNodePorts []string
 	AccessCIDRsSSH       []string
-	AMIName        string
-	AMIOwnerID     string
-	KMSKeyID       string
-	SSHKeyPair     string
-	IRSAEnabled    bool
-	ControlPlane   string
-	NodeGroups     []string
-	StateBackend   string
-	StateBucket    string
-	StateKey       string
-	StateRegion    string
-	OutputDir      string
-	Deploy         bool
+	AMIName              string
+	AMIOwnerID           string
+	KMSKeyID             string
+	SSHKeyPair           string
+	IRSAEnabled          bool
+	KubernetesVersion    string
+	ControlPlane         string
+	NodeGroups           []string
+	StateBackend         string
+	StateBucket          string
+	StateKey             string
+	StateRegion          string
+	OutputDir            string
+	Deploy               bool
 }
 
 // BuildAnswers validates a Config and resolves it into Answers, using the
@@ -91,11 +92,23 @@ func BuildAnswers(
 		}
 	}
 
-	amiName, amiOwnerID, err := resolveAMI(
+	amiName, amiOwnerID, amiK8sVersion, err := resolveAMI(
 		ctx, disc, cfg.AMIName, cfg.AMIOwnerID,
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	kubernetesVersion := cfg.KubernetesVersion
+	if kubernetesVersion == "" {
+		kubernetesVersion = amiK8sVersion
+	}
+	if kubernetesVersion == "" {
+		return nil, fmt.Errorf(
+			"unable to determine kubernetes version: pass --kubernetes-version " +
+				"or choose an AMI tagged with %q",
+			kubernetesVersionTag,
+		)
 	}
 
 	cp, err := parseControlPlane(cfg.ControlPlane)
@@ -127,19 +140,20 @@ func BuildAnswers(
 	}
 
 	return &Answers{
-		ClusterName:    cfg.ClusterName,
-		Region:         cfg.Region,
-		VPCID:          cfg.VPCID,
-		AccessCIDRsAPI:    cfg.AccessCIDRsAPI,
+		ClusterName:          cfg.ClusterName,
+		Region:               cfg.Region,
+		VPCID:                cfg.VPCID,
+		AccessCIDRsAPI:       cfg.AccessCIDRsAPI,
 		AccessCIDRsNodePorts: cfg.AccessCIDRsNodePorts,
 		AccessCIDRsSSH:       cfg.AccessCIDRsSSH,
-		AMIName:        amiName,
-		AMIOwnerID:     amiOwnerID,
-		KMSKeyID:       cfg.KMSKeyID,
-		SSHKeyPair:     cfg.SSHKeyPair,
-		IRSAEnabled:    cfg.IRSAEnabled,
-		ControlPlane:   cp,
-		NodeGroups:     nodeGroups,
+		AMIName:              amiName,
+		AMIOwnerID:           amiOwnerID,
+		KMSKeyID:             cfg.KMSKeyID,
+		SSHKeyPair:           cfg.SSHKeyPair,
+		IRSAEnabled:          cfg.IRSAEnabled,
+		KubernetesVersion:    kubernetesVersion,
+		ControlPlane:         cp,
+		NodeGroups:           nodeGroups,
 		StateBackend: StateBackend{
 			Type:   cfg.StateBackend,
 			Bucket: cfg.StateBucket,
@@ -167,30 +181,51 @@ func validateCIDRSliceRequired(cidrs []string) error {
 	return validateCIDRSlice(cidrs)
 }
 
+// resolveAMI returns the AMI name, owner ID, and Kubernetes version. If name
+// and ownerID are both provided by the caller, discovery is skipped and the
+// Kubernetes version comes back empty — the caller must supply it another way.
+// Otherwise discovery runs and the result that matches whichever of name/
+// ownerID the caller did provide wins; when neither is provided, the newest
+// keights AMI is chosen.
 func resolveAMI(
 	ctx context.Context,
 	disc *Discoverer,
 	name, ownerID string,
-) (string, string, error) {
+) (string, string, string, error) {
 	if name != "" && ownerID != "" {
-		return name, ownerID, nil
+		return name, ownerID, "", nil
 	}
 	amis, err := disc.AMIs(ctx)
 	if err != nil {
-		return "", "", fmt.Errorf("unable to discover AMIs: %w", err)
+		return "", "", "", fmt.Errorf("unable to discover AMIs: %w", err)
 	}
 	if len(amis) == 0 {
-		return "", "", fmt.Errorf(
+		return "", "", "", fmt.Errorf(
 			"no keights AMI found; provide ami-name and ami-owner-id",
 		)
 	}
-	if name == "" {
-		name = amis[0].Name
+	match := amis[0]
+	if name != "" || ownerID != "" {
+		found := false
+		for _, a := range amis {
+			if name != "" && a.Name != name {
+				continue
+			}
+			if ownerID != "" && a.OwnerID != ownerID {
+				continue
+			}
+			match = a
+			found = true
+			break
+		}
+		if !found {
+			return "", "", "", fmt.Errorf(
+				"no keights AMI found matching ami-name=%q ami-owner-id=%q",
+				name, ownerID,
+			)
+		}
 	}
-	if ownerID == "" {
-		ownerID = amis[0].OwnerID
-	}
-	return name, ownerID, nil
+	return match.Name, match.OwnerID, match.KubernetesVersion, nil
 }
 
 func parseControlPlane(spec string) (ControlPlane, error) {

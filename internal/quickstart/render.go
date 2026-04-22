@@ -51,21 +51,22 @@ type RenderOptions struct {
 
 // templateData is the view passed to text/template.
 type templateData struct {
-	ModuleSource   string
-	ClusterName    string
-	Region         string
-	VPCID          string
-	AMIName        string
-	AMIOwnerID     string
-	IRSAEnabled    bool
-	KMSKeyID       string
-	SSHKeyPair     string
+	ModuleSource         string
+	ClusterName          string
+	Region               string
+	VPCID                string
+	AMIName              string
+	AMIOwnerID           string
+	IRSAEnabled          bool
+	KMSKeyID             string
+	SSHKeyPair           string
+	KubernetesVersion    string
 	AccessCIDRsAPI       []string
 	AccessCIDRsNodePorts []string
 	AccessCIDRsSSH       []string
-	ControlPlane   ControlPlane
-	NodeGroups     []NodeGroup
-	StateBackend   StateBackend
+	ControlPlane         ControlPlane
+	NodeGroups           []NodeGroup
+	StateBackend         StateBackend
 }
 
 // Render writes main.tf and vars.tf into outputDir using the answers.
@@ -76,21 +77,22 @@ func Render(a Answers, opts RenderOptions) error {
 	}
 
 	data := templateData{
-		ModuleSource:   opts.ModuleSource,
-		ClusterName:    a.ClusterName,
-		Region:         a.Region,
-		VPCID:          a.VPCID,
-		AMIName:        a.AMIName,
-		AMIOwnerID:     a.AMIOwnerID,
-		IRSAEnabled:    a.IRSAEnabled,
-		KMSKeyID:       a.KMSKeyID,
-		SSHKeyPair:     a.SSHKeyPair,
+		ModuleSource:         opts.ModuleSource,
+		ClusterName:          a.ClusterName,
+		Region:               a.Region,
+		VPCID:                a.VPCID,
+		AMIName:              a.AMIName,
+		AMIOwnerID:           a.AMIOwnerID,
+		IRSAEnabled:          a.IRSAEnabled,
+		KMSKeyID:             a.KMSKeyID,
+		SSHKeyPair:           a.SSHKeyPair,
+		KubernetesVersion:    a.KubernetesVersion,
 		AccessCIDRsAPI:       a.AccessCIDRsAPI,
 		AccessCIDRsNodePorts: a.AccessCIDRsNodePorts,
 		AccessCIDRsSSH:       a.AccessCIDRsSSH,
-		ControlPlane:   a.ControlPlane,
-		NodeGroups:     a.NodeGroups,
-		StateBackend:   a.StateBackend,
+		ControlPlane:         a.ControlPlane,
+		NodeGroups:           a.NodeGroups,
+		StateBackend:         a.StateBackend,
 	}
 
 	files := []string{"main.tf.tmpl", "vars.tf.tmpl"}

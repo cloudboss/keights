@@ -230,6 +230,7 @@ func runMain(
 	cpCountStr := "1"
 	cpTypeSelected := "m5.large"
 	cpTypeCustom := ""
+	k8sVersion := ""
 	subnetOpts := subnetOptions(subnets)
 
 	form := huh.NewForm(
@@ -241,6 +242,16 @@ func runMain(
 				Height(8).
 				Value(&amiID),
 		),
+		huh.NewGroup(
+			huh.NewInput().
+				Title("Kubernetes version").
+				Description("The selected AMI has no "+kubernetesVersionTag+
+					" tag. Enter the version, e.g. 1.34.5.").
+				Value(&k8sVersion).
+				Validate(nonEmpty("kubernetes-version")),
+		).WithHideFunc(func() bool {
+			return amisByID[amiID].KubernetesVersion != ""
+		}),
 		huh.NewGroup(
 			huh.NewSelect[string]().
 				Title("KMS key").
@@ -317,6 +328,11 @@ func runMain(
 	img := amisByID[amiID]
 	a.AMIName = img.Name
 	a.AMIOwnerID = img.OwnerID
+	if img.KubernetesVersion != "" {
+		a.KubernetesVersion = img.KubernetesVersion
+	} else {
+		a.KubernetesVersion = k8sVersion
+	}
 	a.AccessCIDRsSSH = parseCIDRList(sshInput)
 	if cpTypeSelected == customInstanceType {
 		a.ControlPlane.InstanceType = cpTypeCustom

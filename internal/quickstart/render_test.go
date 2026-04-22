@@ -33,15 +33,16 @@ import (
 func TestRender(t *testing.T) {
 	dir := t.TempDir()
 	a := Answers{
-		ClusterName: "demo",
-		Region:      "us-east-1",
-		VPCID:       "vpc-abc",
-		AccessCIDRsAPI: []string{"10.0.0.0/16", "192.168.0.0/16"},
-		AMIName:     "keights-1.34.1",
-		AMIOwnerID:  "123456789012",
-		IRSAEnabled: true,
-		KMSKeyID:    "alias/keights-demo",
-		SSHKeyPair:  "mykey",
+		ClusterName:       "demo",
+		Region:            "us-east-1",
+		VPCID:             "vpc-abc",
+		AccessCIDRsAPI:    []string{"10.0.0.0/16", "192.168.0.0/16"},
+		AMIName:           "keights-1.34.1",
+		AMIOwnerID:        "123456789012",
+		IRSAEnabled:       true,
+		KubernetesVersion: "1.34.5",
+		KMSKeyID:          "alias/keights-demo",
+		SSHKeyPair:        "mykey",
 		ControlPlane: ControlPlane{
 			InstanceType: "m5.large",
 			SubnetIDs:    []string{"subnet-a", "subnet-b", "subnet-c"},
@@ -68,6 +69,8 @@ func TestRender(t *testing.T) {
 	mainStr := string(main)
 	assert.Contains(t, mainStr, `module "keights"`)
 	assert.Contains(t, mainStr, "v2.0.0-tarball")
+	assert.Contains(t, mainStr,
+		`kubernetes_configuration = { version = local.kubernetes_version }`)
 
 	vars, err := os.ReadFile(filepath.Join(dir, "vars.tf"))
 	require.NoError(t, err)
@@ -79,6 +82,7 @@ func TestRender(t *testing.T) {
 	assert.Contains(t, v, `owner = "123456789012"`)
 	assert.Contains(t, v, `irsa_enabled = true`)
 	assert.Contains(t, v, `kms_key_id = "alias/keights-demo"`)
+	assert.Contains(t, v, `kubernetes_version = "1.34.5"`)
 	assert.Contains(t, mainStr, `oidc_provider_arn`)
 	assert.Contains(t, v, `api        = ["10.0.0.0/16", "192.168.0.0/16"]`)
 	assert.Contains(t, v, `node_ports = []`)

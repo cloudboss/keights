@@ -136,6 +136,8 @@ func init() {
 	f.StringVar(&qsCfg.SSHKeyPair, "ssh-key-pair", "", "ec2 key pair name for ssh access")
 	f.BoolVar(&qsCfg.IRSAEnabled, "irsa", true,
 		"enable iam roles for service accounts")
+	f.StringVar(&qsCfg.KubernetesVersion, "kubernetes-version", "",
+		"kubernetes version (read from the selected AMI's tag if omitted)")
 	f.StringVar(&qsCfg.ControlPlane, "control-plane", "",
 		"control plane configuration. spec: type=X,subnets=s1:s2:s3")
 	f.StringArrayVar(&qsCfg.NodeGroups, "node-group", nil,

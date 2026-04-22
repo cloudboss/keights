@@ -22,6 +22,7 @@ locals {
   }
   irsa_enabled = {{.IRSAEnabled}}
   kms_key_id = {{if .KMSKeyID}}"{{.KMSKeyID}}"{{else}}null{{end}}
+  kubernetes_version = "{{.KubernetesVersion}}"
   node_groups = {
 {{- range .NodeGroups}}
     {{.Name}} = {
