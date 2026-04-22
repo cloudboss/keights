@@ -27,9 +27,10 @@ DIR_ROOT = $(realpath $(CURDIR))
 
 KUBERNETES_VERSION = 1.34.5
 IMAGE_REPOSITORY = ghcr.io/cloudboss/keights
-IMAGE_TAG =
 
 CTR_IMAGE_GO = golang:1.26.1-alpine3.23
+CTR_IMAGE_GOLANGCI = ghcr.io/cloudboss/golangci/golangci-lint:v2.11.4-alpine
+CTR_IMAGE_TERRAFORM = ghcr.io/cloudboss/hashicorp/terraform:1.14.8
 UID = $(shell id -u)
 GID = $(shell id -g)
 UID_SHA256 = $(shell echo -n $(UID) | sha256sum | awk '{print $$1}')
@@ -132,11 +133,11 @@ $(HAS_IMAGE_LOCAL): $(HAS_COMMAND_DOCKER)
 	@touch $(HAS_IMAGE_LOCAL)
 
 image: $(HAS_COMMAND_DOCKER)
-	@[ -n "$(IMAGE_TAG)" ] || (echo "IMAGE_TAG is required"; exit 1)
-	@[ $$(echo $(IMAGE_TAG) | cut -c 1) = v ] || (echo "IMAGE_TAG must begin with a 'v'"; exit 1)
+	@[ -n "$(VERSION)" ] || (echo "VERSION is required"; exit 1)
+	@[ $$(echo $(VERSION) | cut -c 1) = v ] || (echo "VERSION must begin with a 'v'"; exit 1)
 	@docker build \
 		--build-arg KUBERNETES_VERSION=$(KUBERNETES_VERSION) \
-		-t $(IMAGE_REPOSITORY):$(IMAGE_TAG) \
+		-t $(IMAGE_REPOSITORY):$(VERSION) \
 		-f image/Containerfile \
 		.
 
@@ -234,8 +235,27 @@ test: | $(HAS_IMAGE_LOCAL)
 		$(CTR_IMAGE_LOCAL) \
 		sh -c "go vet -v ./... && go test -v ./..."
 
+lint: $(HAS_COMMAND_DOCKER)
+	@docker run --rm -t \
+		-v $(DIR_ROOT):/code:z \
+		-w /code \
+		$(CTR_IMAGE_GOLANGCI) \
+		golangci-lint run --timeout 5m ./...
+
+terraform-validate: $(HAS_COMMAND_DOCKER)
+	@docker run --rm -t \
+		-u $(UID):$(GID) \
+		-v $(DIR_ROOT):/code:z \
+		-w /code \
+		-e HOME=/tmp \
+		--entrypoint /bin/sh \
+		$(CTR_IMAGE_TERRAFORM) \
+		-c "terraform fmt -check -recursive terraform && \
+			cd terraform && terraform init -backend=false && terraform validate"
+
 clean:
 	@chmod -R +w $(DIR_OUT)/go
 	@rm -rf $(DIR_OUT)
 
-.PHONY: keights release-one release stackbot terraform-release test clean image
+.PHONY: keights release-one release stackbot terraform-release test lint \
+	terraform-validate clean image
