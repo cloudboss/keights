@@ -1,0 +1,52 @@
+name: ci
+
+on:
+  push:
+    branches: [master, veetwo]
+  pull_request:
+
+env:
+  CI_VERSION: v0.0.0-ci-${{ github.sha }}
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: make test
+
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: make lint
+
+  terraform-validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: make terraform-validate
+
+  build-image:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: make image VERSION=${{ env.CI_VERSION }}
+
+  build-keights:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: make release-one VERSION=${{ env.CI_VERSION }} OS=linux ARCH=amd64
+
+  build-stackbot:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: make stackbot VERSION=${{ env.CI_VERSION }}
+
+  build-terraform:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: make terraform-release VERSION=${{ env.CI_VERSION }}
