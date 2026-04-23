@@ -148,7 +148,8 @@ func init() {
 		"version suffix for the lambda zip paths and function names "+
 			"(module default if omitted)")
 	f.StringVar(&qsCfg.ControlPlane, "control-plane", "",
-		"control plane configuration. spec: type=X,subnets=s1:s2:s3")
+		"control plane configuration. spec: "+
+			"type=X,subnets=s1:s2:s3[,internal=true|false]")
 	f.StringArrayVar(&qsCfg.NodeGroups, "node-group", nil,
 		"node group configuration, repeat for multiple groups. spec: "+
 			"name=X,type=Y,min=N,desired=N,max=N,subnets=s1:s2")

@@ -12,6 +12,9 @@ locals {
   cluster_name = "{{.ClusterName}}"
   control_plane = {
     instance_type = "{{.ControlPlane.InstanceType}}"
+{{- if not .ControlPlane.Internal}}
+    internal      = false
+{{- end}}
 {{- if .SSHKeyPair}}
     key_pair      = "{{.SSHKeyPair}}"
 {{- end}}

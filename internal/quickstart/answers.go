@@ -60,6 +60,7 @@ type StateBackend struct {
 
 type ControlPlane struct {
 	InstanceType string
+	Internal     bool
 	SubnetIDs    []string
 }
 

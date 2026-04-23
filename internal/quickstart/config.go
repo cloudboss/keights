@@ -235,6 +235,7 @@ func resolveAMI(
 func parseControlPlane(spec string) (ControlPlane, error) {
 	cp := ControlPlane{
 		InstanceType: "m5.large",
+		Internal:     true,
 	}
 	fields := strings.Split(spec, ",")
 	for _, field := range fields {
@@ -250,6 +251,14 @@ func parseControlPlane(spec string) (ControlPlane, error) {
 			cp.InstanceType = value
 		case "subnets":
 			cp.SubnetIDs = strings.Split(value, ":")
+		case "internal":
+			internal, err := strconv.ParseBool(value)
+			if err != nil {
+				return cp, fmt.Errorf(
+					"control-plane: invalid internal %q: %w", value, err,
+				)
+			}
+			cp.Internal = internal
 		default:
 			return cp, fmt.Errorf("control-plane: unknown key %q", key)
 		}

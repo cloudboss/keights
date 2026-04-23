@@ -67,10 +67,11 @@ var instanceTypes = []string{
 // the boundaries between the three forms are one-way.
 func RunWizard(ctx context.Context, disc *Discoverer, defs Defaults) (*Answers, error) {
 	a := &Answers{
-		Region:      defs.Region,
-		ClusterName: defs.ClusterName,
+		Region:         defs.Region,
+		ClusterName:    defs.ClusterName,
 		AccessCIDRsAPI: []string{"0.0.0.0/0"},
-		IRSAEnabled: true,
+		IRSAEnabled:    true,
+		ControlPlane:   ControlPlane{Internal: true},
 	}
 
 	vpcs, err := disc.VPCs(ctx)
