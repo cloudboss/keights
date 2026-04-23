@@ -40,6 +40,8 @@ type Answers struct {
 	SSHKeyPair           string
 	IRSAEnabled          bool
 	KubernetesVersion    string
+	LambdaBucket         string
+	LambdaVersion        string
 	ControlPlane         ControlPlane
 	NodeGroups           []NodeGroup
 	StateBackend         StateBackend

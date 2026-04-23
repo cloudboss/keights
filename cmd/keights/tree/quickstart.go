@@ -142,6 +142,11 @@ func init() {
 		"enable iam roles for service accounts")
 	f.StringVar(&qsCfg.KubernetesVersion, "kubernetes-version", "",
 		"kubernetes version (read from the selected AMI's tag if omitted)")
+	f.StringVar(&qsCfg.LambdaBucket, "lambda-bucket", "",
+		"s3 bucket where the lambda zips live (module default if omitted)")
+	f.StringVar(&qsCfg.LambdaVersion, "lambda-version", "",
+		"version suffix for the lambda zip paths and function names "+
+			"(module default if omitted)")
 	f.StringVar(&qsCfg.ControlPlane, "control-plane", "",
 		"control plane configuration. spec: type=X,subnets=s1:s2:s3")
 	f.StringArrayVar(&qsCfg.NodeGroups, "node-group", nil,

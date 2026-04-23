@@ -44,6 +44,8 @@ type Config struct {
 	SSHKeyPair           string
 	IRSAEnabled          bool
 	KubernetesVersion    string
+	LambdaBucket         string
+	LambdaVersion        string
 	ControlPlane         string
 	NodeGroups           []string
 	StateBackend         string
@@ -152,6 +154,8 @@ func BuildAnswers(
 		SSHKeyPair:           cfg.SSHKeyPair,
 		IRSAEnabled:          cfg.IRSAEnabled,
 		KubernetesVersion:    kubernetesVersion,
+		LambdaBucket:         cfg.LambdaBucket,
+		LambdaVersion:        cfg.LambdaVersion,
 		ControlPlane:         cp,
 		NodeGroups:           nodeGroups,
 		StateBackend: StateBackend{

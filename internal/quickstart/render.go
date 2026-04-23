@@ -61,6 +61,8 @@ type templateData struct {
 	KMSKeyID             string
 	SSHKeyPair           string
 	KubernetesVersion    string
+	LambdaBucket         string
+	LambdaVersion        string
 	AccessCIDRsAPI       []string
 	AccessCIDRsNodePorts []string
 	AccessCIDRsSSH       []string
@@ -87,6 +89,8 @@ func Render(a Answers, opts RenderOptions) error {
 		KMSKeyID:             a.KMSKeyID,
 		SSHKeyPair:           a.SSHKeyPair,
 		KubernetesVersion:    a.KubernetesVersion,
+		LambdaBucket:         a.LambdaBucket,
+		LambdaVersion:        a.LambdaVersion,
 		AccessCIDRsAPI:       a.AccessCIDRsAPI,
 		AccessCIDRsNodePorts: a.AccessCIDRsNodePorts,
 		AccessCIDRsSSH:       a.AccessCIDRsSSH,
