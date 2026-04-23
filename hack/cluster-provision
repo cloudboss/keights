@@ -1,0 +1,80 @@
+#!/bin/sh -e
+
+SCENARIO=${SCENARIO:?SCENARIO is required}
+CLUSTER_NAME=${CLUSTER_NAME:?CLUSTER_NAME is required}
+AWS_REGION=${AWS_REGION:?AWS_REGION is required}
+VPC_ID=${VPC_ID:?VPC_ID is required}
+CP_SUBNET_ID=${CP_SUBNET_ID:?CP_SUBNET_ID is required}
+NODE_SUBNET_IDS=${NODE_SUBNET_IDS:?NODE_SUBNET_IDS is required}
+CLUSTER_DIR=${CLUSTER_DIR:?CLUSTER_DIR is required}
+MODULE_SOURCE=${MODULE_SOURCE:?MODULE_SOURCE is required}
+IMAGE_REPOSITORY=${IMAGE_REPOSITORY:?IMAGE_REPOSITORY is required}
+VERSION=${VERSION:?VERSION is required}
+KUBERNETES_VERSION=${KUBERNETES_VERSION:?KUBERNETES_VERSION is required}
+KEIGHTS=${KEIGHTS:?KEIGHTS is required}
+STACKBOT_BUCKET=${STACKBOT_BUCKET:?STACKBOT_BUCKET is required}
+KMS_KEY_ID=${KMS_KEY_ID:?KMS_KEY_ID is required}
+STATE_BUCKET=${STATE_BUCKET:?STATE_BUCKET is required}
+
+ami_name=$(echo "${IMAGE_REPOSITORY}:${VERSION}" | sed 's|[/:]|--|g')
+
+provision_head() {
+    ${KEIGHTS} quickstart --non-interactive \
+        --cluster-name ${CLUSTER_NAME} \
+        --region ${AWS_REGION} \
+        --vpc-id ${VPC_ID} \
+        --access-cidrs-api 0.0.0.0/0 \
+        --ami-name ${ami_name} \
+        --ami-owner-id self \
+        --kms-key-id ${KMS_KEY_ID} \
+        --kubernetes-version ${KUBERNETES_VERSION} \
+        --lambda-bucket ${STACKBOT_BUCKET} \
+        --lambda-version ${VERSION} \
+        --state-backend s3 \
+        --state-bucket ${STATE_BUCKET} \
+        --control-plane type=m5.large,internal=false,subnets=${CP_SUBNET_ID} \
+        --node-group name=default,type=m5.large,min=3,desired=3,max=3,subnets=${NODE_SUBNET_IDS} \
+        --module-source ${MODULE_SOURCE} \
+        --output-dir ${CLUSTER_DIR}
+    ${KEIGHTS} deploy ${CLUSTER_DIR} --auto-approve
+}
+
+case ${SCENARIO} in
+fresh)
+    provision_head
+    ;;
+upgrade)
+    prior=$(cat $(dirname $0)/upgrade-from)
+    echo "Seeding upgrade cluster with ${prior}..."
+    curl -fsSL -o /tmp/keights-prior.tar.gz \
+        https://github.com/cloudboss/keights/releases/download/${prior}/keights-${prior}-linux-amd64.tar.gz
+    mkdir -p /tmp/keights-prior
+    tar -xzf /tmp/keights-prior.tar.gz -C /tmp/keights-prior
+    /tmp/keights-prior/keights quickstart --non-interactive \
+        --cluster-name ${CLUSTER_NAME} \
+        --region ${AWS_REGION} \
+        --vpc-id ${VPC_ID} \
+        --access-cidrs-api 0.0.0.0/0 \
+        --kms-key-id ${KMS_KEY_ID} \
+        --lambda-bucket ${STACKBOT_BUCKET} \
+        --lambda-version ${VERSION} \
+        --state-backend s3 \
+        --state-bucket ${STATE_BUCKET} \
+        --control-plane type=m5.large,internal=false,subnets=${CP_SUBNET_ID} \
+        --node-group name=default,type=m5.large,min=3,desired=3,max=3,subnets=${NODE_SUBNET_IDS} \
+        --output-dir ${CLUSTER_DIR}
+    /tmp/keights-prior/keights deploy ${CLUSTER_DIR} --auto-approve
+    CLUSTER_NAME=${CLUSTER_NAME} KEIGHTS=/tmp/keights-prior/keights \
+        $(dirname $0)/cluster-wait
+    # State lives in S3; re-rendering into a fresh directory picks it up
+    # via the backend. keights quickstart refuses to render into an
+    # existing directory so remove it first.
+    rm -rf ${CLUSTER_DIR}
+    echo "Upgrading cluster to HEAD..."
+    provision_head
+    ;;
+*)
+    echo "Unknown scenario: ${SCENARIO}" >&2
+    exit 1
+    ;;
+esac

@@ -1,0 +1,18 @@
+#!/bin/sh -e
+
+AWS_REGION=${AWS_REGION:?AWS_REGION is required}
+BUCKET_PREFIX=${BUCKET_PREFIX:-keights-e2e}
+
+suffix=$(tr -dc a-z0-9 </dev/urandom 2>/dev/null | head -c 12)
+bucket=${BUCKET_PREFIX}-${suffix}
+
+if [ "${AWS_REGION}" = us-east-1 ]; then
+    aws s3api create-bucket --bucket ${bucket} --region ${AWS_REGION} >&2
+else
+    aws s3api create-bucket \
+        --bucket ${bucket} \
+        --region ${AWS_REGION} \
+        --create-bucket-configuration LocationConstraint=${AWS_REGION} >&2
+fi
+
+echo ${bucket}

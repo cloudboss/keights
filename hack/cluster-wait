@@ -1,0 +1,53 @@
+#!/bin/sh -e
+
+CLUSTER_NAME=${CLUSTER_NAME:?CLUSTER_NAME is required}
+KEIGHTS=${KEIGHTS:?KEIGHTS is required}
+TIMEOUT_SECONDS=${TIMEOUT_SECONDS:-900}
+INTERVAL_SECONDS=${INTERVAL_SECONDS:-5}
+QUIET=${QUIET:-false}
+
+kubectl() {
+    if [ "${QUIET}" = "true" ]; then
+        ${KEIGHTS} kubectl --cluster-name ${CLUSTER_NAME} -- "${@}" >/dev/null 2>&1
+    else
+        ${KEIGHTS} kubectl --cluster-name ${CLUSTER_NAME} -- "${@}"
+    fi
+}
+
+now=$(date +%s)
+deadline=$((${now} + ${TIMEOUT_SECONDS}))
+
+echo "Waiting for API server..."
+while true; do
+    if kubectl get --raw /readyz; then
+        break
+    fi
+    now=$(date +%s)
+    if [ ${now} -ge ${deadline} ]; then
+        echo "Timeout waiting for API server after ${TIMEOUT_SECONDS}s"
+        exit 1
+    fi
+    sleep ${INTERVAL_SECONDS}
+done
+
+echo "Waiting for nodes to be Ready..."
+while true; do
+    if kubectl wait --for=condition=Ready nodes --all --timeout=1s; then
+        break
+    fi
+    now=$(date +%s)
+    if [ ${now} -ge ${deadline} ]; then
+        echo "Timeout waiting for nodes after ${TIMEOUT_SECONDS}s"
+        kubectl get nodes
+        exit 1
+    fi
+    sleep ${INTERVAL_SECONDS}
+done
+
+echo "Waiting for kube-system daemonsets..."
+kubectl -n kube-system rollout status ds --timeout=${TIMEOUT_SECONDS}s
+
+echo "Waiting for kube-system deployments..."
+kubectl -n kube-system rollout status deploy --timeout=${TIMEOUT_SECONDS}s
+
+echo "Cluster is ready."

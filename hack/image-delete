@@ -1,0 +1,23 @@
+#!/bin/sh -e
+
+VERSION=${VERSION:?VERSION is required}
+IMAGE_REPOSITORY=${IMAGE_REPOSITORY:?IMAGE_REPOSITORY is required}
+
+# IMAGE_REPOSITORY is like ghcr.io/cloudboss/keights.
+# Strip ghcr.io/ and split the rest into org and package name.
+path=$(echo "${IMAGE_REPOSITORY}" | sed 's|^ghcr.io/||')
+org=$(echo "${path}" | cut -d/ -f1)
+package=$(echo "${path}" | cut -d/ -f2-)
+
+versions=$(gh api "/orgs/${org}/packages/container/${package}/versions")
+version_id=$(echo "${versions}" | \
+    jq -r "[.[] | select(.metadata.container.tags[]? == \"${VERSION}\")][0].id // empty")
+
+if [ -z "${version_id}" ]; then
+    echo "No package version matching ${VERSION}"
+    exit 0
+fi
+
+gh api --method DELETE \
+    "/orgs/${org}/packages/container/${package}/versions/${version_id}"
+echo "Deleted ${IMAGE_REPOSITORY}:${VERSION}"

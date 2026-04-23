@@ -1,0 +1,64 @@
+#!/bin/sh -e
+
+SONOBUOY_VERSION=${SONOBUOY_VERSION:?SONOBUOY_VERSION is required}
+DIR_CACHE=${DIR_CACHE:?DIR_CACHE is required}
+
+sonobuoy_dir=${DIR_CACHE}/sonobuoy-v${SONOBUOY_VERSION}
+sonobuoy=${sonobuoy_dir}/sonobuoy
+if [ ! -x ${sonobuoy} ]; then
+    echo "Downloading sonobuoy v${SONOBUOY_VERSION}..."
+    mkdir -p ${sonobuoy_dir}
+    url=https://github.com/vmware-tanzu/sonobuoy/releases/download/v${SONOBUOY_VERSION}/sonobuoy_${SONOBUOY_VERSION}_linux_amd64.tar.gz
+    curl -fsSL -o ${DIR_CACHE}/sonobuoy.tar.gz ${url}
+    tar -xzf ${DIR_CACHE}/sonobuoy.tar.gz -C ${sonobuoy_dir} sonobuoy
+    rm -f ${DIR_CACHE}/sonobuoy.tar.gz
+fi
+
+RESULTS_DIR=$(mktemp -d)
+
+echo "Running parallel tests..."
+${sonobuoy} run \
+    --level=trace \
+    --mode=certified-conformance \
+    --plugin e2e \
+    --plugin-env=e2e.E2E_PARALLEL=true \
+    --wait=60
+results_par=$(${sonobuoy} retrieve ${RESULTS_DIR})
+status_par=$(${sonobuoy} results ${results_par} -p e2e | awk '/^Status/{print $2}')
+
+echo "Deleting sonobuoy in preparation for serial tests..."
+${sonobuoy} delete --wait
+
+echo "Running serial tests..."
+${sonobuoy} run \
+    --e2e-focus="\[Serial\].*\[Conformance\]" \
+    --e2e-parallel=false \
+    --e2e-skip="" \
+    --level=trace \
+    --plugin e2e \
+    --wait=30
+results_ser=$(${sonobuoy} retrieve ${RESULTS_DIR})
+status_ser=$(${sonobuoy} results ${results_ser} -p e2e | awk '/^Status/{print $2}')
+
+ret=0
+
+echo -n "Checking e2e results..."
+
+if [ "${status_par}" = "failed" ]; then
+    echo " error:"
+    ret=1
+    ${sonobuoy} results ${results_par} -p e2e
+fi
+
+if [ "${status_ser}" = "failed" ]; then
+    [ ${ret} -eq 0 ] && echo " error:"
+    ret=1
+    ${sonobuoy} results ${results_ser} -p e2e
+fi
+
+[ ${ret} -eq 0 ] && echo " all tests passed."
+
+echo "Running best-effort cleanup..."
+${sonobuoy} delete --wait || true
+
+exit ${ret}

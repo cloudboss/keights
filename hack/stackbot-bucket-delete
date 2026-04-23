@@ -1,0 +1,6 @@
+#!/bin/sh -e
+
+BUCKET=${BUCKET:?BUCKET is required}
+
+aws s3 rm s3://${BUCKET} --recursive || true
+aws s3api delete-bucket --bucket ${BUCKET}

@@ -1,0 +1,14 @@
+#!/bin/sh -e
+
+AMI_ID_FILE=${AMI_ID_FILE:?AMI_ID_FILE is required}
+
+if [ ! -f ${AMI_ID_FILE} ]; then
+    exit 0
+fi
+
+ami_id=$(cat ${AMI_ID_FILE})
+aws ec2 deregister-image \
+    --image-id ${ami_id} \
+    --delete-associated-snapshots
+rm -f ${AMI_ID_FILE}
+echo "Destroyed AMI ${ami_id}"

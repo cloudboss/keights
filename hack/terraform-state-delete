@@ -1,0 +1,6 @@
+#!/bin/sh -e
+
+STATE_BUCKET=${STATE_BUCKET:?STATE_BUCKET is required}
+CLUSTER_NAME=${CLUSTER_NAME:?CLUSTER_NAME is required}
+
+aws s3 rm s3://${STATE_BUCKET}/${CLUSTER_NAME}/ --recursive

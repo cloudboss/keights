@@ -1,0 +1,16 @@
+#!/bin/sh -e
+
+AMI_ID_FILE=${AMI_ID_FILE:?AMI_ID_FILE is required}
+KUBERNETES_VERSION=${KUBERNETES_VERSION:?KUBERNETES_VERSION is required}
+
+ami_id=$(cat ${AMI_ID_FILE})
+snap_ids=$(aws ec2 describe-images \
+    --image-ids ${ami_id} \
+    --query 'Images[0].BlockDeviceMappings[].Ebs.SnapshotId' \
+    --output text)
+
+aws ec2 create-tags \
+    --resources ${ami_id} ${snap_ids} \
+    --tags Key=cloudboss.co/keights/kubernetes-version,Value=${KUBERNETES_VERSION}
+
+echo "Tagged ${ami_id} with kubernetes-version=${KUBERNETES_VERSION}"

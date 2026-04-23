@@ -27,10 +27,16 @@ DIR_ROOT = $(realpath $(CURDIR))
 
 KUBERNETES_VERSION = 1.34.5
 IMAGE_REPOSITORY = ghcr.io/cloudboss/keights
+EASYTO_VERSION = 0.9.0
+SONOBUOY_VERSION = 0.57.3
 
 CTR_IMAGE_GO = ghcr.io/cloudboss/docker.io/library/golang:1.26.1-alpine3.23
 CTR_IMAGE_GOLANGCI = ghcr.io/cloudboss/golangci/golangci-lint:v2.11.4-alpine
 CTR_IMAGE_TERRAFORM = ghcr.io/cloudboss/hashicorp/terraform:1.14.8
+
+DIR_CACHE = $(DIR_OUT)/cache
+DIR_AMI = $(DIR_OUT)/ami
+AMI_ID_FILE = $(DIR_AMI)/ami-id
 UID = $(shell id -u)
 GID = $(shell id -g)
 UID_SHA256 = $(shell echo -n $(UID) | sha256sum | awk '{print $$1}')
@@ -132,14 +138,23 @@ $(HAS_IMAGE_LOCAL): $(HAS_COMMAND_DOCKER)
 		.
 	@touch $(HAS_IMAGE_LOCAL)
 
-image: $(HAS_COMMAND_DOCKER)
+check-version:
 	@[ -n "$(VERSION)" ] || (echo "VERSION is required"; exit 1)
 	@[ $$(echo $(VERSION) | cut -c 1) = v ] || (echo "VERSION must begin with a 'v'"; exit 1)
+
+image: check-version $(HAS_COMMAND_DOCKER)
 	@docker build \
 		--build-arg KUBERNETES_VERSION=$(KUBERNETES_VERSION) \
 		-t $(IMAGE_REPOSITORY):$(VERSION) \
 		-f image/Containerfile \
 		.
+
+image-push: check-version $(HAS_COMMAND_DOCKER)
+	@docker push $(IMAGE_REPOSITORY):$(VERSION)
+
+image-delete: check-version
+	@VERSION=$(VERSION) IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) \
+		$(DIR_ROOT)/hack/image-delete
 
 STACKBOT_GO_DEPS = \
 	go.mod \
@@ -253,9 +268,85 @@ terraform-validate: $(HAS_COMMAND_DOCKER)
 		-c "terraform fmt -check -recursive terraform && \
 			cd terraform && terraform init -backend=false && terraform validate"
 
+ami: check-version
+	@VERSION=$(VERSION) \
+		SUBNET_ID=$(SUBNET_ID) \
+		IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) \
+		EASYTO_VERSION=$(EASYTO_VERSION) \
+		DIR_CACHE=$(DIR_CACHE) \
+		DIR_AMI=$(DIR_AMI) \
+		$(DIR_ROOT)/hack/ami-build
+
+ami-tag:
+	@AMI_ID_FILE=$(AMI_ID_FILE) \
+		KUBERNETES_VERSION=$(KUBERNETES_VERSION) \
+		$(DIR_ROOT)/hack/ami-tag
+
+ami-destroy:
+	@AMI_ID_FILE=$(AMI_ID_FILE) \
+		$(DIR_ROOT)/hack/ami-destroy
+
+stackbot-upload: check-version stackbot
+	@VERSION=$(VERSION) DIR_OUT=$(DIR_OUT) \
+		BUCKET=$(BUCKET) PREFIX=$(PREFIX) \
+		$(DIR_ROOT)/hack/stackbot-upload
+
+stackbot-bucket-create:
+	@AWS_REGION=$(AWS_REGION) BUCKET_PREFIX=$(BUCKET_PREFIX) \
+		$(DIR_ROOT)/hack/stackbot-bucket-create
+
+stackbot-bucket-delete:
+	@BUCKET=$(BUCKET) \
+		$(DIR_ROOT)/hack/stackbot-bucket-delete
+
+KEIGHTS_BIN = $(DIR_STG_KEIGHTS)/keights
+KEIGHTS_PATH = $(DIR_ROOT)/$(shell dirname $(KEIGHTS_BIN))
+
+cluster-provision: check-version $(KEIGHTS_BIN)
+	@SCENARIO=$(SCENARIO) \
+		CLUSTER_NAME=$(CLUSTER_NAME) \
+		AWS_REGION=$(AWS_REGION) \
+		VPC_ID=$(VPC_ID) \
+		CP_SUBNET_ID=$(CP_SUBNET_ID) \
+		NODE_SUBNET_IDS=$(NODE_SUBNET_IDS) \
+		CLUSTER_DIR=$(CLUSTER_DIR) \
+		MODULE_SOURCE=$(MODULE_SOURCE) \
+		IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) \
+		VERSION=$(VERSION) \
+		KUBERNETES_VERSION=$(KUBERNETES_VERSION) \
+		STACKBOT_BUCKET=$(STACKBOT_BUCKET) \
+		KMS_KEY_ID=$(KMS_KEY_ID) \
+		STATE_BUCKET=$(STATE_BUCKET) \
+		KEIGHTS=$(KEIGHTS_BIN) \
+		$(DIR_ROOT)/hack/cluster-provision
+
+terraform-state-delete:
+	@STATE_BUCKET=$(STATE_BUCKET) CLUSTER_NAME=$(CLUSTER_NAME) \
+		$(DIR_ROOT)/hack/terraform-state-delete
+
+e2e-run:
+	@PATH=$(KEIGHTS_PATH):$(PATH) DIR_CACHE=$(DIR_CACHE) SONOBUOY_VERSION=$(SONOBUOY_VERSION) \
+		$(DIR_ROOT)/hack/e2e-run
+
+cluster-wait: $(KEIGHTS_BIN)
+	@PATH=$(KEIGHTS_PATH):$(PATH) CLUSTER_NAME=$(CLUSTER_NAME) KEIGHTS=$(KEIGHTS_BIN) \
+		$(DIR_ROOT)/hack/cluster-wait
+
+cluster-kubeconfig: $(KEIGHTS_BIN)
+	@[ -n "$(CLUSTER_NAME)" ] || (echo "CLUSTER_NAME is required"; exit 1)
+	@[ -n "$(OUTPUT)" ] || (echo "OUTPUT is required"; exit 1)
+	@$(KEIGHTS_BIN) kubeconfig --cluster-name $(CLUSTER_NAME) -o $(OUTPUT)
+
+cluster-destroy: $(KEIGHTS_BIN)
+	@[ -n "$(CLUSTER_DIR)" ] || (echo "CLUSTER_DIR is required"; exit 1)
+	@$(KEIGHTS_BIN) destroy $(CLUSTER_DIR) --auto-approve
+
 clean:
 	@chmod -R +w $(DIR_OUT)/go
 	@rm -rf $(DIR_OUT)
 
-.PHONY: keights release-one release stackbot terraform-release test lint \
-	terraform-validate clean image
+.PHONY: check-version keights release-one release stackbot terraform-release \
+	test lint terraform-validate ami ami-tag ami-destroy image image-push \
+	image-delete stackbot-upload stackbot-bucket-create \
+	stackbot-bucket-delete cluster-provision terraform-state-delete \
+	cluster-wait cluster-kubeconfig cluster-destroy e2e-run clean

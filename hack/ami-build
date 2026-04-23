@@ -1,0 +1,37 @@
+#!/bin/sh -e
+
+VERSION=${VERSION:?VERSION is required}
+SUBNET_ID=${SUBNET_ID:?SUBNET_ID is required}
+IMAGE_REPOSITORY=${IMAGE_REPOSITORY:?IMAGE_REPOSITORY is required}
+EASYTO_VERSION=${EASYTO_VERSION:?EASYTO_VERSION is required}
+DIR_CACHE=${DIR_CACHE:?DIR_CACHE is required}
+DIR_AMI=${DIR_AMI:?DIR_AMI is required}
+
+easyto_dir=${DIR_CACHE}/easyto-v${EASYTO_VERSION}
+easyto=${easyto_dir}/bin/easyto
+if [ ! -x ${easyto} ]; then
+    echo "Downloading easyto v${EASYTO_VERSION}..."
+    mkdir -p ${DIR_CACHE}
+    url=https://github.com/cloudboss/easyto/releases/download/v${EASYTO_VERSION}/easyto-v${EASYTO_VERSION}-linux-amd64.tar.gz
+    curl -fsSL -o ${DIR_CACHE}/easyto.tar.gz ${url}
+    tar -xzf ${DIR_CACHE}/easyto.tar.gz -C ${DIR_CACHE}
+    rm -f ${DIR_CACHE}/easyto.tar.gz
+fi
+
+container_image=${IMAGE_REPOSITORY}:${VERSION}
+ami_name=$(echo "${container_image}" | sed 's|[/:]|--|g')
+
+${easyto} ami \
+    -a ${ami_name} \
+    -c ${container_image} \
+    --services=chrony,ssh \
+    -s ${SUBNET_ID}
+
+mkdir -p ${DIR_AMI}
+aws ec2 describe-images \
+    --owners self \
+    --filters Name=name,Values=${ami_name} \
+    --query 'Images[0].ImageId' \
+    --output text > ${DIR_AMI}/ami-id
+
+echo "Built AMI $(cat ${DIR_AMI}/ami-id) (${ami_name})"
