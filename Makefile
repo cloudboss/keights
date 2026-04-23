@@ -28,7 +28,7 @@ DIR_ROOT = $(realpath $(CURDIR))
 KUBERNETES_VERSION = 1.34.5
 IMAGE_REPOSITORY = ghcr.io/cloudboss/keights
 
-CTR_IMAGE_GO = golang:1.26.1-alpine3.23
+CTR_IMAGE_GO = ghcr.io/cloudboss/docker.io/library/golang:1.26.1-alpine3.23
 CTR_IMAGE_GOLANGCI = ghcr.io/cloudboss/golangci/golangci-lint:v2.11.4-alpine
 CTR_IMAGE_TERRAFORM = ghcr.io/cloudboss/hashicorp/terraform:1.14.8
 UID = $(shell id -u)
