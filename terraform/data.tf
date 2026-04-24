@@ -20,6 +20,13 @@
 
 data "aws_caller_identity" "current" {}
 
+# Resolves an STS assumed-role ARN (e.g. when terraform is applied via OIDC)
+# to the underlying IAM role ARN so it's usable as an aws-iam-authenticator
+# identity mapping. For IAM users the ARN passes through unchanged.
+data "aws_iam_session_context" "current" {
+  arn = data.aws_caller_identity.current.arn
+}
+
 data "aws_partition" "current" {}
 
 data "aws_region" "current" {}

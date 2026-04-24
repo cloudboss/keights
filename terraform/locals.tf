@@ -25,6 +25,11 @@ locals {
 
   aws_region = data.aws_region.current.region
 
+  caller_identity = merge(
+    data.aws_caller_identity.current,
+    { arn = data.aws_iam_session_context.current.issuer_arn },
+  )
+
   irsa = var.irsa_enabled ? {
     oidc_issuer             = module.irsa[0].oidc_issuer
     ebs_csi_driver_role_arn = module.irsa_roles[0].iam_role_ebs_csi.arn

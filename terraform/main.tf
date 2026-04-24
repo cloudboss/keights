@@ -163,7 +163,7 @@ module "control_plane" {
   irsa                  = local.irsa
   aws_partition         = local.aws_partition
   aws_region            = local.aws_region
-  caller_identity       = data.aws_caller_identity.current
+  caller_identity       = local.caller_identity
   cluster_domain        = var.kubernetes_configuration.cluster_domain
   cluster_name          = var.cluster_name
   debug_logging         = var.control_plane.debug_logging
