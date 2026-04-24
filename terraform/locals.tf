@@ -47,9 +47,8 @@ locals {
   )
 
   lambda_s3_keys = {
-    auto_namer    = "${var.lambda.s3.prefix}/${local.lambda_version}/auto-namer-${local.lambda_version}.zip"
-    instance_attr = "${var.lambda.s3.prefix}/${local.lambda_version}/instance-attr-${local.lambda_version}.zip"
-    kube_ca       = "${var.lambda.s3.prefix}/${local.lambda_version}/kube-ca-${local.lambda_version}.zip"
+    auto_namer = "${var.lambda.s3.prefix}/${local.lambda_version}/auto-namer-${local.lambda_version}.zip"
+    kube_ca    = "${var.lambda.s3.prefix}/${local.lambda_version}/kube-ca-${local.lambda_version}.zip"
   }
 
   lambda_version_prefix = (

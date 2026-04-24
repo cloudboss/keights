@@ -479,46 +479,6 @@ resource "aws_iam_role_policy_attachment" "lambda_auto_namer" {
   policy_arn = aws_iam_policy.lambda_auto_namer.arn
 }
 
-resource "aws_iam_policy" "lambda_instance_attr" {
-  name = "keights-lambda-instance-attr-${var.cluster_name}"
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "ec2:ModifyInstanceAttribute",
-        ]
-        Resource = ["*"]
-      },
-    ]
-  })
-  tags = var.tags
-}
-
-resource "aws_iam_role" "lambda_instance_attr" {
-  assume_role_policy = local.assume_role_policy_lambda
-  name               = "keights-instance-attr-${var.cluster_name}"
-  tags               = var.tags
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_instance_attr_logs" {
-  role       = aws_iam_role.lambda_instance_attr.name
-  policy_arn = aws_iam_policy.lambda_logs.arn
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_instance_attr_vpc" {
-  count = var.features.lambda_vpc ? 1 : 0
-
-  role       = aws_iam_role.lambda_instance_attr.name
-  policy_arn = aws_iam_policy.lambda_vpc[0].arn
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_instance_attr" {
-  role       = aws_iam_role.lambda_instance_attr.name
-  policy_arn = aws_iam_policy.lambda_instance_attr.arn
-}
-
 resource "aws_iam_policy" "lambda_kube_ca" {
   name = "keights-lambda-kube-ca-${var.cluster_name}"
   policy = jsonencode({

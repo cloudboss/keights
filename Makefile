@@ -76,7 +76,6 @@ TERRAFORM_SOURCES = $(shell find terraform -type f -name '*.tf')
 
 STACKBOT_ZIPS = \
 	$(DIR_OUT)/auto-namer/auto-namer-$(VERSION).zip \
-	$(DIR_OUT)/instance-attr/instance-attr-$(VERSION).zip \
 	$(DIR_OUT)/kube-ca/kube-ca-$(VERSION).zip
 
 $(DIR_STG_KEIGHTS)/keights: $(KEIGHTS_GO_DEPS) | $(DIR_STG_KEIGHTS)/ $(HAS_IMAGE_LOCAL)
@@ -176,22 +175,6 @@ $(DIR_OUT)/auto-namer/bootstrap: \
 		$(CTR_IMAGE_LOCAL) \
 		go build -o /code/$(DIR_OUT)/auto-namer/bootstrap ./stackbot/auto-namer/...
 
-$(DIR_OUT)/instance-attr/bootstrap: \
-		$(STACKBOT_GO_DEPS) \
-		$(shell find stackbot/asgevent -type f -path '*.go' ! -path '*_test.go') \
-		$(shell find stackbot/instance-attr -type f -path '*.go' ! -path '*_test.go') \
-		| $(DIR_OUT)/instance-attr/ $(HAS_IMAGE_LOCAL)
-	@docker run --rm -t \
-		-v $(DIR_ROOT):/code:z \
-		-e GOPATH=/code/$(DIR_OUT)/go \
-		-e GOCACHE=/code/$(DIR_OUT)/gocache \
-		-e CGO_ENABLED=0 \
-		-e GOOS=linux \
-		-e GOARCH=amd64 \
-		-w /code \
-		$(CTR_IMAGE_LOCAL) \
-		go build -o /code/$(DIR_OUT)/instance-attr/bootstrap ./stackbot/instance-attr/...
-
 $(DIR_OUT)/kube-ca/bootstrap: \
 		$(STACKBOT_GO_DEPS) \
 		$(shell find stackbot/kube-ca -type f -path '*.go' ! -path '*_test.go') \
@@ -212,12 +195,6 @@ $(DIR_OUT)/auto-namer/auto-namer-$(VERSION).zip: $(DIR_OUT)/auto-namer/bootstrap
 	@[ -n "$(VERSION)" ] || (echo "VERSION is required"; exit 1)
 	@[ $$(echo $(VERSION) | cut -c 1) = v ] || (echo "VERSION must begin with a 'v'"; exit 1)
 	@cd $(DIR_OUT)/auto-namer && fakeroot zip auto-namer-$(VERSION).zip bootstrap
-
-$(DIR_OUT)/instance-attr/instance-attr-$(VERSION).zip: $(DIR_OUT)/instance-attr/bootstrap \
-		| $(HAS_COMMAND_FAKEROOT) $(HAS_COMMAND_ZIP)
-	@[ -n "$(VERSION)" ] || (echo "VERSION is required"; exit 1)
-	@[ $$(echo $(VERSION) | cut -c 1) = v ] || (echo "VERSION must begin with a 'v'"; exit 1)
-	@cd $(DIR_OUT)/instance-attr && fakeroot zip instance-attr-$(VERSION).zip bootstrap
 
 $(DIR_OUT)/kube-ca/kube-ca-$(VERSION).zip: $(DIR_OUT)/kube-ca/bootstrap \
 		| $(HAS_COMMAND_FAKEROOT) $(HAS_COMMAND_ZIP)

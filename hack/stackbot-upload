@@ -5,7 +5,7 @@ DIR_OUT=${DIR_OUT:?DIR_OUT is required}
 BUCKET=${BUCKET:?BUCKET is required}
 PREFIX=${PREFIX:?PREFIX is required}
 
-for component in auto-namer instance-attr kube-ca; do
+for component in auto-namer kube-ca; do
     aws s3 cp \
         ${DIR_OUT}/${component}/${component}-${VERSION}.zip \
         s3://${BUCKET}/${PREFIX}/${VERSION}/

@@ -116,21 +116,6 @@ module "lambda_auto_namer" {
   vpc_config = local.vpc_config_lambda
 }
 
-module "lambda_instance_attr" {
-  source = "./modules/lambda-instance-attr"
-
-  autoscaling_group_names = [
-    "keights-control-plane-${var.cluster_name}",
-  ]
-  iam_role_arn = module.iam.iam_role_lambda_instance_attr.arn
-  s3 = {
-    bucket = var.lambda.s3.bucket
-    key    = local.lambda_s3_keys.instance_attr
-  }
-  stack_key  = var.cluster_name
-  vpc_config = local.vpc_config_lambda
-}
-
 module "lambda_kube_ca" {
   source = "./modules/lambda-kube-ca"
 
@@ -223,10 +208,8 @@ module "control_plane" {
   vpc_id     = var.vpc_id
 
   depends_on = [
-    resource.aws_lambda_invocation.kube_ca,
     module.lambda_auto_namer,
-    module.lambda_instance_attr,
-    module.lambda_kube_ca,
+    resource.aws_lambda_invocation.kube_ca,
   ]
 }
 

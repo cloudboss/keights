@@ -74,14 +74,6 @@ output "iam_role_lambda_auto_namer" {
   value = aws_iam_role.lambda_auto_namer
 }
 
-output "iam_policy_lambda_instance_attr" {
-  value = aws_iam_policy.lambda_instance_attr
-}
-
-output "iam_role_lambda_instance_attr" {
-  value = aws_iam_role.lambda_instance_attr
-}
-
 output "iam_policy_lambda_kube_ca" {
   value = aws_iam_policy.lambda_kube_ca
 }
