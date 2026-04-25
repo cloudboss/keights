@@ -1,0 +1,92 @@
+name: common
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+      upload_artifacts:
+        type: boolean
+        required: false
+        default: true
+      push_image:
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: make test
+
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: make lint
+
+  terraform-validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: make terraform-validate
+
+  build-keights:
+    runs-on: ubuntu-24.04
+    needs:
+      - lint
+      - test
+    strategy:
+      matrix:
+        include:
+          - { os: linux, arch: amd64 }
+          - { os: darwin, arch: amd64 }
+          - { os: darwin, arch: arm64 }
+    steps:
+      - uses: actions/checkout@v5
+      - run: |
+          make release-one \
+              VERSION=${{ inputs.version }} \
+              OS=${{ matrix.os }} \
+              ARCH=${{ matrix.arch }}
+      - if: ${{ inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: keights-${{ matrix.os }}-${{ matrix.arch }}
+          path: _output/release/keights-${{ inputs.version }}-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+
+  build-terraform:
+    runs-on: ubuntu-24.04
+    needs:
+      - terraform-validate
+    steps:
+      - uses: actions/checkout@v5
+      - run: make terraform-release VERSION=${{ inputs.version }}
+      - if: ${{ inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-tarball
+          path: _output/keights-terraform-${{ inputs.version }}.tar.gz
+
+  build-image:
+    runs-on: ubuntu-24.04
+    needs:
+      - lint
+      - test
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+      - if: ${{ inputs.push_image }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - run: make image VERSION=${{ inputs.version }}
+      - if: ${{ inputs.push_image }}
+        run: make image-push VERSION=${{ inputs.version }}

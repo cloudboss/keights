@@ -1,0 +1,120 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
+
+jobs:
+  test-build:
+    uses: ./.github/workflows/common.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      version: ${{ github.ref_name }}
+      push_image: true
+
+  build-ami:
+    runs-on: ubuntu-24.04
+    needs:
+      - test-build
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      ami_id: ${{ steps.ami.outputs.ami_id }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      - run: make ami VERSION=${{ github.ref_name }} SUBNET_ID=${{ secrets.SUBNET_ID_PUBLIC }}
+      - run: make ami-tag
+      - run: make ami-public
+      - id: ami
+        run: echo "ami_id=$(cat _output/ami/ami-id)" >> ${GITHUB_OUTPUT}
+
+  upload-stackbot:
+    runs-on: ubuntu-24.04
+    needs:
+      - test-build
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      - run: |
+          make stackbot-upload \
+              VERSION=${{ github.ref_name }} \
+              BUCKET=cloudboss-keights \
+              PREFIX=lambda
+
+  release:
+    runs-on: ubuntu-24.04
+    needs:
+      - test-build
+      - build-ami
+      - upload-stackbot
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: docker://antonyurchenko/git-release:v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PRE_RELEASE: "${{ contains(github.ref_name, '-') }}"
+        with:
+          args: |
+            artifacts/keights-${{ github.ref_name }}-linux-amd64.tar.gz
+            artifacts/keights-${{ github.ref_name }}-darwin-amd64.tar.gz
+            artifacts/keights-${{ github.ref_name }}-darwin-arm64.tar.gz
+            artifacts/keights-terraform-${{ github.ref_name }}.tar.gz
+
+  cleanup:
+    if: failure() || cancelled()
+    runs-on: ubuntu-24.04
+    needs:
+      - test-build
+      - build-ami
+      - upload-stackbot
+      - release
+    permissions:
+      id-token: write
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      - continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: make image-delete VERSION=${{ github.ref_name }}
+      - if: needs.build-ami.outputs.ami_id != ''
+        continue-on-error: true
+        run: |
+          mkdir -p _output/ami
+          echo "${{ needs.build-ami.outputs.ami_id }}" > _output/ami/ami-id
+          make ami-destroy
+      - continue-on-error: true
+        run: |
+          make stackbot-delete \
+              VERSION=${{ github.ref_name }} \
+              BUCKET=cloudboss-keights \
+              PREFIX=lambda
+      - continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: make release-delete RELEASE_TAG=${{ github.ref_name }}

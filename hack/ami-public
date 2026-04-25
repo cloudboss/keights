@@ -1,0 +1,10 @@
+#!/bin/sh -e
+
+AMI_ID_FILE=${AMI_ID_FILE:?AMI_ID_FILE is required}
+
+ami_id=$(cat ${AMI_ID_FILE})
+aws ec2 modify-image-attribute \
+    --image-id ${ami_id} \
+    --launch-permission 'Add=[{Group=all}]'
+
+echo "Made ${ami_id} public"

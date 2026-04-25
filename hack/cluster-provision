@@ -4,8 +4,8 @@ SCENARIO=${SCENARIO:?SCENARIO is required}
 CLUSTER_NAME=${CLUSTER_NAME:?CLUSTER_NAME is required}
 AWS_REGION=${AWS_REGION:?AWS_REGION is required}
 VPC_ID=${VPC_ID:?VPC_ID is required}
-CP_SUBNET_ID=${CP_SUBNET_ID:?CP_SUBNET_ID is required}
-NODE_SUBNET_IDS=${NODE_SUBNET_IDS:?NODE_SUBNET_IDS is required}
+SUBNET_ID_PUBLIC=${SUBNET_ID_PUBLIC:?SUBNET_ID_PUBLIC is required}
+SUBNET_IDS_PRIVATE=${SUBNET_IDS_PRIVATE:?SUBNET_IDS_PRIVATE is required}
 CLUSTER_DIR=${CLUSTER_DIR:?CLUSTER_DIR is required}
 MODULE_SOURCE=${MODULE_SOURCE:?MODULE_SOURCE is required}
 IMAGE_REPOSITORY=${IMAGE_REPOSITORY:?IMAGE_REPOSITORY is required}
@@ -32,8 +32,8 @@ provision_head() {
         --lambda-version ${VERSION} \
         --state-backend s3 \
         --state-bucket ${STATE_BUCKET} \
-        --control-plane type=m5.large,internal=false,subnets=${CP_SUBNET_ID} \
-        --node-group name=default,type=m5.large,min=3,desired=3,max=3,subnets=${NODE_SUBNET_IDS} \
+        --control-plane type=m5.large,internal=false,subnets=${SUBNET_ID_PUBLIC} \
+        --node-group name=default,type=m5.large,min=3,desired=3,max=3,subnets=${SUBNET_IDS_PRIVATE} \
         --module-source ${MODULE_SOURCE} \
         --output-dir ${CLUSTER_DIR}
     ${KEIGHTS} deploy ${CLUSTER_DIR} --auto-approve
@@ -60,8 +60,8 @@ upgrade)
         --lambda-version ${VERSION} \
         --state-backend s3 \
         --state-bucket ${STATE_BUCKET} \
-        --control-plane type=m5.large,internal=false,subnets=${CP_SUBNET_ID} \
-        --node-group name=default,type=m5.large,min=3,desired=3,max=3,subnets=${NODE_SUBNET_IDS} \
+        --control-plane type=m5.large,internal=false,subnets=${SUBNET_ID_PUBLIC} \
+        --node-group name=default,type=m5.large,min=3,desired=3,max=3,subnets=${SUBNET_IDS_PRIVATE} \
         --output-dir ${CLUSTER_DIR}
     /tmp/keights-prior/keights deploy ${CLUSTER_DIR} --auto-approve
     CLUSTER_NAME=${CLUSTER_NAME} KEIGHTS=/tmp/keights-prior/keights \

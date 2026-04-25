@@ -1,0 +1,5 @@
+#!/bin/sh -e
+
+RELEASE_TAG=${RELEASE_TAG:?RELEASE_TAG is required}
+
+gh release delete ${RELEASE_TAG} --yes --cleanup-tag

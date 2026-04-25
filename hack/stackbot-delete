@@ -1,0 +1,7 @@
+#!/bin/sh -e
+
+VERSION=${VERSION:?VERSION is required}
+BUCKET=${BUCKET:?BUCKET is required}
+PREFIX=${PREFIX:?PREFIX is required}
+
+aws s3 rm s3://${BUCKET}/${PREFIX}/${VERSION}/ --recursive

@@ -44,7 +44,7 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_E2E_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
           role-duration-seconds: 14400
 
@@ -73,7 +73,7 @@ jobs:
       - name: Build and tag AMI
         id: ami
         run: |
-          make ami VERSION=${VERSION} SUBNET_ID=${{ secrets.E2E_CP_SUBNET_ID }}
+          make ami VERSION=${VERSION} SUBNET_ID=${{ secrets.SUBNET_ID_PUBLIC }}
           make ami-tag
           echo "ami_id=$(cat _output/ami/ami-id)" >> ${GITHUB_OUTPUT}
 
@@ -114,7 +114,7 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_E2E_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
           role-duration-seconds: 14400
 
@@ -125,13 +125,13 @@ jobs:
               SCENARIO=${{ matrix.scenario }} \
               CLUSTER_NAME=${CLUSTER_NAME} \
               CLUSTER_DIR=${CLUSTER_DIR} \
-              VPC_ID=${{ secrets.E2E_VPC_ID }} \
-              CP_SUBNET_ID=${{ secrets.E2E_CP_SUBNET_ID }} \
-              NODE_SUBNET_IDS=${{ secrets.E2E_NODE_SUBNET_IDS }} \
+              VPC_ID=${{ secrets.VPC_ID }} \
+              SUBNET_ID_PUBLIC=${{ secrets.SUBNET_ID_PUBLIC }} \
+              SUBNET_IDS_PRIVATE=${{ secrets.SUBNET_IDS_PRIVATE }} \
               MODULE_SOURCE=${{ github.workspace }}/terraform \
               STACKBOT_BUCKET=${{ needs.setup.outputs.bucket }} \
-              KMS_KEY_ID=${{ secrets.E2E_KMS_KEY_ID }} \
-              STATE_BUCKET=${{ secrets.E2E_STATE_BUCKET }}
+              KMS_KEY_ID=${{ secrets.KMS_KEY_ID }} \
+              STATE_BUCKET=${{ secrets.STATE_BUCKET }}
 
       - name: Wait for cluster
         run: make cluster-wait CLUSTER_NAME=${CLUSTER_NAME}
@@ -152,7 +152,7 @@ jobs:
         if: always() && steps.destroy.outcome == 'success'
         run: |
           make terraform-state-delete \
-              STATE_BUCKET=${{ secrets.E2E_STATE_BUCKET }} \
+              STATE_BUCKET=${{ secrets.STATE_BUCKET }} \
               CLUSTER_NAME=${CLUSTER_NAME}
 
   cleanup:
@@ -168,7 +168,7 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_E2E_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
           role-duration-seconds: 14400
 

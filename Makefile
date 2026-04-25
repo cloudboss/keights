@@ -259,6 +259,10 @@ ami-tag:
 		KUBERNETES_VERSION=$(KUBERNETES_VERSION) \
 		$(DIR_ROOT)/hack/ami-tag
 
+ami-public:
+	@AMI_ID_FILE=$(AMI_ID_FILE) \
+		$(DIR_ROOT)/hack/ami-public
+
 ami-destroy:
 	@AMI_ID_FILE=$(AMI_ID_FILE) \
 		$(DIR_ROOT)/hack/ami-destroy
@@ -276,6 +280,14 @@ stackbot-bucket-delete:
 	@BUCKET=$(BUCKET) \
 		$(DIR_ROOT)/hack/stackbot-bucket-delete
 
+stackbot-delete: check-version
+	@VERSION=$(VERSION) BUCKET=$(BUCKET) PREFIX=$(PREFIX) \
+		$(DIR_ROOT)/hack/stackbot-delete
+
+release-delete:
+	@RELEASE_TAG=$(RELEASE_TAG) \
+		$(DIR_ROOT)/hack/release-delete
+
 KEIGHTS_BIN = $(DIR_STG_KEIGHTS)/keights
 KEIGHTS_PATH = $(DIR_ROOT)/$(shell dirname $(KEIGHTS_BIN))
 
@@ -284,8 +296,8 @@ cluster-provision: check-version $(KEIGHTS_BIN)
 		CLUSTER_NAME=$(CLUSTER_NAME) \
 		AWS_REGION=$(AWS_REGION) \
 		VPC_ID=$(VPC_ID) \
-		CP_SUBNET_ID=$(CP_SUBNET_ID) \
-		NODE_SUBNET_IDS=$(NODE_SUBNET_IDS) \
+		SUBNET_ID_PUBLIC=$(SUBNET_ID_PUBLIC) \
+		SUBNET_IDS_PRIVATE=$=$(SUBNET_IDS_PRIVATE) \
 		CLUSTER_DIR=$(CLUSTER_DIR) \
 		MODULE_SOURCE=$(MODULE_SOURCE) \
 		IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) \
@@ -323,7 +335,8 @@ clean:
 	@rm -rf $(DIR_OUT)
 
 .PHONY: check-version keights release-one release stackbot terraform-release \
-	test lint terraform-validate ami ami-tag ami-destroy image image-push \
-	image-delete stackbot-upload stackbot-bucket-create \
-	stackbot-bucket-delete cluster-provision terraform-state-delete \
-	cluster-wait cluster-kubeconfig cluster-destroy e2e-run clean
+	test lint terraform-validate ami ami-tag ami-public ami-destroy \
+	release-delete image image-push image-delete stackbot-upload \
+	stackbot-delete stackbot-bucket-create stackbot-bucket-delete \
+	cluster-provision terraform-state-delete cluster-wait \
+	cluster-kubeconfig cluster-destroy e2e-run clean
