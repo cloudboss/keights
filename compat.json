@@ -1,0 +1,24 @@
+{
+  "_comment": [
+    "Keights compatibility manifest. Pinned Containerfile build-arg values per",
+    "supported Kubernetes minor version; the Make `image` target reads this via",
+    "`hack/compat-build-args` and passes the values to `docker build`. Also",
+    "feeds the default KUBERNETES_VERSION for local dev / sanity image build",
+    "via `hack/compat-default-test-version`, and is baked into the image at",
+    "/etc/keights/compat.json for runtime visibility."
+  ],
+  "default-test-version": "1.34.5",
+  "image-build-args": {
+    "1.34": {
+      "AWS_CNI_VERSION": "1.20.4",
+      "AWS_EBS_CSI_DRIVER_VERSION": "2.58.0",
+      "CERT_MANAGER_VERSION": "1.20.1",
+      "CLOUD_PROVIDER_AWS_VERSION": "1.34.2",
+      "AWS_IAM_AUTHENTICATOR_VERSION": "0.7.8",
+      "AWS_IAM_AUTHENTICATOR_EKS_VERSION": "v0.7.8-eks-1-34-latest",
+      "CONTAINERD_VERSION": "2.1.4",
+      "CRICTL_VERSION": "1.34.0",
+      "HELM_VERSION": "3.19.0"
+    }
+  }
+}

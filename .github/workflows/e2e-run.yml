@@ -1,0 +1,122 @@
+name: e2e-run
+
+# Run the E2E matrix against pre-built artifacts. The caller is expected to
+# have created the AMI, the stackbot bucket (with zips uploaded), and to have
+# uploaded the keights binary as a workflow artifact named `keights_artifact_name`.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      kubernetes_version:
+        required: true
+        type: string
+      ami_name:
+        required: true
+        type: string
+      bucket:
+        required: true
+        type: string
+      scenarios:
+        required: true
+        type: string
+      keights_artifact_name:
+        required: true
+        type: string
+      source_ami_name:
+        required: false
+        type: string
+        default: ""
+      source_version:
+        required: false
+        type: string
+        default: ""
+      region:
+        required: false
+        type: string
+        default: us-east-1
+    secrets:
+      AWS_ROLE_ARN:
+        required: true
+      VPC_ID:
+        required: true
+      SUBNET_ID_PUBLIC:
+        required: true
+      SUBNET_IDS_PRIVATE:
+        required: true
+      KMS_KEY_ID:
+        required: true
+      STATE_BUCKET:
+        required: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: ${{ fromJson(inputs.scenarios) }}
+    env:
+      VERSION: ${{ inputs.version }}
+      KUBERNETES_VERSION: ${{ inputs.kubernetes_version }}
+      CLUSTER_NAME: e2e-${{ github.run_id }}-${{ matrix.scenario }}
+      AWS_REGION: ${{ inputs.region }}
+      CLUSTER_DIR: ${{ github.workspace }}/cluster
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.keights_artifact_name }}
+          path: _output/staging/keights/linux/amd64
+      - run: chmod +x _output/staging/keights/linux/amd64/keights
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-duration-seconds: 14400
+      - if: matrix.scenario == 'upgrade' && inputs.source_version != ''
+        run: |
+          mkdir -p _output
+          echo "${{ inputs.source_version }}" > _output/upgrade-from
+      - name: Provision cluster
+        env:
+          SOURCE_AMI_NAME: ${{ inputs.source_ami_name }}
+        run: |
+          make cluster-provision \
+              VERSION=${VERSION} \
+              KUBERNETES_VERSION=${KUBERNETES_VERSION} \
+              AMI_NAME=${{ inputs.ami_name }} \
+              SCENARIO=${{ matrix.scenario }} \
+              CLUSTER_NAME=${CLUSTER_NAME} \
+              CLUSTER_DIR=${CLUSTER_DIR} \
+              VPC_ID=${{ secrets.VPC_ID }} \
+              SUBNET_ID_PUBLIC=${{ secrets.SUBNET_ID_PUBLIC }} \
+              SUBNET_IDS_PRIVATE=${{ secrets.SUBNET_IDS_PRIVATE }} \
+              MODULE_SOURCE=${{ github.workspace }}/terraform \
+              STACKBOT_BUCKET=${{ inputs.bucket }} \
+              KMS_KEY_ID=${{ secrets.KMS_KEY_ID }} \
+              STATE_BUCKET=${{ secrets.STATE_BUCKET }}
+      - name: Wait for cluster
+        run: make cluster-wait CLUSTER_NAME=${CLUSTER_NAME}
+      - name: Run conformance tests
+        env:
+          KUBECONFIG: ${{ github.workspace }}/kubeconfig
+        run: |
+          make cluster-kubeconfig CLUSTER_NAME=${CLUSTER_NAME} OUTPUT=${KUBECONFIG}
+          make e2e-run
+      - name: Destroy cluster
+        id: destroy
+        if: always()
+        run: make cluster-destroy CLUSTER_DIR=${CLUSTER_DIR}
+      - name: Delete terraform state
+        if: always() && steps.destroy.outcome == 'success'
+        run: |
+          make terraform-state-delete \
+              STATE_BUCKET=${{ secrets.STATE_BUCKET }} \
+              CLUSTER_NAME=${CLUSTER_NAME}

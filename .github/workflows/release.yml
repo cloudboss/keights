@@ -13,28 +13,9 @@ jobs:
       packages: write
     with:
       version: ${{ github.ref_name }}
-      push_image: true
-
-  build-ami:
-    runs-on: ubuntu-24.04
-    needs:
-      - test-build
-    permissions:
-      id-token: write
-      contents: read
-    outputs:
-      ami_id: ${{ steps.ami.outputs.ami_id }}
-    steps:
-      - uses: actions/checkout@v5
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1
-      - run: make ami VERSION=${{ github.ref_name }} SUBNET_ID=${{ secrets.SUBNET_ID_PUBLIC }}
-      - run: make ami-tag
-      - run: make ami-public
-      - id: ami
-        run: echo "ami_id=$(cat _output/ami/ami-id)" >> ${GITHUB_OUTPUT}
+      # Sanity-build only. Production images are built per (keights, kubernetes)
+      # pair by .github/workflows/ami.yml.
+      push_image: false
 
   upload-stackbot:
     runs-on: ubuntu-24.04
@@ -59,7 +40,6 @@ jobs:
     runs-on: ubuntu-24.04
     needs:
       - test-build
-      - build-ami
       - upload-stackbot
     permissions:
       contents: write
@@ -85,29 +65,17 @@ jobs:
     runs-on: ubuntu-24.04
     needs:
       - test-build
-      - build-ami
       - upload-stackbot
       - release
     permissions:
       id-token: write
       contents: write
-      packages: write
     steps:
       - uses: actions/checkout@v5
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-east-1
-      - continue-on-error: true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: make image-delete VERSION=${{ github.ref_name }}
-      - if: needs.build-ami.outputs.ami_id != ''
-        continue-on-error: true
-        run: |
-          mkdir -p _output/ami
-          echo "${{ needs.build-ami.outputs.ami_id }}" > _output/ami/ami-id
-          make ami-destroy
       - continue-on-error: true
         run: |
           make stackbot-delete \

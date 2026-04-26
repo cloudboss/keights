@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+# Pick the source AMI for the upgrade-from E2E test.
+#
+# Among keights AMIs visible to the caller, find the highest Kubernetes
+# minor version strictly below TARGET_KUBERNETES_VERSION's minor version,
+# then within that subset pick the AMI tagged with the oldest keights
+# version. Print AMI_ID, AMI_NAME, SOURCE_KUBERNETES_VERSION, and
+# SOURCE_VERSION as KEY=VALUE lines so the workflow can capture them into
+# env or GITHUB_OUTPUT. Print "SKIP" alone if no candidate exists (e.g.,
+# this is the first AMI for a brand new keights minor version with no prior
+# Kubernetes minor version already built).
+#
+# Usage: TARGET_KUBERNETES_VERSION=1.35.1 hack/ami-find-upgrade-source
+
+import json
+import os
+import subprocess
+import sys
+
+target = os.environ.get("TARGET_KUBERNETES_VERSION")
+if not target:
+    print("TARGET_KUBERNETES_VERSION is required", file=sys.stderr)
+    sys.exit(1)
+
+
+def minor_pair(version):
+    parts = version.split(".")
+    return (int(parts[0]), int(parts[1]))
+
+
+def keights_tuple(version):
+    return tuple(int(p) for p in version.lstrip("v").split("."))
+
+
+def tag(tags, key):
+    for t in tags:
+        if t["Key"] == key:
+            return t["Value"]
+    return None
+
+
+target_minor = minor_pair(target)
+
+result = subprocess.run(
+    [
+        "aws", "ec2", "describe-images",
+        "--owners", "self",
+        "--filters", "Name=tag-key,Values=cloudboss.co/keights/keights-version",
+        "--query", "Images[].{Id:ImageId,Name:Name,Tags:Tags}",
+        "--output", "json",
+    ],
+    check=True,
+    capture_output=True,
+    text=True,
+)
+images = json.loads(result.stdout)
+
+candidates = []
+for img in images:
+    k8s = tag(img["Tags"], "cloudboss.co/keights/kubernetes-version")
+    keights = tag(img["Tags"], "cloudboss.co/keights/keights-version")
+    if not k8s or not keights:
+        continue
+    if minor_pair(k8s) >= target_minor:
+        continue
+    candidates.append((img["Id"], img["Name"], k8s, keights))
+
+if not candidates:
+    print("SKIP")
+    sys.exit(0)
+
+newest_previous = max(minor_pair(c[2]) for c in candidates)
+filtered = [c for c in candidates if minor_pair(c[2]) == newest_previous]
+filtered.sort(key=lambda c: keights_tuple(c[3]))
+chosen = filtered[0]
+
+print(f"AMI_ID={chosen[0]}")
+print(f"AMI_NAME={chosen[1]}")
+print(f"SOURCE_KUBERNETES_VERSION={chosen[2]}")
+print(f"SOURCE_VERSION={chosen[3]}")

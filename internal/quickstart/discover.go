@@ -87,10 +87,20 @@ func (a AMI) Label() string {
 	return fmt.Sprintf("id: %s, from: %s, kubernetes: %s", a.ID, from, k8s)
 }
 
-// kubernetesVersionTag is the AMI tag that records which Kubernetes version
-// the image was built for. Tooling reads it to pick an AMI for a given
-// Kubernetes version and to render the corresponding value into Terraform.
-const kubernetesVersionTag = "cloudboss.co/keights/kubernetes-version"
+// AMI tag keys used by the AMI build pipeline and read by tooling here.
+const (
+	// kubernetesVersionTag records which Kubernetes patch the AMI was built
+	// for. Used to render the kubernetes_version into Terraform.
+	kubernetesVersionTag = "cloudboss.co/keights/kubernetes-version"
+
+	// keightsVersionMinorTag is the minor-scoped compatibility filter, e.g.,
+	// "v2.0". A keights v2.0.x CLI only sees AMIs blessed for v2.0.
+	keightsVersionMinorTag = "cloudboss.co/keights/keights-version-minor"
+
+	// containerImageTag is the easyto-set tag carrying the source container
+	// image ref (e.g., ghcr.io/cloudboss/keights:...).
+	containerImageTag = "cloudboss.co/easyto/container-image"
+)
 
 // KMSKey describes a KMS key alias for selection in the wizard.
 type KMSKey struct {
@@ -131,10 +141,32 @@ type KMSAPI interface {
 type Discoverer struct {
 	ec2 EC2API
 	kms KMSAPI
+	// keightsVersion is the running CLI version (e.g., "v2.0.5"), used to
+	// scope AMI discovery to the matching keights minor. Empty disables the
+	// minor filter (e.g., for dev builds where Version == "dev").
+	keightsVersion string
 }
 
-func NewDiscoverer(ec2Client EC2API, kmsClient KMSAPI) *Discoverer {
-	return &Discoverer{ec2: ec2Client, kms: kmsClient}
+func NewDiscoverer(ec2Client EC2API, kmsClient KMSAPI, keightsVersion string) *Discoverer {
+	return &Discoverer{
+		ec2:            ec2Client,
+		kms:            kmsClient,
+		keightsVersion: keightsVersion,
+	}
+}
+
+// keightsMinor returns the vMAJOR.MINOR prefix of a vMAJOR.MINOR.PATCH string,
+// e.g., "v2.0.5" -> "v2.0". Returns "" for inputs that aren't a vMAJOR.MINOR.*
+// shape (such as "dev"), in which case callers should skip minor filtering.
+func keightsMinor(version string) string {
+	if !strings.HasPrefix(version, "v") {
+		return ""
+	}
+	parts := strings.SplitN(version, ".", 3)
+	if len(parts) < 2 {
+		return ""
+	}
+	return parts[0] + "." + parts[1]
 }
 
 func (d *Discoverer) VPCs(ctx context.Context) ([]VPC, error) {
@@ -181,25 +213,33 @@ func (d *Discoverer) Subnets(ctx context.Context, vpcID string) ([]Subnet, error
 	return subs, nil
 }
 
-// AMIs returns AMIs tagged with `container_image` values that begin with
-// `ghcr.io/cloudboss/keights`. Both AMIs owned by the caller and AMIs shared
-// with the caller's account are considered.
+// AMIs returns keights AMIs visible to the caller. Filters on the easyto
+// container-image tag and, when the running CLI has a release-shaped version,
+// on the keights-version-minor tag, so a v2.0.x CLI only sees AMIs blessed
+// for v2.0.
 func (d *Discoverer) AMIs(ctx context.Context) ([]AMI, error) {
-	out, err := d.ec2.DescribeImages(ctx, &ec2.DescribeImagesInput{
-		Owners: []string{"self"},
-		Filters: []ec2types.Filter{
-			{
-				Name:   strPtr("tag:container_image"),
-				Values: []string{"ghcr.io/cloudboss/keights*"},
-			},
+	filters := []ec2types.Filter{
+		{
+			Name:   strPtr("tag:" + containerImageTag),
+			Values: []string{"ghcr.io/cloudboss/keights*"},
 		},
+	}
+	if minor := keightsMinor(d.keightsVersion); minor != "" {
+		filters = append(filters, ec2types.Filter{
+			Name:   strPtr("tag:" + keightsVersionMinorTag),
+			Values: []string{minor},
+		})
+	}
+	out, err := d.ec2.DescribeImages(ctx, &ec2.DescribeImagesInput{
+		Owners:  []string{"self"},
+		Filters: filters,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to describe images: %w", err)
 	}
 	amis := make([]AMI, 0, len(out.Images))
 	for _, img := range out.Images {
-		ci := tagValue(img.Tags, "container_image")
+		ci := tagValue(img.Tags, containerImageTag)
 		if !strings.HasPrefix(ci, "ghcr.io/cloudboss/keights") {
 			continue
 		}

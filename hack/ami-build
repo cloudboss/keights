@@ -1,6 +1,8 @@
 #!/bin/sh -e
 
 VERSION=${VERSION:?VERSION is required}
+VERSION_MINOR=${VERSION_MINOR:?VERSION_MINOR is required}
+KUBERNETES_VERSION=${KUBERNETES_VERSION:?KUBERNETES_VERSION is required}
 SUBNET_ID=${SUBNET_ID:?SUBNET_ID is required}
 IMAGE_REPOSITORY=${IMAGE_REPOSITORY:?IMAGE_REPOSITORY is required}
 EASYTO_VERSION=${EASYTO_VERSION:?EASYTO_VERSION is required}
@@ -18,16 +20,24 @@ if [ ! -x ${easyto} ]; then
     rm -f ${DIR_CACHE}/easyto.tar.gz
 fi
 
-container_image=${IMAGE_REPOSITORY}:${VERSION}
-ami_name=$(echo "${container_image}" | sed 's|[/:]|--|g')
+container_image=${IMAGE_REPOSITORY}:${VERSION}-k8s-${KUBERNETES_VERSION}
+# AMI name must be unique per account/region, so include a timestamp.
+timestamp=$(date -u +%Y%m%dT%H%M%SZ)
+ami_name="keights-${VERSION}-k8s-${KUBERNETES_VERSION}-${timestamp}"
 
 ${easyto} ami \
     -a ${ami_name} \
     -c ${container_image} \
     --services=chrony,ssh \
-    -s ${SUBNET_ID}
+    -s ${SUBNET_ID} \
+    --public \
+    --tag Name=${container_image} \
+    --tag cloudboss.co/keights/kubernetes-version=${KUBERNETES_VERSION} \
+    --tag cloudboss.co/keights/keights-version-minor=${VERSION_MINOR} \
+    --tag cloudboss.co/keights/keights-version=${VERSION}
 
 mkdir -p ${DIR_AMI}
+echo "${ami_name}" > ${DIR_AMI}/ami-name
 aws ec2 describe-images \
     --owners self \
     --filters Name=name,Values=${ami_name} \

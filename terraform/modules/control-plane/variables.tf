@@ -87,7 +87,9 @@ variable "kube_ca_function_name" {
 }
 
 variable "kubernetes_version" {
-  type = string
+  type        = string
+  default     = null
+  description = "When null, derived from the AMI's `cloudboss.co/keights/kubernetes-version` tag."
 }
 
 variable "load_balancer" {

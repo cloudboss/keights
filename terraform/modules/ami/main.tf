@@ -60,3 +60,19 @@ data "aws_ami" "it" {
 output "id" {
   value = data.aws_ami.it.id
 }
+
+output "kubernetes_version" {
+  value = data.aws_ami.it.tags["cloudboss.co/keights/kubernetes-version"]
+}
+
+output "keights_version_minor" {
+  value = data.aws_ami.it.tags["cloudboss.co/keights/keights-version-minor"]
+}
+
+output "keights_version" {
+  value = data.aws_ami.it.tags["cloudboss.co/keights/keights-version"]
+}
+
+output "tags" {
+  value = data.aws_ami.it.tags
+}

@@ -8,7 +8,7 @@ SUBNET_ID_PUBLIC=${SUBNET_ID_PUBLIC:?SUBNET_ID_PUBLIC is required}
 SUBNET_IDS_PRIVATE=${SUBNET_IDS_PRIVATE:?SUBNET_IDS_PRIVATE is required}
 CLUSTER_DIR=${CLUSTER_DIR:?CLUSTER_DIR is required}
 MODULE_SOURCE=${MODULE_SOURCE:?MODULE_SOURCE is required}
-IMAGE_REPOSITORY=${IMAGE_REPOSITORY:?IMAGE_REPOSITORY is required}
+AMI_NAME=${AMI_NAME:?AMI_NAME is required}
 VERSION=${VERSION:?VERSION is required}
 KUBERNETES_VERSION=${KUBERNETES_VERSION:?KUBERNETES_VERSION is required}
 KEIGHTS=${KEIGHTS:?KEIGHTS is required}
@@ -16,15 +16,13 @@ STACKBOT_BUCKET=${STACKBOT_BUCKET:?STACKBOT_BUCKET is required}
 KMS_KEY_ID=${KMS_KEY_ID:?KMS_KEY_ID is required}
 STATE_BUCKET=${STATE_BUCKET:?STATE_BUCKET is required}
 
-ami_name=$(echo "${IMAGE_REPOSITORY}:${VERSION}" | sed 's|[/:]|--|g')
-
 provision_head() {
     ${KEIGHTS} quickstart --non-interactive \
         --cluster-name ${CLUSTER_NAME} \
         --region ${AWS_REGION} \
         --vpc-id ${VPC_ID} \
         --access-cidrs-api 0.0.0.0/0 \
-        --ami-name ${ami_name} \
+        --ami-name ${AMI_NAME} \
         --ami-owner-id self \
         --kms-key-id ${KMS_KEY_ID} \
         --kubernetes-version ${KUBERNETES_VERSION} \
@@ -44,8 +42,15 @@ fresh)
     provision_head
     ;;
 upgrade)
-    prior=$(cat $(dirname $0)/upgrade-from)
-    echo "Seeding upgrade cluster with ${prior}..."
+    prior=$(cat $(dirname $0)/../_output/upgrade-from)
+    SOURCE_AMI_OWNER_ID=${SOURCE_AMI_OWNER_ID:-self}
+    if [ -n "${SOURCE_AMI_NAME}" ]; then
+        ami_args="--ami-name ${SOURCE_AMI_NAME} --ami-owner-id ${SOURCE_AMI_OWNER_ID}"
+        echo "Seeding upgrade cluster with ${prior} on AMI ${SOURCE_AMI_NAME}..."
+    else
+        ami_args=""
+        echo "Seeding upgrade cluster with ${prior} (default AMI discovery)..."
+    fi
     curl -fsSL -o /tmp/keights-prior.tar.gz \
         https://github.com/cloudboss/keights/releases/download/${prior}/keights-${prior}-linux-amd64.tar.gz
     mkdir -p /tmp/keights-prior
@@ -55,6 +60,7 @@ upgrade)
         --region ${AWS_REGION} \
         --vpc-id ${VPC_ID} \
         --access-cidrs-api 0.0.0.0/0 \
+        ${ami_args} \
         --kms-key-id ${KMS_KEY_ID} \
         --lambda-bucket ${STACKBOT_BUCKET} \
         --lambda-version ${VERSION} \

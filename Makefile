@@ -25,10 +25,14 @@ DIR_STG = $(DIR_OUT)/staging
 DIR_RELEASE = $(DIR_OUT)/release
 DIR_ROOT = $(realpath $(CURDIR))
 
-KUBERNETES_VERSION = 1.34.5
 IMAGE_REPOSITORY = ghcr.io/cloudboss/keights
-EASYTO_VERSION = 0.9.0
+EASYTO_VERSION = 0.10.0
 SONOBUOY_VERSION = 0.57.3
+
+# KUBERNETES_VERSION defaults to the patch from compat.json's default-test-version,
+# used by the keights-tag sanity image build and by local dev.
+# The AMI workflow passes KUBERNETES_VERSION explicitly per (keights, kubernetes) pair.
+KUBERNETES_VERSION ?= $(shell $(CURDIR)/hack/compat-default-test-version 2>/dev/null)
 
 CTR_IMAGE_GO = ghcr.io/cloudboss/docker.io/library/golang:1.26.1-alpine3.23
 CTR_IMAGE_GOLANGCI = ghcr.io/cloudboss/golangci/golangci-lint:v2.11.4-alpine
@@ -141,18 +145,33 @@ check-version:
 	@[ -n "$(VERSION)" ] || (echo "VERSION is required"; exit 1)
 	@[ $$(echo $(VERSION) | cut -c 1) = v ] || (echo "VERSION must begin with a 'v'"; exit 1)
 
-image: check-version $(HAS_COMMAND_DOCKER)
+# Generic guard for required variables. Any target can depend on
+# `check-var-FOO` to assert FOO is non-empty before running.
+check-var-%:
+	@[ -n "$($*)" ] || (echo "$* is required"; exit 1)
+
+# Image tag includes the keights tag and the kubernetes patch so each (keights, kubernetes)
+# pair is a distinct image.
+IMAGE_TAG = $(IMAGE_REPOSITORY):$(VERSION)-k8s-$(KUBERNETES_VERSION)
+
+# Image build-args are derived from compat.json keyed by the kubernetes minor
+# version, so each (keights tag, kubernetes patch) pair pins the values its
+# minor version expects.
+IMAGE_BUILD_ARGS = $(shell $(CURDIR)/hack/compat-build-args $(KUBERNETES_VERSION))
+
+image: check-version check-var-KUBERNETES_VERSION $(HAS_COMMAND_DOCKER)
 	@docker build \
 		--build-arg KUBERNETES_VERSION=$(KUBERNETES_VERSION) \
-		-t $(IMAGE_REPOSITORY):$(VERSION) \
+		$(IMAGE_BUILD_ARGS) \
+		-t $(IMAGE_TAG) \
 		-f image/Containerfile \
 		.
 
-image-push: check-version $(HAS_COMMAND_DOCKER)
-	@docker push $(IMAGE_REPOSITORY):$(VERSION)
+image-push: check-version check-var-KUBERNETES_VERSION $(HAS_COMMAND_DOCKER)
+	@docker push $(IMAGE_TAG)
 
-image-delete: check-version
-	@VERSION=$(VERSION) IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) \
+image-delete: check-version check-var-KUBERNETES_VERSION
+	@VERSION=$(VERSION)-k8s-$(KUBERNETES_VERSION) IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) \
 		$(DIR_ROOT)/hack/image-delete
 
 STACKBOT_GO_DEPS = \
@@ -245,23 +264,20 @@ terraform-validate: $(HAS_COMMAND_DOCKER)
 		-c "terraform fmt -check -recursive terraform && \
 			cd terraform && terraform init -backend=false && terraform validate"
 
-ami: check-version
+# Extract MAJOR.MINOR from a vX.Y.Z keights tag for the keights-version-minor
+# AMI tag, e.g., v2.0.5 -> v2.0.
+VERSION_MINOR = $(shell echo $(VERSION) | awk -F. '{print $$1"."$$2}')
+
+ami: check-version check-var-KUBERNETES_VERSION
 	@VERSION=$(VERSION) \
+		VERSION_MINOR=$(VERSION_MINOR) \
+		KUBERNETES_VERSION=$(KUBERNETES_VERSION) \
 		SUBNET_ID=$(SUBNET_ID) \
 		IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) \
 		EASYTO_VERSION=$(EASYTO_VERSION) \
 		DIR_CACHE=$(DIR_CACHE) \
 		DIR_AMI=$(DIR_AMI) \
 		$(DIR_ROOT)/hack/ami-build
-
-ami-tag:
-	@AMI_ID_FILE=$(AMI_ID_FILE) \
-		KUBERNETES_VERSION=$(KUBERNETES_VERSION) \
-		$(DIR_ROOT)/hack/ami-tag
-
-ami-public:
-	@AMI_ID_FILE=$(AMI_ID_FILE) \
-		$(DIR_ROOT)/hack/ami-public
 
 ami-destroy:
 	@AMI_ID_FILE=$(AMI_ID_FILE) \
@@ -291,7 +307,7 @@ release-delete:
 KEIGHTS_BIN = $(DIR_STG_KEIGHTS)/keights
 KEIGHTS_PATH = $(DIR_ROOT)/$(shell dirname $(KEIGHTS_BIN))
 
-cluster-provision: check-version $(KEIGHTS_BIN)
+cluster-provision: check-version check-var-KUBERNETES_VERSION check-var-AMI_NAME $(KEIGHTS_BIN)
 	@SCENARIO=$(SCENARIO) \
 		CLUSTER_NAME=$(CLUSTER_NAME) \
 		AWS_REGION=$(AWS_REGION) \
@@ -300,7 +316,7 @@ cluster-provision: check-version $(KEIGHTS_BIN)
 		SUBNET_IDS_PRIVATE=$=$(SUBNET_IDS_PRIVATE) \
 		CLUSTER_DIR=$(CLUSTER_DIR) \
 		MODULE_SOURCE=$(MODULE_SOURCE) \
-		IMAGE_REPOSITORY=$(IMAGE_REPOSITORY) \
+		AMI_NAME=$(AMI_NAME) \
 		VERSION=$(VERSION) \
 		KUBERNETES_VERSION=$(KUBERNETES_VERSION) \
 		STACKBOT_BUCKET=$(STACKBOT_BUCKET) \
@@ -334,8 +350,8 @@ clean:
 	@chmod -R +w $(DIR_OUT)/go
 	@rm -rf $(DIR_OUT)
 
-.PHONY: check-version keights release-one release stackbot terraform-release \
-	test lint terraform-validate ami ami-tag ami-public ami-destroy \
+.PHONY: check-version check-var-% keights release-one release stackbot \
+	terraform-release test lint terraform-validate ami ami-destroy \
 	release-delete image image-push image-delete stackbot-upload \
 	stackbot-delete stackbot-bucket-create stackbot-bucket-delete \
 	cluster-provision terraform-state-delete cluster-wait \

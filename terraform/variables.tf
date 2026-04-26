@@ -153,9 +153,9 @@ variable "kubernetes_configuration" {
     cluster_domain = optional(string, "cluster.local")
     image_registry = optional(string, "registry.k8s.io")
     service_subnet = optional(string, "10.96.0.0/12")
-    version        = optional(string, "1.34.1")
+    version        = optional(string)
   })
-  description = "Kubernetes configuration options."
+  description = "Kubernetes configuration options. `version`, when null, is derived from the AMI's `cloudboss.co/keights/kubernetes-version` tag."
 
   default = {}
 }

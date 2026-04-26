@@ -61,7 +61,7 @@ If you run with --non-interactive, you must provide configuration via flags. Exa
 		}
 
 		disc := quickstart.NewDiscoverer(
-			ec2.NewFromConfig(cfg), kms.NewFromConfig(cfg),
+			ec2.NewFromConfig(cfg), kms.NewFromConfig(cfg), Version,
 		)
 
 		var answers *quickstart.Answers
