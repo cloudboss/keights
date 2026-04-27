@@ -126,6 +126,7 @@ jobs:
       keights_artifact_name: keights-linux-amd64
       source_ami_name: ${{ needs.build.outputs.source_ami_name }}
       source_version: ${{ needs.build.outputs.source_version }}
+      module_source: ""
     secrets: inherit
 
   cleanup:

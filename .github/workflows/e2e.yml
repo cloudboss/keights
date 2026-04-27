@@ -111,6 +111,7 @@ jobs:
       source_ami_name: ${{ needs.setup.outputs.source_ami_name }}
       source_version: ${{ needs.setup.outputs.source_version }}
       region: ${{ inputs.region || 'us-east-1' }}
+      module_source: ${{ github.workspace }}/terraform
     secrets: inherit
 
   cleanup:

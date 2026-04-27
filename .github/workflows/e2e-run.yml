@@ -37,6 +37,9 @@ on:
         required: false
         type: string
         default: us-east-1
+      module_source:
+        required: true
+        type: string
     secrets:
       AWS_ROLE_ARN:
         required: true
@@ -98,7 +101,7 @@ jobs:
               VPC_ID=${{ secrets.VPC_ID }} \
               SUBNET_ID_PUBLIC=${{ secrets.SUBNET_ID_PUBLIC }} \
               SUBNET_IDS_PRIVATE=${{ secrets.SUBNET_IDS_PRIVATE }} \
-              MODULE_SOURCE=${{ github.workspace }}/terraform \
+              MODULE_SOURCE=${{ inputs.module_source }} \
               STACKBOT_BUCKET=${{ inputs.bucket }} \
               KMS_KEY_ID=${{ secrets.KMS_KEY_ID }} \
               STATE_BUCKET=${{ secrets.STATE_BUCKET }}

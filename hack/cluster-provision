@@ -4,10 +4,9 @@ SCENARIO=${SCENARIO:?SCENARIO is required}
 CLUSTER_NAME=${CLUSTER_NAME:?CLUSTER_NAME is required}
 AWS_REGION=${AWS_REGION:?AWS_REGION is required}
 VPC_ID=${VPC_ID:?VPC_ID is required}
-SUBNET_ID_PUBLIC=${SUBNET_ID_PUBLIC:?SUBNET_ID_PUBLIC is required}
+SUBNET_ID_API=${SUBNET_ID_API:?SUBNET_ID_API is required}
 SUBNET_IDS_PRIVATE=${SUBNET_IDS_PRIVATE:?SUBNET_IDS_PRIVATE is required}
 CLUSTER_DIR=${CLUSTER_DIR:?CLUSTER_DIR is required}
-MODULE_SOURCE=${MODULE_SOURCE:?MODULE_SOURCE is required}
 AMI_NAME=${AMI_NAME:?AMI_NAME is required}
 VERSION=${VERSION:?VERSION is required}
 KUBERNETES_VERSION=${KUBERNETES_VERSION:?KUBERNETES_VERSION is required}
@@ -15,35 +14,41 @@ KEIGHTS=${KEIGHTS:?KEIGHTS is required}
 STACKBOT_BUCKET=${STACKBOT_BUCKET:?STACKBOT_BUCKET is required}
 KMS_KEY_ID=${KMS_KEY_ID:?KMS_KEY_ID is required}
 STATE_BUCKET=${STATE_BUCKET:?STATE_BUCKET is required}
+SOURCE_AMI_OWNER_ID=${SOURCE_AMI_OWNER_ID:-self}
 
-provision_head() {
-    ${KEIGHTS} quickstart --non-interactive \
+provision() {
+    local ami_args=${1}
+    local keights_cmd=${2}
+    local module_source_arg=
+    if [ -n "${MODULE_SOURCE}" ]; then
+        module_source_arg="--module-source ${MODULE_SOURCE}"
+    fi
+    ${keights_cmd} quickstart --non-interactive \
         --cluster-name ${CLUSTER_NAME} \
         --region ${AWS_REGION} \
         --vpc-id ${VPC_ID} \
         --access-cidrs-api 0.0.0.0/0 \
-        --ami-name ${AMI_NAME} \
-        --ami-owner-id self \
-        --kms-key-id ${KMS_KEY_ID} \
+        ${ami_args} \
         --kubernetes-version ${KUBERNETES_VERSION} \
+        --kms-key-id ${KMS_KEY_ID} \
         --lambda-bucket ${STACKBOT_BUCKET} \
         --lambda-version ${VERSION} \
         --state-backend s3 \
         --state-bucket ${STATE_BUCKET} \
-        --control-plane type=m5.large,internal=false,subnets=${SUBNET_ID_PUBLIC} \
+        --control-plane type=m5.large,internal=false,subnets=${SUBNET_ID_API} \
         --node-group name=default,type=m5.large,min=3,desired=3,max=3,subnets=${SUBNET_IDS_PRIVATE} \
-        --module-source ${MODULE_SOURCE} \
+        ${module_source_arg} \
         --output-dir ${CLUSTER_DIR}
-    ${KEIGHTS} deploy ${CLUSTER_DIR} --auto-approve
+    ${keights_cmd} deploy ${CLUSTER_DIR} --auto-approve
 }
 
-case ${SCENARIO} in
-fresh)
-    provision_head
-    ;;
-upgrade)
-    prior=$(cat $(dirname $0)/../_output/upgrade-from)
-    SOURCE_AMI_OWNER_ID=${SOURCE_AMI_OWNER_ID:-self}
+provision_prior() {
+    upgrade_from_file=$(realpath $(dirname $0)/../_output/upgrade-from)
+    if [ ! -f ${upgrade_from_file} ]; then
+        echo "Expected file ${upgrade_from_file} not found" >&2
+        return 1
+    fi
+    prior=$(cat ${upgrade_from_file})
     if [ -n "${SOURCE_AMI_NAME}" ]; then
         ami_args="--ami-name ${SOURCE_AMI_NAME} --ami-owner-id ${SOURCE_AMI_OWNER_ID}"
         echo "Seeding upgrade cluster with ${prior} on AMI ${SOURCE_AMI_NAME}..."
@@ -51,31 +56,28 @@ upgrade)
         ami_args=""
         echo "Seeding upgrade cluster with ${prior} (default AMI discovery)..."
     fi
-    curl -fsSL -o /tmp/keights-prior.tar.gz \
+    tmpdir=$(mktemp -d)
+    trap "rm -rf ${tmpdir}" EXIT
+    curl -fsSL -o ${tmpdir}/keights-prior.tar.gz \
         https://github.com/cloudboss/keights/releases/download/${prior}/keights-${prior}-linux-amd64.tar.gz
-    mkdir -p /tmp/keights-prior
-    tar -xzf /tmp/keights-prior.tar.gz -C /tmp/keights-prior
-    /tmp/keights-prior/keights quickstart --non-interactive \
-        --cluster-name ${CLUSTER_NAME} \
-        --region ${AWS_REGION} \
-        --vpc-id ${VPC_ID} \
-        --access-cidrs-api 0.0.0.0/0 \
-        ${ami_args} \
-        --kms-key-id ${KMS_KEY_ID} \
-        --lambda-bucket ${STACKBOT_BUCKET} \
-        --lambda-version ${VERSION} \
-        --state-backend s3 \
-        --state-bucket ${STATE_BUCKET} \
-        --control-plane type=m5.large,internal=false,subnets=${SUBNET_ID_PUBLIC} \
-        --node-group name=default,type=m5.large,min=3,desired=3,max=3,subnets=${SUBNET_IDS_PRIVATE} \
-        --output-dir ${CLUSTER_DIR}
-    /tmp/keights-prior/keights deploy ${CLUSTER_DIR} --auto-approve
-    CLUSTER_NAME=${CLUSTER_NAME} KEIGHTS=/tmp/keights-prior/keights \
+    tar -C ${tmpdir} -xzf ${tmpdir}/keights-prior.tar.gz
+    provision "${ami_args}" "${tmpdir}/keights"
+    PATH=${tmpdir}:${PATH} CLUSTER_NAME=${CLUSTER_NAME} KEIGHTS=${tmpdir}/keights \
         $(dirname $0)/cluster-wait
-    # State lives in S3; re-rendering into a fresh directory picks it up
-    # via the backend. keights quickstart refuses to render into an
-    # existing directory so remove it first.
+    # Clean up for the next run so `keights quickstart` doesn't error out due to an existing directory.
     rm -rf ${CLUSTER_DIR}
+}
+
+provision_head() {
+    provision "--ami-name ${AMI_NAME} --ami-owner-id ${SOURCE_AMI_OWNER_ID}" "${KEIGHTS}"
+}
+
+case ${SCENARIO} in
+fresh)
+    provision_head
+    ;;
+upgrade)
+    provision_prior
     echo "Upgrading cluster to HEAD..."
     provision_head
     ;;
