@@ -1,0 +1,47 @@
+name: cron
+
+# Daily refresh: for each released keights v2 line, build any AMI that is
+# missing for the latest patch of every Kubernetes line it supports.
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  find-missing:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      pairs: ${{ steps.pairs.outputs.list }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      - id: pairs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          list=$(./hack/ami-find-missing v2)
+          echo "list=${list}" >> "${GITHUB_OUTPUT}"
+          echo "missing pairs: ${list}"
+
+  build:
+    needs: find-missing
+    if: needs.find-missing.outputs.pairs != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        pair: ${{ fromJson(needs.find-missing.outputs.pairs) }}
+    uses: ./.github/workflows/ami.yml
+    with:
+      keights_tag: ${{ matrix.pair.keights_tag }}
+      kubernetes_version: ${{ matrix.pair.kubernetes_version }}
+    secrets: inherit

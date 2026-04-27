@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+# Find (keights tag, kubernetes patch version) pairs that have no AMI yet.
+#
+# For every keights GitHub release matching `<KEIGHTS_VERSION_PREFIX>.Y.Z`,
+# pick the highest one and read its compat.json. The keys of
+# `image-build-args` in compat.json declare which Kubernetes minor versions
+# are supported. For each one, fetch the latest patch from dl.k8s.io and
+# check AWS for an AMI tagged with that (keights-version-minor,
+# kubernetes-version) pair. Emit any missing pairs as a JSON list to stdout:
+#
+#   [{"keights_tag":"v2.0.7","kubernetes_version":"1.34.5"}, ...]
+
+import json
+import re
+import subprocess
+import sys
+import urllib.request
+
+
+def run(cmd):
+    return subprocess.run(cmd, check=True, capture_output=True, text=True).stdout
+
+
+def stable_releases(prefix):
+    pattern = re.compile(rf"^{re.escape(prefix)}\.([0-9]+)\.([0-9]+)$")
+    out = run(["gh", "release", "list",
+               "--json", "tagName,isDraft,isPrerelease",
+               "--limit", "200"])
+    releases = []
+    for r in json.loads(out):
+        if r.get("isDraft") or r.get("isPrerelease"):
+            continue
+        m = pattern.match(r["tagName"])
+        if not m:
+            continue
+        releases.append((int(m.group(1)), int(m.group(2)), r["tagName"]))
+    return releases
+
+
+def highest_patch_per_minor(prefix, tags):
+    by_minor = {}
+    for minor, patch, name in tags:
+        cur = by_minor.get(minor)
+        if cur is None or patch > cur[0]:
+            by_minor[minor] = (patch, name)
+    return [(f"{prefix}.{minor}", name) for minor, (_, name) in sorted(by_minor.items())]
+
+
+def compat_at(tag):
+    return json.loads(run(["git", "show", f"{tag}:compat.json"]))
+
+
+def latest_kubernetes_patch(kubernetes_minor_version):
+    url = f"https://dl.k8s.io/release/stable-{kubernetes_minor_version}.txt"
+    with urllib.request.urlopen(url, timeout=30) as resp:
+        return resp.read().decode("utf-8").strip().lstrip("v")
+
+
+def ami_exists(keights_version_minor, kubernetes_version):
+    out = run([
+        "aws", "ec2", "describe-images",
+        "--owners", "self",
+        "--filters",
+        f"Name=tag:cloudboss.co/keights/keights-version-minor,Values={keights_version_minor}",
+        f"Name=tag:cloudboss.co/keights/kubernetes-version,Values={kubernetes_version}",
+        "--query", "Images[].ImageId",
+        "--output", "json",
+    ])
+    return len(json.loads(out)) > 0
+
+
+def main():
+    if len(sys.argv) != 2:
+        print(f"usage: {sys.argv[0]} KEIGHTS_VERSION_PREFIX (e.g. v2)", file=sys.stderr)
+        sys.exit(1)
+    prefix = sys.argv[1]
+    missing = []
+    for keights_version_minor, tag in highest_patch_per_minor(prefix, stable_releases(prefix)):
+        try:
+            data = compat_at(tag)
+        except subprocess.CalledProcessError:
+            print(f"warning: no compat.json at {tag}, skipping", file=sys.stderr)
+            continue
+        for kubernetes_minor_version in sorted((data.get("image-build-args") or {}).keys()):
+            try:
+                kubernetes_version = latest_kubernetes_patch(kubernetes_minor_version)
+            except Exception as e:
+                print(f"warning: failed to fetch latest {kubernetes_minor_version} patch: {e}",
+                      file=sys.stderr)
+                continue
+            if ami_exists(keights_version_minor, kubernetes_version):
+                continue
+            missing.append({"keights_tag": tag, "kubernetes_version": kubernetes_version})
+    print(json.dumps(missing))
+
+
+if __name__ == "__main__":
+    main()
