@@ -67,6 +67,7 @@ KEIGHTS_TARBALL = $(DIR_RELEASE)/keights-$(VERSION)-$(OS)-$(ARCH).tar.gz
 KEIGHTS_GO_DEPS = \
 	go.mod \
 	$(shell find cmd/keights -type f -path '*.go' ! -path '*_test.go') \
+	$(shell find internal/ami -type f -path '*.go' ! -path '*_test.go') \
 	$(shell find internal/deploy -type f -path '*.go' ! -path '*_test.go') \
 	$(shell find internal/deps -type f -path '*.go' ! -path '*_test.go') \
 	$(shell find internal/nlb -type f -path '*.go' ! -path '*_test.go') \

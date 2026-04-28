@@ -21,46 +21,17 @@
 package tree
 
 import (
-	"context"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/cloudboss/keights/cmd/keights/tree/ami"
 	"github.com/spf13/cobra"
 )
 
-var (
-	ClusterName string
-	Region      string
-
-	RootCmd = &cobra.Command{
-		Use:              "keights",
-		Short:            "Self hosted Kubernetes on AWS",
-		SilenceUsage:     true,
-		TraverseChildren: true,
-	}
-)
-
-func init() {
-	RootCmd.PersistentFlags().StringVar(
-		&ClusterName, "cluster-name", "", "name of the cluster",
-	)
-	RootCmd.PersistentFlags().StringVar(
-		&Region, "region", "", "AWS region (overrides SDK defaults)",
-	)
-	RootCmd.AddCommand(AmiCmd)
-	RootCmd.AddCommand(DeployCmd)
-	RootCmd.AddCommand(DestroyCmd)
-	RootCmd.AddCommand(KubeconfigCmd)
-	RootCmd.AddCommand(KubectlCmd)
-	RootCmd.AddCommand(QuickstartCmd)
-	RootCmd.AddCommand(TokenCmd)
-	RootCmd.AddCommand(VersionCmd)
+var AmiCmd = &cobra.Command{
+	Use:   "ami",
+	Short: "Manage keights AMIs",
 }
 
-func loadAWSConfig(ctx context.Context) (aws.Config, error) {
-	var opts []func(*config.LoadOptions) error
-	if Region != "" {
-		opts = append(opts, config.WithRegion(Region))
-	}
-	return config.LoadDefaultConfig(ctx, opts...)
+func init() {
+	AmiCmd.AddCommand(ami.NewCopy(Version, loadAWSConfig))
+	AmiCmd.AddCommand(ami.NewList(Version, loadAWSConfig))
+	AmiCmd.AddCommand(ami.NewStatus(loadAWSConfig))
 }

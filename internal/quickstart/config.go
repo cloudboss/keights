@@ -107,9 +107,7 @@ func BuildAnswers(
 	}
 	if kubernetesVersion == "" {
 		return nil, fmt.Errorf(
-			"unable to determine kubernetes version: pass --kubernetes-version " +
-				"or choose an AMI tagged with %q",
-			kubernetesVersionTag,
+			"unable to determine kubernetes version: pass --kubernetes-version",
 		)
 	}
 

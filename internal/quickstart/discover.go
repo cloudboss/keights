@@ -29,6 +29,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
+	"github.com/cloudboss/keights/internal/ami"
 )
 
 // VPC describes a VPC for selection in the wizard.
@@ -65,42 +66,8 @@ type KeyPair struct {
 	Name string
 }
 
-// AMI describes a keights AMI candidate for selection in the wizard.
-type AMI struct {
-	ID                string
-	Name              string
-	OwnerID           string
-	CreationDate      string
-	ContainerImage    string
-	KubernetesVersion string
-}
-
-func (a AMI) Label() string {
-	from := a.ContainerImage
-	if from == "" {
-		from = "unknown"
-	}
-	k8s := a.KubernetesVersion
-	if k8s == "" {
-		k8s = "unknown"
-	}
-	return fmt.Sprintf("id: %s, from: %s, kubernetes: %s", a.ID, from, k8s)
-}
-
-// AMI tag keys used by the AMI build pipeline and read by tooling here.
-const (
-	// kubernetesVersionTag records which Kubernetes patch the AMI was built
-	// for. Used to render the kubernetes_version into Terraform.
-	kubernetesVersionTag = "cloudboss.co/keights/kubernetes-version"
-
-	// keightsVersionMinorTag is the minor-scoped compatibility filter, e.g.,
-	// "v2.0". A keights v2.0.x CLI only sees AMIs blessed for v2.0.
-	keightsVersionMinorTag = "cloudboss.co/keights/keights-version-minor"
-
-	// containerImageTag is the easyto-set tag carrying the source container
-	// image ref (e.g., ghcr.io/cloudboss/keights:...).
-	containerImageTag = "cloudboss.co/easyto/container-image"
-)
+// AMI is an alias for ami.AMI to keep call sites in this package terse.
+type AMI = ami.AMI
 
 // KMSKey describes a KMS key alias for selection in the wizard.
 type KMSKey struct {
@@ -115,16 +82,17 @@ func (k KMSKey) Label() string {
 	return k.AliasName
 }
 
-// EC2API is the subset of the EC2 client the discoverer needs.
+// EC2API is the subset of the EC2 client the discoverer needs. It embeds
+// ami.EC2API so the discoverer can pass its client straight through to
+// ami.Find without an adapter.
 type EC2API interface {
+	ami.EC2API
 	DescribeVpcs(ctx context.Context, in *ec2.DescribeVpcsInput,
 		opts ...func(*ec2.Options)) (*ec2.DescribeVpcsOutput, error)
 	DescribeSubnets(ctx context.Context, in *ec2.DescribeSubnetsInput,
 		opts ...func(*ec2.Options)) (*ec2.DescribeSubnetsOutput, error)
 	DescribeKeyPairs(ctx context.Context, in *ec2.DescribeKeyPairsInput,
 		opts ...func(*ec2.Options)) (*ec2.DescribeKeyPairsOutput, error)
-	DescribeImages(ctx context.Context, in *ec2.DescribeImagesInput,
-		opts ...func(*ec2.Options)) (*ec2.DescribeImagesOutput, error)
 }
 
 // KMSAPI is the subset of the KMS client the discoverer needs.
@@ -153,20 +121,6 @@ func NewDiscoverer(ec2Client EC2API, kmsClient KMSAPI, keightsVersion string) *D
 		kms:            kmsClient,
 		keightsVersion: keightsVersion,
 	}
-}
-
-// keightsMinor returns the vMAJOR.MINOR prefix of a vMAJOR.MINOR.PATCH string,
-// e.g., "v2.0.5" -> "v2.0". Returns "" for inputs that aren't a vMAJOR.MINOR.*
-// shape (such as "dev"), in which case callers should skip minor filtering.
-func keightsMinor(version string) string {
-	if !strings.HasPrefix(version, "v") {
-		return ""
-	}
-	parts := strings.SplitN(version, ".", 3)
-	if len(parts) < 2 {
-		return ""
-	}
-	return parts[0] + "." + parts[1]
 }
 
 func (d *Discoverer) VPCs(ctx context.Context) ([]VPC, error) {
@@ -213,49 +167,15 @@ func (d *Discoverer) Subnets(ctx context.Context, vpcID string) ([]Subnet, error
 	return subs, nil
 }
 
-// AMIs returns keights AMIs visible to the caller. Filters on the easyto
-// container-image tag and, when the running CLI has a release-shaped version,
-// on the keights-version-minor tag, so a v2.0.x CLI only sees AMIs blessed
-// for v2.0.
+// AMIs returns keights AMIs visible to the caller. The discoverer queries
+// both the caller's own account ("self") and the official keights account
+// in the configured region, so callers see official AMIs when running in
+// us-east-1 and self-owned copies (created via `keights ami copy`) elsewhere.
 func (d *Discoverer) AMIs(ctx context.Context) ([]AMI, error) {
-	filters := []ec2types.Filter{
-		{
-			Name:   strPtr("tag:" + containerImageTag),
-			Values: []string{"ghcr.io/cloudboss/keights*"},
-		},
-	}
-	if minor := keightsMinor(d.keightsVersion); minor != "" {
-		filters = append(filters, ec2types.Filter{
-			Name:   strPtr("tag:" + keightsVersionMinorTag),
-			Values: []string{minor},
-		})
-	}
-	out, err := d.ec2.DescribeImages(ctx, &ec2.DescribeImagesInput{
-		Owners:  []string{"self"},
-		Filters: filters,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("unable to describe images: %w", err)
-	}
-	amis := make([]AMI, 0, len(out.Images))
-	for _, img := range out.Images {
-		ci := tagValue(img.Tags, containerImageTag)
-		if !strings.HasPrefix(ci, "ghcr.io/cloudboss/keights") {
-			continue
-		}
-		amis = append(amis, AMI{
-			ID:                aws(img.ImageId),
-			Name:              aws(img.Name),
-			OwnerID:           aws(img.OwnerId),
-			CreationDate:      aws(img.CreationDate),
-			ContainerImage:    ci,
-			KubernetesVersion: tagValue(img.Tags, kubernetesVersionTag),
-		})
-	}
-	sort.Slice(amis, func(i, j int) bool {
-		return amis[i].CreationDate > amis[j].CreationDate
-	})
-	return amis, nil
+	return ami.Find(
+		ctx, d.ec2, "", d.keightsVersion,
+		[]string{"self", ami.OfficialOwnerID},
+	)
 }
 
 // KMSKeys returns customer-managed KMS keys the caller can see. Keys without
