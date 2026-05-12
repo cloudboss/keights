@@ -30,6 +30,7 @@ import (
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	"github.com/cloudboss/keights/internal/ami"
+	"github.com/cloudboss/keights/internal/validate"
 )
 
 // VPC describes a VPC for selection in the wizard.
@@ -89,6 +90,8 @@ type EC2API interface {
 	ami.EC2API
 	DescribeVpcs(ctx context.Context, in *ec2.DescribeVpcsInput,
 		opts ...func(*ec2.Options)) (*ec2.DescribeVpcsOutput, error)
+	DescribeVpcAttribute(ctx context.Context, in *ec2.DescribeVpcAttributeInput,
+		opts ...func(*ec2.Options)) (*ec2.DescribeVpcAttributeOutput, error)
 	DescribeSubnets(ctx context.Context, in *ec2.DescribeSubnetsInput,
 		opts ...func(*ec2.Options)) (*ec2.DescribeSubnetsOutput, error)
 	DescribeKeyPairs(ctx context.Context, in *ec2.DescribeKeyPairsInput,
@@ -138,6 +141,49 @@ func (d *Discoverer) VPCs(ctx context.Context) ([]VPC, error) {
 	}
 	sort.Slice(vpcs, func(i, j int) bool { return vpcs[i].ID < vpcs[j].ID })
 	return vpcs, nil
+}
+
+// ValidateAccount runs preflight checks against the configured region and
+// selected VPC. Pass the chosen subnet IDs to verify membership in the VPC;
+// pass nil if subnet selection hasn't happened yet. Pass an empty amiName
+// to run the AMI discovery check; when the caller has an explicit AMI name
+// the AMI check is skipped (the explicit lookup happens elsewhere). The
+// returned error includes per-check remediation hints formatted for direct
+// display.
+func (d *Discoverer) ValidateAccount(
+	ctx context.Context, region, vpcID, amiName string, subnetIDs []string,
+) error {
+	vpc, err := validate.CheckVPC(ctx, d.ec2, vpcID)
+	if err != nil {
+		return err
+	}
+	results := []validate.Result{vpc}
+	if vpc.OK {
+		dns, err := validate.CheckVPCDNS(ctx, d.ec2, region, vpcID)
+		if err != nil {
+			return err
+		}
+		results = append(results, dns)
+		if len(subnetIDs) > 0 {
+			subnets, err := validate.CheckSubnets(ctx, d.ec2, vpcID, subnetIDs)
+			if err != nil {
+				return err
+			}
+			results = append(results, subnets)
+		}
+	}
+	if amiName == "" {
+		amiResult, err := validate.CheckAMI(ctx, d.ec2, region, d.keightsVersion)
+		if err != nil {
+			return err
+		}
+		results = append(results, amiResult)
+	}
+	var buf strings.Builder
+	if validate.PrintResults(&buf, results) {
+		return nil
+	}
+	return fmt.Errorf("preflight validation failed:\n%s", buf.String())
 }
 
 func (d *Discoverer) Subnets(ctx context.Context, vpcID string) ([]Subnet, error) {

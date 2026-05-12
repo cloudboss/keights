@@ -94,6 +94,26 @@ func BuildAnswers(
 		}
 	}
 
+	cp, err := parseControlPlane(cfg.ControlPlane)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeGroups, err := parseNodeGroups(cfg.NodeGroups)
+	if err != nil {
+		return nil, err
+	}
+
+	subnetIDs := append([]string(nil), cp.SubnetIDs...)
+	for _, ng := range nodeGroups {
+		subnetIDs = append(subnetIDs, ng.SubnetIDs...)
+	}
+	if err := disc.ValidateAccount(
+		ctx, cfg.Region, cfg.VPCID, cfg.AMIName, subnetIDs,
+	); err != nil {
+		return nil, err
+	}
+
 	amiName, amiOwnerID, amiK8sVersion, err := resolveAMI(
 		ctx, disc, cfg.AMIName, cfg.AMIOwnerID,
 	)
@@ -109,16 +129,6 @@ func BuildAnswers(
 		return nil, fmt.Errorf(
 			"unable to determine kubernetes version: pass --kubernetes-version",
 		)
-	}
-
-	cp, err := parseControlPlane(cfg.ControlPlane)
-	if err != nil {
-		return nil, err
-	}
-
-	nodeGroups, err := parseNodeGroups(cfg.NodeGroups)
-	if err != nil {
-		return nil, err
 	}
 
 	outputDir := cfg.OutputDir
@@ -215,11 +225,6 @@ func resolveAMI(
 	amis, err := disc.AMIs(ctx)
 	if err != nil {
 		return "", "", "", fmt.Errorf("unable to discover AMIs: %w", err)
-	}
-	if len(amis) == 0 {
-		return "", "", "", fmt.Errorf(
-			"no keights AMI found; provide ami-name and ami-owner-id",
-		)
 	}
 	match := amis[0]
 	if ownerID != "" {

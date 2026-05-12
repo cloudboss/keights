@@ -86,20 +86,18 @@ func RunWizard(ctx context.Context, disc *Discoverer, defs Defaults) (*Answers, 
 		return nil, err
 	}
 
+	if err := disc.ValidateAccount(ctx, a.Region, a.VPCID, "", nil); err != nil {
+		return nil, err
+	}
+
 	subnets, err := disc.Subnets(ctx, a.VPCID)
 	if err != nil {
 		return nil, err
-	}
-	if len(subnets) == 0 {
-		return nil, fmt.Errorf("no subnets found in %s", a.VPCID)
 	}
 
 	amis, err := disc.AMIs(ctx)
 	if err != nil {
 		return nil, err
-	}
-	if len(amis) == 0 {
-		return nil, errors.New("no keights ami found in this region")
 	}
 
 	kmsKeys, err := disc.KMSKeys(ctx)
