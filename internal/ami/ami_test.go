@@ -86,13 +86,13 @@ func TestFind_FiltersByNameAndParsesNameForVersions(t *testing.T) {
 		images: []ec2types.Image{
 			{
 				ImageId:      p("ami-1"),
-				Name:         p("keights-v2.0.5-k8s-1.34.5-20260427T120000Z"),
+				Name:         p("keights-v2.0.5-k8s-v1.34.5-20260427T120000Z"),
 				OwnerId:      p("256008164056"),
 				CreationDate: p("2026-04-27T12:00:00Z"),
 			},
 			{
 				ImageId:      p("ami-2"),
-				Name:         p("keights-v2.0.4-k8s-1.34.3-20260301T120000Z"),
+				Name:         p("keights-v2.0.4-k8s-v1.34.3-20260301T120000Z"),
 				OwnerId:      p("123456789012"),
 				CreationDate: p("2026-03-01T12:00:00Z"),
 			},
@@ -133,7 +133,7 @@ func TestFind_DevVersionUsesUnboundedNameFilter(t *testing.T) {
 func TestCopy_TagsImageAndSnapshotsViaTagSpecifications(t *testing.T) {
 	src := AMI{
 		ID:                  "ami-src",
-		Name:                "keights-v2.0.5-k8s-1.34.5-20260427T120000Z",
+		Name:                "keights-v2.0.5-k8s-v1.34.5-20260427T120000Z",
 		KubernetesVersion:   "1.34.5",
 		KeightsVersion:      "v2.0.5",
 		KeightsVersionMinor: "v2.0",
@@ -169,7 +169,7 @@ func TestCopy_TagsImageAndSnapshotsViaTagSpecifications(t *testing.T) {
 func TestCopy_DefaultNameComesFromSource(t *testing.T) {
 	src := AMI{
 		ID:                  "ami-src",
-		Name:                "keights-v2.0.5-k8s-1.34.5-20260427T120000Z",
+		Name:                "keights-v2.0.5-k8s-v1.34.5-20260427T120000Z",
 		KubernetesVersion:   "1.34.5",
 		KeightsVersion:      "v2.0.5",
 		KeightsVersionMinor: "v2.0",
@@ -185,7 +185,7 @@ func TestGet_FetchesByIDAndParsesName(t *testing.T) {
 		images: []ec2types.Image{
 			{
 				ImageId:      p("ami-1"),
-				Name:         p("keights-v2.0.5-k8s-1.34.5-20260427T120000Z"),
+				Name:         p("keights-v2.0.5-k8s-v1.34.5-20260427T120000Z"),
 				OwnerId:      p(OfficialOwnerID),
 				CreationDate: p("2026-04-27T12:00:00Z"),
 			},
@@ -199,6 +199,83 @@ func TestGet_FetchesByIDAndParsesName(t *testing.T) {
 	assert.Equal(t, "1.34.5", got.KubernetesVersion)
 	assert.Equal(t, "v2.0.5", got.KeightsVersion)
 	assert.Equal(t, "v2.0", got.KeightsVersionMinor)
+}
+
+func TestGet_LegacyNameWithoutVOnK8s(t *testing.T) {
+	f := &fakeEC2{
+		images: []ec2types.Image{
+			{
+				ImageId:      p("ami-legacy"),
+				Name:         p("keights-v2.0.5-k8s-1.34.5-20260427T120000Z"),
+				OwnerId:      p(OfficialOwnerID),
+				CreationDate: p("2026-04-27T12:00:00Z"),
+			},
+		},
+	}
+	got, err := Get(context.Background(), f, "us-east-1", "ami-legacy")
+	require.NoError(t, err)
+	assert.Equal(t, "1.34.5", got.KubernetesVersion)
+	assert.Equal(t, "v2.0.5", got.KeightsVersion)
+}
+
+func TestLookupByName_KeightsConventionPopulatesVersions(t *testing.T) {
+	f := &fakeEC2{
+		images: []ec2types.Image{
+			{
+				ImageId:      p("ami-1"),
+				Name:         p("keights-v2.0.5-k8s-v1.34.5-20260427T120000Z"),
+				OwnerId:      p(OfficialOwnerID),
+				CreationDate: p("2026-04-27T12:00:00Z"),
+			},
+		},
+	}
+	got, ok, err := LookupByName(
+		context.Background(), f, "us-east-1",
+		"keights-v2.0.5-k8s-v1.34.5-20260427T120000Z",
+		[]string{"self", OfficialOwnerID},
+	)
+	require.NoError(t, err)
+	require.True(t, ok)
+	require.Len(t, f.lastIn.Filters, 1)
+	assert.Equal(t, "name", *f.lastIn.Filters[0].Name)
+	assert.Equal(t, "ami-1", got.ID)
+	assert.Equal(t, OfficialOwnerID, got.OwnerID)
+	assert.Equal(t, "1.34.5", got.KubernetesVersion)
+	assert.Equal(t, "v2.0.5", got.KeightsVersion)
+}
+
+func TestLookupByName_NonKeightsNameSucceedsWithEmptyVersions(t *testing.T) {
+	f := &fakeEC2{
+		images: []ec2types.Image{
+			{
+				ImageId:      p("ami-custom"),
+				Name:         p("ghcr.io--cloudboss--keights--v2.0.1-alpha.1-k8s-1.34.5"),
+				OwnerId:      p("123456789012"),
+				CreationDate: p("2026-04-27T12:00:00Z"),
+			},
+		},
+	}
+	got, ok, err := LookupByName(
+		context.Background(), f, "us-east-1",
+		"ghcr.io--cloudboss--keights--v2.0.1-alpha.1-k8s-1.34.5",
+		[]string{"self", OfficialOwnerID},
+	)
+	require.NoError(t, err)
+	require.True(t, ok)
+	assert.Equal(t, "ami-custom", got.ID)
+	assert.Equal(t, "123456789012", got.OwnerID)
+	assert.Empty(t, got.KubernetesVersion)
+	assert.Empty(t, got.KeightsVersion)
+}
+
+func TestLookupByName_NotFound(t *testing.T) {
+	f := &fakeEC2{}
+	_, ok, err := LookupByName(
+		context.Background(), f, "us-east-1", "missing",
+		[]string{"self", OfficialOwnerID},
+	)
+	require.NoError(t, err)
+	assert.False(t, ok)
 }
 
 func TestGet_NotFound(t *testing.T) {

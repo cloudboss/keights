@@ -45,6 +45,12 @@ locals {
     : module.kms_key[0].key_id
   )
 
+  kubernetes_version = (
+    var.kubernetes_configuration.version != null && var.kubernetes_configuration.version != ""
+    ? var.kubernetes_configuration.version
+    : module.ami.kubernetes_version
+  )
+
   kms_key_id_storage = (
     var.storage.kms_key_id != null
     ? data.aws_kms_key.storage[0].arn

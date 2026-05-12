@@ -22,8 +22,6 @@ locals {
   cluster_dns_ip = cidrhost(var.service_subnet, 10)
   etcd_prefix    = "keights-etcd-${var.cluster_name}"
 
-  kubernetes_version = coalesce(var.kubernetes_version, module.ami.kubernetes_version)
-
   # Sort AZ names, otherwise the launch template may change on each run.
   azs_sorted = sort([
     for _, az in local.azs_autoscaling_group : az
@@ -172,7 +170,7 @@ locals {
     }
     imageRepository   = var.image_registry
     kind              = "ClusterConfiguration"
-    kubernetesVersion = local.kubernetes_version
+    kubernetesVersion = var.kubernetes_version
     networking = {
       dnsDomain     = var.cluster_domain
       serviceSubnet = var.service_subnet

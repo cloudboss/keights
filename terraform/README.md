@@ -147,7 +147,7 @@ An object to configure internal Kubernetes settings.
 | cluster\_domain | The cluster DNS domain. | string | `cluster.local` | no |
 | image\_registry | The container image registry for Kubernetes components. | string | `registry.k8s.io` | no |
 | service\_subnet | The CIDR for Kubernetes services. | string | `10.96.0.0/12` | no |
-| version | The Kubernetes version. | string | `1.34.1` | no |
+| version | The Kubernetes version. Normally it is parsed from the AMI name, provided it follows the convention `keights-vX.Y.Z-k8s-[v]A.B.C-<timestamp>`, otherwise this must be defined. | string | `null` | conditional |
 
 ## lambda object
 

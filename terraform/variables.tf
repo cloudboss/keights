@@ -155,7 +155,7 @@ variable "kubernetes_configuration" {
     service_subnet = optional(string, "10.96.0.0/12")
     version        = optional(string)
   })
-  description = "Kubernetes configuration options. `version`, when null, is derived from the AMI's `cloudboss.co/keights/kubernetes-version` tag."
+  description = "Kubernetes configuration options. If `version` is null, the Kubernetes version is parsed from the AMI name, provided it follows the keights convention `keights-vX.Y.Z-k8s-[v]A.B.C-<timestamp>`."
 
   default = {}
 }

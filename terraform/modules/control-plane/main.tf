@@ -432,7 +432,7 @@ resource "aws_ebs_volume" "etcd" {
 }
 
 resource "aws_launch_template" "it" {
-  image_id                             = module.ami.id
+  image_id                             = var.image_id
   instance_initiated_shutdown_behavior = "stop"
   instance_type                        = var.instance_type
   key_name                             = var.key_pair
@@ -478,13 +478,6 @@ resource "aws_launch_template" "it" {
 resource "aws_cloudformation_stack" "it" {
   name          = local.name
   template_body = yamlencode(local.cfn_template_body)
-}
-
-module "ami" {
-  source = "../ami"
-
-  ami             = var.ami
-  caller_identity = var.caller_identity
 }
 
 module "user_data" {

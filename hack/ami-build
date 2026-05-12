@@ -23,7 +23,7 @@ fi
 container_image=${IMAGE_REPOSITORY}:${VERSION}-k8s-${KUBERNETES_VERSION}
 # AMI name must be unique per account/region, so include a timestamp.
 timestamp=$(date -u +%Y%m%dT%H%M%SZ)
-ami_name="keights-${VERSION}-k8s-${KUBERNETES_VERSION}-${timestamp}"
+ami_name="keights-${VERSION}-k8s-v${KUBERNETES_VERSION}-${timestamp}"
 
 ${easyto} ami \
     -a ${ami_name} \

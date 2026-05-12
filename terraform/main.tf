@@ -155,11 +155,26 @@ module "load_balancer" {
   vpc_id             = var.vpc_id
 }
 
+module "ami" {
+  source = "./modules/ami"
+
+  ami             = var.ami
+  caller_identity = local.caller_identity
+}
+
+resource "terraform_data" "kubernetes_version_check" {
+  lifecycle {
+    precondition {
+      condition     = local.kubernetes_version != null
+      error_message = "`var.kubernetes_configuration.version` is required when the AMI name does not follow the keights convention `keights-vX.Y.Z-k8s-[v]A.B.C-<timestamp>`."
+    }
+  }
+}
+
 module "control_plane" {
   source = "./modules/control-plane"
 
   addons                = var.addons
-  ami                   = var.ami
   irsa                  = local.irsa
   aws_partition         = local.aws_partition
   aws_region            = local.aws_region
@@ -171,11 +186,12 @@ module "control_plane" {
   etcd_domain           = local.hosted_zone_name
   iam_instance_profile  = module.iam.iam_instance_profile_control_plane.arn
   identity_mappings     = var.identity_mappings
+  image_id              = module.ami.id
   image_registry        = var.kubernetes_configuration.image_registry
   instance_type         = var.control_plane.instance_type
   key_pair              = var.control_plane.key_pair
   kube_ca_function_name = module.lambda_kube_ca.lambda.function_name
-  kubernetes_version    = var.kubernetes_configuration.version
+  kubernetes_version    = local.kubernetes_version
   load_balancer = {
     dns_name         = module.load_balancer.it.load_balancer.dns_name
     target_group_arn = module.load_balancer.it.target_group.arn

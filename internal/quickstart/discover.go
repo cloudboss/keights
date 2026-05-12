@@ -178,6 +178,16 @@ func (d *Discoverer) AMIs(ctx context.Context) ([]AMI, error) {
 	)
 }
 
+// AMIByName looks up an AMI by exact name across {self, OfficialOwnerID}. The
+// AMI does not need to follow the keights naming convention; in that case the
+// parsed version fields are left empty.
+func (d *Discoverer) AMIByName(ctx context.Context, name string) (AMI, bool, error) {
+	return ami.LookupByName(
+		ctx, d.ec2, "", name,
+		[]string{"self", ami.OfficialOwnerID},
+	)
+}
+
 // KMSKeys returns customer-managed KMS keys the caller can see. Keys without
 // an alias are included; AWS-managed aliases (`alias/aws/*`) are excluded.
 // When a key has multiple aliases, the first one wins.

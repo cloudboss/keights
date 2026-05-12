@@ -183,12 +183,14 @@ func validateCIDRSliceRequired(cidrs []string) error {
 	return validateCIDRSlice(cidrs)
 }
 
-// resolveAMI returns the AMI name, owner ID, and Kubernetes version. If name
-// and ownerID are both provided by the caller, discovery is skipped and the
-// Kubernetes version comes back empty — the caller must supply it another way.
-// Otherwise discovery runs and the result that matches whichever of name/
-// ownerID the caller did provide wins; when neither is provided, the newest
-// keights AMI is chosen.
+// resolveAMI returns the AMI name, owner ID, and Kubernetes version. If both
+// name and ownerID are provided, discovery is skipped and the Kubernetes
+// version comes back empty -- the caller must supply it another way. If only
+// name is provided, the AMI is looked up directly by name across the caller's
+// account and the official keights account; the name is not required to
+// follow the keights naming convention. Otherwise discovery runs over keights
+// AMIs and the result that matches the supplied ownerID (or the newest, when
+// neither is provided) wins.
 func resolveAMI(
 	ctx context.Context,
 	disc *Discoverer,
@@ -196,6 +198,19 @@ func resolveAMI(
 ) (string, string, string, error) {
 	if name != "" && ownerID != "" {
 		return name, ownerID, "", nil
+	}
+	if name != "" {
+		a, ok, err := disc.AMIByName(ctx, name)
+		if err != nil {
+			return "", "", "", fmt.Errorf("unable to look up AMI: %w", err)
+		}
+		if !ok {
+			return "", "", "", fmt.Errorf(
+				"no AMI found matching ami-name=%q in caller account or official keights account",
+				name,
+			)
+		}
+		return a.Name, a.OwnerID, a.KubernetesVersion, nil
 	}
 	amis, err := disc.AMIs(ctx)
 	if err != nil {
@@ -207,13 +222,10 @@ func resolveAMI(
 		)
 	}
 	match := amis[0]
-	if name != "" || ownerID != "" {
+	if ownerID != "" {
 		found := false
 		for _, a := range amis {
-			if name != "" && a.Name != name {
-				continue
-			}
-			if ownerID != "" && a.OwnerID != ownerID {
+			if a.OwnerID != ownerID {
 				continue
 			}
 			match = a
@@ -222,8 +234,8 @@ func resolveAMI(
 		}
 		if !found {
 			return "", "", "", fmt.Errorf(
-				"no keights AMI found matching ami-name=%q ami-owner-id=%q",
-				name, ownerID,
+				"no keights AMI found matching ami-owner-id=%q",
+				ownerID,
 			)
 		}
 	}

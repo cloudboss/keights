@@ -69,13 +69,13 @@ func TestResolveCopySource_AMIIDFromDifferentMinor(t *testing.T) {
 		images: []ec2types.Image{
 			{
 				ImageId:      strp("ami-old-minor"),
-				Name:         strp("keights-v1.9.3-k8s-1.30.1-20250101T000000Z"),
+				Name:         strp("keights-v1.9.3-k8s-v1.30.1-20250101T000000Z"),
 				OwnerId:      strp(intami.OfficialOwnerID),
 				CreationDate: strp("2025-01-01T00:00:00Z"),
 			},
 			{
 				ImageId:      strp("ami-current"),
-				Name:         strp("keights-v2.0.5-k8s-1.34.5-20260427T120000Z"),
+				Name:         strp("keights-v2.0.5-k8s-v1.34.5-20260427T120000Z"),
 				OwnerId:      strp(intami.OfficialOwnerID),
 				CreationDate: strp("2026-04-27T12:00:00Z"),
 			},
@@ -99,7 +99,7 @@ func TestResolveCopySource_AMIIDFromWrongAccount(t *testing.T) {
 		images: []ec2types.Image{
 			{
 				ImageId:      strp("ami-foreign"),
-				Name:         strp("keights-v2.0.5-k8s-1.34.5-20260427T120000Z"),
+				Name:         strp("keights-v2.0.5-k8s-v1.34.5-20260427T120000Z"),
 				OwnerId:      strp("999999999999"),
 				CreationDate: strp("2026-04-27T12:00:00Z"),
 			},
@@ -115,13 +115,13 @@ func TestResolveCopySource_DefaultPicksLatestMatchingMinor(t *testing.T) {
 		images: []ec2types.Image{
 			{
 				ImageId:      strp("ami-newer"),
-				Name:         strp("keights-v2.0.5-k8s-1.34.5-20260427T120000Z"),
+				Name:         strp("keights-v2.0.5-k8s-v1.34.5-20260427T120000Z"),
 				OwnerId:      strp(intami.OfficialOwnerID),
 				CreationDate: strp("2026-04-27T12:00:00Z"),
 			},
 			{
 				ImageId:      strp("ami-older"),
-				Name:         strp("keights-v2.0.4-k8s-1.34.3-20260101T000000Z"),
+				Name:         strp("keights-v2.0.4-k8s-v1.34.3-20260101T000000Z"),
 				OwnerId:      strp(intami.OfficialOwnerID),
 				CreationDate: strp("2026-01-01T00:00:00Z"),
 			},
@@ -140,7 +140,7 @@ func TestResolveCopySource_AMIIDNotFound(t *testing.T) {
 		images: []ec2types.Image{
 			{
 				ImageId:      strp("ami-real"),
-				Name:         strp("keights-v2.0.5-k8s-1.34.5-20260427T120000Z"),
+				Name:         strp("keights-v2.0.5-k8s-v1.34.5-20260427T120000Z"),
 				OwnerId:      strp(intami.OfficialOwnerID),
 				CreationDate: strp("2026-04-27T12:00:00Z"),
 			},

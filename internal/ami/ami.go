@@ -51,12 +51,13 @@ const (
 )
 
 // keightsAMINameRE matches the AMI naming convention enforced by hack/ami-build:
-// "keights-vMAJOR.MINOR.PATCH-k8s-MAJOR.MINOR.PATCH-TIMESTAMP". The first two
-// groups are the keights and kubernetes versions; we rely on the AMI name to
-// carry these because AWS does not expose AMI tags to accounts other than the
-// owner, even on public AMIs.
+// "keights-vMAJOR.MINOR.PATCH-k8s-vMAJOR.MINOR.PATCH-TIMESTAMP". The "v" on
+// the kubernetes version is optional so legacy AMI names still parse. The
+// first two groups are the keights and kubernetes versions; we rely on the
+// AMI name to carry these because AWS does not expose AMI tags to accounts
+// other than the owner, even on public AMIs.
 var keightsAMINameRE = regexp.MustCompile(
-	`^keights-(v\d+\.\d+\.\d+)-k8s-(\d+\.\d+\.\d+)-`,
+	`^keights-(v\d+\.\d+\.\d+)-k8s-v?(\d+\.\d+\.\d+)-`,
 )
 
 // AMI describes a keights AMI candidate.
@@ -175,6 +176,40 @@ func imageToAMI(img ec2types.Image, region string) (AMI, bool) {
 		KeightsVersionMinor: KeightsMinor(keightsFull),
 		Region:              region,
 	}, true
+}
+
+// LookupByName fetches a single AMI by exact name across the given owners.
+// Unlike Find, the AMI is not required to follow the keights naming
+// convention; in that case the parsed version fields are left empty.
+func LookupByName(
+	ctx context.Context, c EC2API, region, name string, owners []string,
+) (AMI, bool, error) {
+	out, err := c.DescribeImages(ctx, &ec2.DescribeImagesInput{
+		Owners: owners,
+		Filters: []ec2types.Filter{
+			{Name: p("name"), Values: []string{name}},
+		},
+	})
+	if err != nil {
+		return AMI{}, false, fmt.Errorf("unable to describe images: %w", err)
+	}
+	if len(out.Images) == 0 {
+		return AMI{}, false, nil
+	}
+	img := out.Images[0]
+	a := AMI{
+		ID:           deref(img.ImageId),
+		Name:         deref(img.Name),
+		OwnerID:      deref(img.OwnerId),
+		CreationDate: deref(img.CreationDate),
+		Region:       region,
+	}
+	if m := keightsAMINameRE.FindStringSubmatch(a.Name); m != nil {
+		a.KeightsVersion = m[1]
+		a.KubernetesVersion = m[2]
+		a.KeightsVersionMinor = KeightsMinor(m[1])
+	}
+	return a, true, nil
 }
 
 // Copy invokes EC2 CopyImage to copy src from srcRegion into dst's region,

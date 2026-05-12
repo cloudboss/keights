@@ -42,6 +42,15 @@ locals {
   ami_owner = (
     length(var.ami.owner) > 0 ? var.ami.owner : local.ami_owner_default
   )
+
+  # Parse the Kubernetes version from a keights AMI name of the form
+  # `keights-vX.Y.Z-k8s-vA.B.C-<timestamp>`. The "v" on the kubernetes
+  # version is optional so legacy AMI names still return a value.
+  kubernetes_version_matches = regexall(
+    "^keights-v[0-9]+\\.[0-9]+\\.[0-9]+-k8s-v?([0-9]+\\.[0-9]+\\.[0-9]+)-",
+    data.aws_ami.it.name,
+  )
+  kubernetes_version = one(local.kubernetes_version_matches[*][0])
 }
 
 data "aws_ami" "it" {
@@ -62,17 +71,5 @@ output "id" {
 }
 
 output "kubernetes_version" {
-  value = data.aws_ami.it.tags["cloudboss.co/keights/kubernetes-version"]
-}
-
-output "keights_version_minor" {
-  value = data.aws_ami.it.tags["cloudboss.co/keights/keights-version-minor"]
-}
-
-output "keights_version" {
-  value = data.aws_ami.it.tags["cloudboss.co/keights/keights-version"]
-}
-
-output "tags" {
-  value = data.aws_ami.it.tags
+  value = local.kubernetes_version
 }

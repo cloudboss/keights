@@ -22,10 +22,6 @@ variable "addons" {
   type = any
 }
 
-variable "ami" {
-  type = any
-}
-
 variable "aws_partition" {
   type = string
 }
@@ -66,6 +62,10 @@ variable "identity_mappings" {
   type = list(any)
 }
 
+variable "image_id" {
+  type = string
+}
+
 variable "irsa" {
   type = any
 }
@@ -87,9 +87,7 @@ variable "kube_ca_function_name" {
 }
 
 variable "kubernetes_version" {
-  type        = string
-  default     = null
-  description = "When null, derived from the AMI's `cloudboss.co/keights/kubernetes-version` tag."
+  type = string
 }
 
 variable "load_balancer" {
