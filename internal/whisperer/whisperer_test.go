@@ -35,11 +35,11 @@ import (
 
 type fakeSSM struct {
 	ssmAPI
-	pages        []*ssm.GetParametersByPathOutput
-	pageErr      error
-	pageCalls    []*ssm.GetParametersByPathInput
-	deleteErr    error
-	deleteCalls  []*ssm.DeleteParametersInput
+	pages       []*ssm.GetParametersByPathOutput
+	pageErr     error
+	pageCalls   []*ssm.GetParametersByPathInput
+	deleteErr   error
+	deleteCalls []*ssm.DeleteParametersInput
 }
 
 func (f *fakeSSM) GetParametersByPath(
