@@ -70,7 +70,7 @@ jobs:
       - run: make release-one VERSION=${VERSION} OS=linux ARCH=amd64
       - uses: actions/upload-artifact@v4
         with:
-          name: keights-linux-amd64
+          name: keights-linux-amd64-${{ inputs.keights_tag }}-${{ inputs.kubernetes_version }}
           path: _output/staging/keights/linux/amd64/keights
           retention-days: 1
       - run: make image VERSION=${VERSION} KUBERNETES_VERSION=${KUBERNETES_VERSION}
@@ -123,7 +123,7 @@ jobs:
       ami_name: ${{ needs.build.outputs.ami_name }}
       bucket: ${{ needs.build.outputs.bucket }}
       scenarios: ${{ needs.build.outputs.scenarios }}
-      keights_artifact_name: keights-linux-amd64
+      keights_artifact_name: keights-linux-amd64-${{ inputs.keights_tag }}-${{ inputs.kubernetes_version }}
       source_ami_name: ${{ needs.build.outputs.source_ami_name }}
       source_version: ${{ needs.build.outputs.source_version }}
       module_source: ""
