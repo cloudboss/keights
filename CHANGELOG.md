@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.1.0] - 2026-05-13
+
+### Added
+
+- Add preflight checks during `keights quickstart` and new command `keights account validate`.
+
+### Changed
+
+- Update CI builds to run on pushes for any branch.
+- Identify nodes by EC2 instance ID instead of hostname.
+- Update easyto to v0.11.0.
+
+### Fixed
+
+- Fix AMI version and owner resolution.
+
 ## [2.0.0] - 2026-04-27
 
 This is a rewrite from the previous Ansible and CloudFormation based version.
@@ -16,4 +32,5 @@ Differences include:
 - Includes a CLI tool to manage clusters with quickstart and other utilities.
 - Keights version is decoupled from Kubernetes versions so one keights release can support multiple Kubernetes releases.
 
+[2.1.0]: https://github.com/cloudboss/keights/releases/tag/v2.1.0
 [2.0.0]: https://github.com/cloudboss/keights/releases/tag/v2.0.0
