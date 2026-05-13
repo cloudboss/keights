@@ -26,7 +26,7 @@ DIR_RELEASE = $(DIR_OUT)/release
 DIR_ROOT = $(realpath $(CURDIR))
 
 IMAGE_REPOSITORY = ghcr.io/cloudboss/keights
-EASYTO_VERSION = 0.10.0
+EASYTO_VERSION = 0.11.0
 SONOBUOY_VERSION = 0.57.3
 
 # KUBERNETES_VERSION defaults to the patch from compat.json's default-test-version,
