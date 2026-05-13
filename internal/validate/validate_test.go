@@ -33,10 +33,6 @@ import (
 )
 
 type stubEC2 struct {
-	support   *bool
-	hostnames *bool
-	vpcErr    error
-
 	vpcs    []ec2types.Vpc
 	vpcsErr error
 
@@ -54,22 +50,6 @@ func (s *stubEC2) DescribeVpcs(
 		return nil, s.vpcsErr
 	}
 	return &ec2.DescribeVpcsOutput{Vpcs: s.vpcs}, nil
-}
-
-func (s *stubEC2) DescribeVpcAttribute(
-	_ context.Context, in *ec2.DescribeVpcAttributeInput, _ ...func(*ec2.Options),
-) (*ec2.DescribeVpcAttributeOutput, error) {
-	if s.vpcErr != nil {
-		return nil, s.vpcErr
-	}
-	out := &ec2.DescribeVpcAttributeOutput{}
-	switch in.Attribute {
-	case ec2types.VpcAttributeNameEnableDnsSupport:
-		out.EnableDnsSupport = &ec2types.AttributeBooleanValue{Value: s.support}
-	case ec2types.VpcAttributeNameEnableDnsHostnames:
-		out.EnableDnsHostnames = &ec2types.AttributeBooleanValue{Value: s.hostnames}
-	}
-	return out, nil
 }
 
 func (s *stubEC2) DescribeImages(
@@ -96,80 +76,7 @@ func (s *stubEC2) DescribeSubnets(
 	return &ec2.DescribeSubnetsOutput{Subnets: s.subnets}, nil
 }
 
-func boolp(b bool) *bool    { return &b }
 func strp(s string) *string { return &s }
-
-func TestCheckVPCDNS(t *testing.T) {
-	tests := []struct {
-		name        string
-		support     *bool
-		hostnames   *bool
-		wantOK      bool
-		wantMissing []string
-	}{
-		{
-			name:      "both true passes",
-			support:   boolp(true),
-			hostnames: boolp(true),
-			wantOK:    true,
-		},
-		{
-			name:        "hostnames false fails",
-			support:     boolp(true),
-			hostnames:   boolp(false),
-			wantOK:      false,
-			wantMissing: []string{"enableDnsHostnames"},
-		},
-		{
-			name:        "support false fails",
-			support:     boolp(false),
-			hostnames:   boolp(true),
-			wantOK:      false,
-			wantMissing: []string{"enableDnsSupport"},
-		},
-		{
-			name:        "both false fails",
-			support:     boolp(false),
-			hostnames:   boolp(false),
-			wantOK:      false,
-			wantMissing: []string{"enableDnsSupport", "enableDnsHostnames"},
-		},
-		{
-			name:        "nil values treated as false",
-			support:     nil,
-			hostnames:   nil,
-			wantOK:      false,
-			wantMissing: []string{"enableDnsSupport", "enableDnsHostnames"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &stubEC2{support: tt.support, hostnames: tt.hostnames}
-			r, err := CheckVPCDNS(context.Background(), c, "us-west-2", "vpc-abc")
-			require.NoError(t, err)
-			assert.Equal(t, "vpc-dns", r.Name)
-			assert.Equal(t, tt.wantOK, r.OK)
-			if tt.wantOK {
-				assert.Empty(t, r.Detail)
-				assert.Empty(t, r.Remediation)
-				return
-			}
-			for _, m := range tt.wantMissing {
-				assert.Contains(t, r.Detail, m)
-			}
-			assert.Contains(t, r.Remediation, "vpc-abc")
-			assert.Contains(t, r.Remediation, "--region us-west-2")
-			assert.Contains(t, r.Remediation, "modify-vpc-attribute")
-		})
-	}
-}
-
-func TestCheckVPCDNS_APIError(t *testing.T) {
-	c := &stubEC2{vpcErr: errors.New("boom")}
-	_, err := CheckVPCDNS(context.Background(), c, "us-east-1", "vpc-abc")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "vpc-abc")
-}
 
 func TestCheckAMI(t *testing.T) {
 	matching := ec2types.Image{

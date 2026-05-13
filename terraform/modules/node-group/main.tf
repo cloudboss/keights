@@ -42,8 +42,20 @@ module "user_data" {
   env-from = [
     {
       imds = {
+        name = "AVAILABILITY_ZONE"
+        path = "placement/availability-zone"
+      }
+    },
+    {
+      imds = {
         name = "HOSTNAME"
         path = "hostname"
+      }
+    },
+    {
+      imds = {
+        name = "INSTANCE_ID"
+        path = "instance-id"
       }
     },
     {
@@ -103,13 +115,15 @@ module "user_data" {
     {
       template = {
         content = <<-EOS
-          KUBELET_KEIGHTS_ARGS="--node-ip={{ipv4_address}}"
+          KUBELET_KEIGHTS_ARGS="--node-ip={{ipv4_address}} --hostname-override={{instance_id}} --provider-id=aws:///{{availability_zone}}/{{instance_id}}"
         EOS
         mount = {
           destination = "/var/lib/kubelet/keights-flags.env"
         }
         variables = {
-          ipv4_address = "$(IPV4_ADDRESS)"
+          availability_zone = "$(AVAILABILITY_ZONE)"
+          instance_id       = "$(INSTANCE_ID)"
+          ipv4_address      = "$(IPV4_ADDRESS)"
         }
       }
     },

@@ -43,6 +43,7 @@ locals {
       criSocket       = "unix:///run/containerd/containerd.sock"
       imagePullPolicy = "IfNotPresent"
       imagePullSerial = false
+      name            = "{{instance_id}}"
       kubeletExtraArgs = [
         {
           name  = "cloud-provider"
@@ -59,6 +60,10 @@ locals {
         {
           name  = "node-ip"
           value = "{{ipv4_address}}"
+        },
+        {
+          name  = "provider-id"
+          value = "aws:///{{availability_zone}}/{{instance_id}}"
         },
       ]
       taints = [
@@ -367,6 +372,7 @@ locals {
         variables = {
           ipv4_address      = "$(IPV4_ADDRESS)"
           availability_zone = "$(AVAILABILITY_ZONE)"
+          instance_id       = "$(INSTANCE_ID)"
         }
       }
     },

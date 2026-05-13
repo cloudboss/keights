@@ -42,10 +42,9 @@ func NewValidate(version string, loadAWSConfig loadAWSConfigFunc) *cobra.Command
 		Short: "Validate that the AWS account is set up for keights",
 		Long: `Run preflight checks against the AWS account.
 
-Checks that the selected VPC has DNS support and DNS hostnames enabled,
-that any --subnet-id values belong to the VPC, and that a keights AMI is
-visible in the configured region. Exits non-zero on any failure, with a
-remediation hint per check.`,
+Checks that the selected VPC exists, that any --subnet-id values belong
+to it, and that a keights AMI is visible in the configured region.
+Exits non-zero on any failure, with a remediation hint per check.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
@@ -65,19 +64,12 @@ remediation hint per check.`,
 				return err
 			}
 			results := []validate.Result{vpc}
-			if vpc.OK {
-				dns, err := validate.CheckVPCDNS(ctx, client, cfg.Region, vpcID)
+			if vpc.OK && len(subnetIDs) > 0 {
+				subnets, err := validate.CheckSubnets(ctx, client, vpcID, subnetIDs)
 				if err != nil {
 					return err
 				}
-				results = append(results, dns)
-				if len(subnetIDs) > 0 {
-					subnets, err := validate.CheckSubnets(ctx, client, vpcID, subnetIDs)
-					if err != nil {
-						return err
-					}
-					results = append(results, subnets)
-				}
+				results = append(results, subnets)
 			}
 			amiResult, err := validate.CheckAMI(ctx, client, cfg.Region, version)
 			if err != nil {

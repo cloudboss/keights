@@ -90,8 +90,6 @@ type EC2API interface {
 	ami.EC2API
 	DescribeVpcs(ctx context.Context, in *ec2.DescribeVpcsInput,
 		opts ...func(*ec2.Options)) (*ec2.DescribeVpcsOutput, error)
-	DescribeVpcAttribute(ctx context.Context, in *ec2.DescribeVpcAttributeInput,
-		opts ...func(*ec2.Options)) (*ec2.DescribeVpcAttributeOutput, error)
 	DescribeSubnets(ctx context.Context, in *ec2.DescribeSubnetsInput,
 		opts ...func(*ec2.Options)) (*ec2.DescribeSubnetsOutput, error)
 	DescribeKeyPairs(ctx context.Context, in *ec2.DescribeKeyPairsInput,
@@ -158,19 +156,12 @@ func (d *Discoverer) ValidateAccount(
 		return err
 	}
 	results := []validate.Result{vpc}
-	if vpc.OK {
-		dns, err := validate.CheckVPCDNS(ctx, d.ec2, region, vpcID)
+	if vpc.OK && len(subnetIDs) > 0 {
+		subnets, err := validate.CheckSubnets(ctx, d.ec2, vpcID, subnetIDs)
 		if err != nil {
 			return err
 		}
-		results = append(results, dns)
-		if len(subnetIDs) > 0 {
-			subnets, err := validate.CheckSubnets(ctx, d.ec2, vpcID, subnetIDs)
-			if err != nil {
-				return err
-			}
-			results = append(results, subnets)
-		}
+		results = append(results, subnets)
 	}
 	if amiName == "" {
 		amiResult, err := validate.CheckAMI(ctx, d.ec2, region, d.keightsVersion)

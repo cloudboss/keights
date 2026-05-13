@@ -116,7 +116,7 @@ The identity mappings object is used to configure [aws-iam-authenticator](https:
     name = "kubernetes-nodes"
     spec = {
       arn      = var.node_role_arn
-      username = "system:node:{{EC2PrivateDNSName}}"
+      username = "system:node:{{SessionName}}"
       groups   = ["system:bootstrappers", "system:nodes"]
     }
   },

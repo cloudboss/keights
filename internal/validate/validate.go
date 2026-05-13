@@ -40,8 +40,6 @@ type EC2API interface {
 	ami.EC2API
 	DescribeVpcs(ctx context.Context, in *ec2.DescribeVpcsInput,
 		opts ...func(*ec2.Options)) (*ec2.DescribeVpcsOutput, error)
-	DescribeVpcAttribute(ctx context.Context, in *ec2.DescribeVpcAttributeInput,
-		opts ...func(*ec2.Options)) (*ec2.DescribeVpcAttributeOutput, error)
 	DescribeSubnets(ctx context.Context, in *ec2.DescribeSubnetsInput,
 		opts ...func(*ec2.Options)) (*ec2.DescribeSubnetsOutput, error)
 }
@@ -78,57 +76,6 @@ func CheckVPC(ctx context.Context, c EC2API, vpcID string) (Result, error) {
 		}, nil
 	}
 	return Result{Name: "vpc", OK: true}, nil
-}
-
-// CheckVPCDNS verifies the VPC has enableDnsSupport and enableDnsHostnames
-// both set to true. Both are required:
-//   - enableDnsSupport: AWS DNS resolver must answer queries so pods can
-//     pull images and reach AWS APIs.
-//   - enableDnsHostnames: each instance must be assigned a private DNS
-//     hostname so the kubelet's node name matches the EC2 PrivateDnsName
-//     that aws-iam-authenticator substitutes for {{EC2PrivateDNSName}}.
-func CheckVPCDNS(ctx context.Context, c EC2API, region, vpcID string) (Result, error) {
-	support, err := vpcBoolAttr(ctx, c, vpcID, ec2types.VpcAttributeNameEnableDnsSupport)
-	if err != nil {
-		return Result{}, err
-	}
-	hostnames, err := vpcBoolAttr(ctx, c, vpcID, ec2types.VpcAttributeNameEnableDnsHostnames)
-	if err != nil {
-		return Result{}, err
-	}
-	if support && hostnames {
-		return Result{Name: "vpc-dns", OK: true}, nil
-	}
-
-	var missing []string
-	if !support {
-		missing = append(missing, "enableDnsSupport")
-	}
-	if !hostnames {
-		missing = append(missing, "enableDnsHostnames")
-	}
-	requirement := "it to be true"
-	if len(missing) > 1 {
-		requirement = "them to be true"
-	}
-	detail := fmt.Sprintf(
-		"VPC %s has %s set to false, and keights requires %s.",
-		vpcID, strings.Join(missing, " and "), requirement,
-	)
-
-	var rem strings.Builder
-	for _, m := range missing {
-		fmt.Fprintf(&rem,
-			"  aws ec2 modify-vpc-attribute --region %s --vpc-id %s --%s '{\"Value\":true}'\n",
-			region, vpcID, attrFlag(m),
-		)
-	}
-	return Result{
-		Name:        "vpc-dns",
-		OK:          false,
-		Detail:      detail,
-		Remediation: rem.String(),
-	}, nil
 }
 
 // CheckAMI verifies that at least one keights AMI is visible to the caller
@@ -218,29 +165,6 @@ func CheckSubnets(
 
 func strPtr(s string) *string { return &s }
 
-func vpcBoolAttr(
-	ctx context.Context, c EC2API, vpcID string, attr ec2types.VpcAttributeName,
-) (bool, error) {
-	out, err := c.DescribeVpcAttribute(ctx, &ec2.DescribeVpcAttributeInput{
-		VpcId:     &vpcID,
-		Attribute: attr,
-	})
-	if err != nil {
-		return false, fmt.Errorf("describe %s on %s: %w", attr, vpcID, err)
-	}
-	switch attr {
-	case ec2types.VpcAttributeNameEnableDnsSupport:
-		if out.EnableDnsSupport != nil && out.EnableDnsSupport.Value != nil {
-			return *out.EnableDnsSupport.Value, nil
-		}
-	case ec2types.VpcAttributeNameEnableDnsHostnames:
-		if out.EnableDnsHostnames != nil && out.EnableDnsHostnames.Value != nil {
-			return *out.EnableDnsHostnames.Value, nil
-		}
-	}
-	return false, nil
-}
-
 // PrintResults writes each result to w and returns whether all passed.
 // Failed results are followed by their remediation block.
 func PrintResults(w io.Writer, results []Result) bool {
@@ -264,14 +188,4 @@ func PrintResults(w io.Writer, results []Result) bool {
 		}
 	}
 	return allOK
-}
-
-func attrFlag(attr string) string {
-	switch attr {
-	case "enableDnsSupport":
-		return "enable-dns-support"
-	case "enableDnsHostnames":
-		return "enable-dns-hostnames"
-	}
-	return attr
 }

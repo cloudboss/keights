@@ -194,7 +194,7 @@ locals {
       name = "kubernetes-nodes"
       spec = {
         arn      = var.node_role_arn
-        username = "system:node:{{EC2PrivateDNSName}}"
+        username = "system:node:{{SessionName}}"
         groups   = ["system:bootstrappers", "system:nodes"]
       }
     },
@@ -497,6 +497,12 @@ module "user_data" {
       imds = {
         name = "HOSTNAME"
         path = "hostname"
+      }
+    },
+    {
+      imds = {
+        name = "INSTANCE_ID"
+        path = "instance-id"
       }
     },
     {
