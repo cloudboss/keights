@@ -68,7 +68,6 @@ jobs:
     env:
       VERSION: ${{ inputs.version }}
       KUBERNETES_VERSION: ${{ inputs.kubernetes_version }}
-      CLUSTER_NAME: e2e-${{ github.run_id }}-${{ matrix.scenario }}
       AWS_REGION: ${{ inputs.region }}
       CLUSTER_DIR: ${{ github.workspace }}/cluster
     steps:
@@ -87,6 +86,25 @@ jobs:
         run: |
           mkdir -p _output
           echo "${{ inputs.source_version }}" > _output/upgrade-from
+      - name: Set cluster name
+        env:
+          SCENARIO: ${{ matrix.scenario }}
+        run: |
+          run_key=$(printf '%s' "${GITHUB_RUN_ID}" | sha256sum | cut -c1-10)
+          pair_key=$(printf '%s-%s' "${VERSION}" "${KUBERNETES_VERSION}" | sha256sum | cut -c1-6)
+          case "${SCENARIO}" in
+          fresh)
+              scenario_key=f
+              ;;
+          upgrade)
+              scenario_key=u
+              ;;
+          *)
+              echo "unknown scenario: ${SCENARIO}" >&2
+              exit 1
+              ;;
+          esac
+          echo "CLUSTER_NAME=e2e-${run_key}-${pair_key}-${scenario_key}" >> "${GITHUB_ENV}"
       - name: Provision cluster
         env:
           SOURCE_AMI_NAME: ${{ inputs.source_ami_name }}
