@@ -4,9 +4,15 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test-build:
     uses: ./.github/workflows/common.yml
+    permissions:
+      contents: read
+      packages: write
     with:
       version: v0.0.0-ci-${{ github.sha }}
       upload_artifacts: false

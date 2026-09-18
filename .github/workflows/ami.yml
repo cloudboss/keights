@@ -35,6 +35,9 @@ on:
       STATE_BUCKET:
         required: true
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -117,6 +120,9 @@ jobs:
   e2e:
     needs: build
     uses: ./.github/workflows/e2e-run.yml
+    permissions:
+      id-token: write
+      contents: read
     with:
       version: ${{ inputs.keights_tag }}
       kubernetes_version: ${{ inputs.kubernetes_version }}
@@ -136,6 +142,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       id-token: write
+      contents: read
       packages: write
     env:
       VERSION: ${{ inputs.keights_tag }}
